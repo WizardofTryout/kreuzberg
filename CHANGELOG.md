@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **EML/MSG attachments line pollutes text output**: `build_email_text_output()` appended an `Attachments: ...` line that doesn't represent message content. Removed from text output; attachment names remain in metadata.
 - **HTML script/style tags leak in email fallback**: The regex-based HTML cleaner for email bodies used `.*?` which doesn't match across newlines, allowing multiline `<script>`/`<style>` content to leak into extracted text. Added `(?s)` flag for dotall matching.
 - **SVG CData content leaks JavaScript/CSS**: `Event::CData` handler in the XML extractor didn't check SVG mode, causing `<script>` and `<style>` CDATA blocks to appear in SVG text output.
+- **RTF parser leaks metadata noise into text**: The RTF extractor did not skip known destination groups (`fonttbl`, `stylesheet`, `colortbl`, `info`, `themedata`, etc.) or ignorable destinations (`{\*\...}`), causing ~17KB of font tables, color definitions, and internal metadata to appear in extracted text.
+- **RTF `\u` control word mishandled**: Control words like `\ul` (underline) and `\uc1` were incorrectly interpreted as Unicode escapes (`\u` + numeric param), producing garbage characters instead of being treated as formatting commands.
+- **RTF paragraph breaks collapsed to spaces**: `\par` control words emitted a single space instead of newlines, causing all paragraphs to merge into a single line. Now correctly emits double newlines for paragraph separation.
+- **RTF whitespace normalization destroys paragraph structure**: `normalize_whitespace()` treated newlines as whitespace and collapsed them to spaces. Rewritten to preserve newlines while collapsing runs of spaces within lines.
 
 ---
 

@@ -171,18 +171,17 @@ pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
     // mail_parser parses standard RFC 2822 dates into HeaderValue::DateTime,
     // losing the original string. For non-standard dates (ISO 8601, invalid strings),
     // it may produce garbled output. We extract the raw header from the email bytes.
-    let date = extract_raw_date_header(&data)
-        .or_else(|| {
-            message.date().and_then(|d| {
-                let rfc3339 = d.to_rfc3339();
-                // Reject obviously garbled dates (year 2000, month 0)
-                if rfc3339.starts_with("2000-00") || rfc3339.starts_with("0000-") {
-                    None
-                } else {
-                    Some(rfc3339)
-                }
-            })
-        });
+    let date = extract_raw_date_header(&data).or_else(|| {
+        message.date().and_then(|d| {
+            let rfc3339 = d.to_rfc3339();
+            // Reject obviously garbled dates (year 2000, month 0)
+            if rfc3339.starts_with("2000-00") || rfc3339.starts_with("0000-") {
+                None
+            } else {
+                Some(rfc3339)
+            }
+        })
+    });
 
     let message_id = message.message_id().map(|id| id.to_string());
 
@@ -522,9 +521,7 @@ fn read_msg_filetime_prop<F: std::io::Read + std::io::Seek>(
 
         if pid == prop_id && ptype == 0x0040 {
             // PT_SYSTIME
-            let filetime = u64::from_le_bytes(
-                buf[offset + 8..offset + 16].try_into().ok()?,
-            );
+            let filetime = u64::from_le_bytes(buf[offset + 8..offset + 16].try_into().ok()?);
             return filetime_to_iso8601(filetime);
         }
         offset += 16;
@@ -565,7 +562,9 @@ fn filetime_to_iso8601(filetime: u64) -> Option<String> {
     } else {
         // Include sub-second precision
         let frac = nanos / 1_000_000; // milliseconds
-        Some(format!("{y:04}-{m:02}-{d:02}T{hour:02}:{min:02}:{sec:02}.{frac:03}+00:00"))
+        Some(format!(
+            "{y:04}-{m:02}-{d:02}T{hour:02}:{min:02}:{sec:02}.{frac:03}+00:00"
+        ))
     }
 }
 
@@ -616,10 +615,7 @@ fn read_msg_recipients<F: std::io::Read + std::io::Seek>(
 
 /// Read PR_RECIPIENT_TYPE (0x0C15) from a recipient's __properties_version1.0 stream.
 /// Returns 1 (To), 2 (CC), 3 (BCC), or 0 if not found.
-fn read_msg_recip_type<F: std::io::Read + std::io::Seek>(
-    comp: &mut cfb::CompoundFile<F>,
-    base: &str,
-) -> u32 {
+fn read_msg_recip_type<F: std::io::Read + std::io::Seek>(comp: &mut cfb::CompoundFile<F>, base: &str) -> u32 {
     use std::io::Read;
 
     let props_path = format!("{base}/__properties_version1.0");
@@ -641,12 +637,7 @@ fn read_msg_recip_type<F: std::io::Read + std::io::Seek>(
 
         if pid == 0x0C15 && ptype == 0x0003 {
             // PT_LONG
-            return u32::from_le_bytes([
-                buf[offset + 8],
-                buf[offset + 9],
-                buf[offset + 10],
-                buf[offset + 11],
-            ]);
+            return u32::from_le_bytes([buf[offset + 8], buf[offset + 9], buf[offset + 10], buf[offset + 11]]);
         }
         offset += 16;
     }

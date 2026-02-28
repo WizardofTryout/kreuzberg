@@ -255,10 +255,12 @@ fn handle_control_word(
                     }
                 }
                 // Skip the replacement character (usually `?` or next byte)
-                if let Some(&next) = chars.peek() {
-                    if next != '\\' && next != '{' && next != '}' {
-                        chars.next();
-                    }
+                if let Some(&next) = chars.peek()
+                    && next != '\\'
+                    && next != '{'
+                    && next != '}'
+                {
+                    chars.next();
                 }
             }
         }
