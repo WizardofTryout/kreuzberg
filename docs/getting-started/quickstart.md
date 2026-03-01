@@ -640,4 +640,9 @@ Handle extraction errors gracefully:
 
 ## Next Steps
 
-- [Contributing](../contributing.md) - Learn how to contribute to Kreuzberg
+- **[Features Overview](../features.md)** — Explore all capabilities (OCR, chunking, embeddings)
+- **[Configuration Guide](../guides/configuration.md)** — Customize extraction behavior
+- **[OCR Setup](../guides/ocr.md)** — Set up Tesseract, PaddleOCR, or EasyOCR
+- **[Docker Deployment](../guides/docker.md)** — Run Kreuzberg as a container
+- **[API Reference](../reference/api-python.md)** — Complete API documentation
+- **[Contributing](../contributing.md)** — Help improve Kreuzberg

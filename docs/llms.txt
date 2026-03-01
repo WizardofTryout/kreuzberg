@@ -23,6 +23,9 @@ Kreuzberg provides async/sync APIs, text chunking, language detection, keyword e
 - [Configuration](https://docs.kreuzberg.dev/guides/configuration/): Configuration options
 - [OCR](https://docs.kreuzberg.dev/guides/ocr/): Optical character recognition setup with Tesseract, EasyOCR, or PaddleOCR
 - [Element-Based Output](https://docs.kreuzberg.dev/guides/element-based-output/): Structured element extraction
+- [Document Structure](https://docs.kreuzberg.dev/guides/document-structure/): Hierarchical tree-based document output
+- [PDF Hierarchy](https://docs.kreuzberg.dev/guides/pdf-hierarchy/): PDF hierarchy detection using K-means clustering
+- [Keyword Extraction](https://docs.kreuzberg.dev/guides/keywords/): YAKE and RAKE keyword extraction
 - [Advanced Features](https://docs.kreuzberg.dev/guides/advanced/): Advanced usage patterns
 - [Docker Deployment](https://docs.kreuzberg.dev/guides/docker/): Docker container deployment
 - [Kubernetes Deployment](https://docs.kreuzberg.dev/guides/kubernetes/): Kubernetes deployment guide
@@ -46,8 +49,12 @@ Kreuzberg provides async/sync APIs, text chunking, language detection, keyword e
 - [Java API](https://docs.kreuzberg.dev/reference/api-java/): Java binding reference
 - [Rust API](https://docs.kreuzberg.dev/reference/api-rust/): Rust core library reference
 - [Ruby API](https://docs.kreuzberg.dev/reference/api-ruby/): Ruby binding reference
+- [R API](https://docs.kreuzberg.dev/reference/api-r/): R binding reference
 - [Elixir API](https://docs.kreuzberg.dev/reference/api-elixir/): Elixir binding reference
+- [C API](https://docs.kreuzberg.dev/reference/api-c/): C FFI binding reference
 - [Configuration Reference](https://docs.kreuzberg.dev/reference/configuration/): Full configuration options
+- [Environment Variables](https://docs.kreuzberg.dev/reference/environment-variables/): KREUZBERG_* environment variable reference
+- [File Size Limits](https://docs.kreuzberg.dev/reference/file-size-limits/): Upload and processing size limits
 - [Format Support](https://docs.kreuzberg.dev/reference/formats/): Supported file formats (75+)
 - [Types](https://docs.kreuzberg.dev/reference/types/): Type definitions
 - [Errors](https://docs.kreuzberg.dev/reference/errors/): Error types and handling
