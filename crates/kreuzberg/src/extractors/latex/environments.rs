@@ -88,7 +88,11 @@ pub fn process_table(content: &str, output: &mut String, tables: &mut Vec<Table>
 
     for line in lines {
         let trimmed = line.trim();
-        if trimmed.starts_with("\\hline") || trimmed.is_empty() || trimmed.contains("\\begin{tabular}") {
+        if trimmed.starts_with("\\hline")
+            || trimmed.is_empty()
+            || trimmed.contains("\\begin{tabular}")
+            || trimmed.contains("\\end{tabular}")
+        {
             continue;
         }
 

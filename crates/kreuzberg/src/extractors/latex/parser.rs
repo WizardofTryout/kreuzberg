@@ -6,7 +6,7 @@
 use super::commands::process_line;
 use super::environments::{process_list, process_table, process_table_with_caption};
 use super::metadata::extract_metadata_from_line;
-use super::utilities::{collect_environment, extract_braced, extract_env_name};
+use super::utilities::{collect_environment, extract_braced, extract_env_name, extract_heading_title};
 use crate::types::{Metadata, Table};
 
 /// LaTeX parser state machine.
@@ -136,7 +136,7 @@ impl<'a> LatexParser<'a> {
         i: &mut usize,
         _skip_until_end: &mut Option<String>,
     ) -> bool {
-        if !trimmed.contains("\\begin{") {
+        if !trimmed.contains("\\begin{") && !trimmed.contains("\\begin {") {
             return false;
         }
 
@@ -186,7 +186,10 @@ impl<'a> LatexParser<'a> {
                         continue;
                     }
                     // Skip nested \begin/\end markers
-                    if trimmed_line.contains("\\begin{") || trimmed_line.contains("\\end{") {
+                    if trimmed_line.contains("\\begin{")
+                        || trimmed_line.contains("\\begin {")
+                        || trimmed_line.contains("\\end{")
+                    {
                         continue;
                     }
                     // Extract caption text from figure/table environments
@@ -211,52 +214,38 @@ impl<'a> LatexParser<'a> {
 
     /// Processes section headings, display math, and regular content.
     fn process_sections_and_content(&mut self, trimmed: &str, lines: &[&str], i: &mut usize) {
-        if trimmed.starts_with("\\chapter{") || trimmed.starts_with("\\chapter*{") {
-            let cmd = if trimmed.starts_with("\\chapter*{") {
-                "chapter*"
-            } else {
-                "chapter"
-            };
-            if let Some(title) = extract_braced(trimmed, cmd) {
-                self.output.push_str(&format!("\n# {}\n\n", title));
+        // Check for heading commands: \chapter, \section, \subsection, etc.
+        // Also handles starred variants (\section*) and optional args (\section[short]{title})
+        let heading_commands = [
+            ("chapter*", "\n# "),
+            ("chapter", "\n# "),
+            ("section*", "\n# "),
+            ("section", "\n# "),
+            ("subsection*", "## "),
+            ("subsection", "## "),
+            ("subsubsection*", "### "),
+            ("subsubsection", "### "),
+            ("paragraph*", "#### "),
+            ("paragraph", "#### "),
+        ];
+
+        for (cmd, prefix) in heading_commands {
+            let cmd_prefix = format!("\\{}", cmd);
+            if trimmed.starts_with(&cmd_prefix) {
+                let rest = &trimmed[cmd_prefix.len()..];
+                if rest.starts_with('{') || rest.starts_with('[') {
+                    if let Some(title) = extract_heading_title(trimmed, cmd) {
+                        let processed = process_line(&title);
+                        self.output.push_str(prefix);
+                        self.output.push_str(&processed);
+                        self.output.push_str("\n\n");
+                    }
+                    return;
+                }
             }
-        } else if trimmed.starts_with("\\section{") || trimmed.starts_with("\\section*{") {
-            let cmd = if trimmed.starts_with("\\section*{") {
-                "section*"
-            } else {
-                "section"
-            };
-            if let Some(title) = extract_braced(trimmed, cmd) {
-                self.output.push_str(&format!("\n# {}\n\n", title));
-            }
-        } else if trimmed.starts_with("\\subsection{") || trimmed.starts_with("\\subsection*{") {
-            let cmd = if trimmed.starts_with("\\subsection*{") {
-                "subsection*"
-            } else {
-                "subsection"
-            };
-            if let Some(title) = extract_braced(trimmed, cmd) {
-                self.output.push_str(&format!("## {}\n\n", title));
-            }
-        } else if trimmed.starts_with("\\subsubsection{") || trimmed.starts_with("\\subsubsection*{") {
-            let cmd = if trimmed.starts_with("\\subsubsection*{") {
-                "subsubsection*"
-            } else {
-                "subsubsection"
-            };
-            if let Some(title) = extract_braced(trimmed, cmd) {
-                self.output.push_str(&format!("### {}\n\n", title));
-            }
-        } else if trimmed.starts_with("\\paragraph{") || trimmed.starts_with("\\paragraph*{") {
-            let cmd = if trimmed.starts_with("\\paragraph*{") {
-                "paragraph*"
-            } else {
-                "paragraph"
-            };
-            if let Some(title) = extract_braced(trimmed, cmd) {
-                self.output.push_str(&format!("#### {}\n\n", title));
-            }
-        } else if trimmed.starts_with("\\[") {
+        }
+
+        if trimmed.starts_with("\\[") {
             // Display math mode
             self.process_display_math(trimmed, lines, i);
         } else if !trimmed.is_empty() && !trimmed.starts_with("%") {

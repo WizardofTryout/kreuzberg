@@ -79,7 +79,9 @@ fn process_command(cmd: &str, chars: &mut std::iter::Peekable<std::str::Chars>, 
             }
         }
         "usepackage" | "documentclass" | "pagestyle" | "setlength" | "newcommand" | "renewcommand" | "def" | "let"
-        | "input" | "include" | "bibliography" | "bibliographystyle" | "graphicspath" | "geometry" | "hypersetup" => {
+        | "input" | "include" | "bibliography" | "bibliographystyle" | "graphicspath" | "geometry" | "hypersetup"
+        | "rule" | "hspace" | "vspace" | "addtolength" | "setcounter" | "addtocounter" | "value"
+        | "VerbatimFootnotes" | "numberwithin" => {
             // Skip preamble/setup commands - consume all braced arguments
             while chars.peek() == Some(&'{') || chars.peek() == Some(&'[') {
                 if chars.peek() == Some(&'[') {

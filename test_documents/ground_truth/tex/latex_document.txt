@@ -1,47 +1,46 @@
-Introduction
+This is a LaTeX document for testing pandoc extraction.
+It includes mathematical equations and special formatting.
 
-LaTeX is widely used for academic and scientific documents. This document tests pandoc’s ability to extract content and metadata from LaTeX sources.
+# Introduction
 
-Mathematical Content
+LaTeX is widely used for academic and scientific documents.
+This document tests pandoc's ability to extract content and metadata from LaTeX sources.
+
+# Mathematical Content
 
 The quadratic formula is given by:
 $$\begin{equation}
 x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}
 \end{equation}$$
 
-Inline math also works: E = mc².
+Inline math also works: $E = mc^2$.
 
-Lists and Formatting
+# Lists and Formatting
 
-Enumerated List
+## Enumerated List
 
-1.  First item
+1. First item
+2. Second item with bold text
+3. Third item with italic text
 
-2.  Second item with bold text
-
-3.  Third item with italic text
-
-Itemized List
+## Itemized List
 
 - Bullet point one
-
 - Bullet point two
-
 - Nested items:
-
   - Sub-item A
-
   - Sub-item B
+  
 
-Tables
 
-  Left    Center    Right
-  ------ -------- -------
-  A1        B1         C1
-  A2        B2         C2
+# Tables
 
-  : Sample Table
+Sample Table
+| Left | Center | Right |
+| --- | --- | --- |
+| A1 | B1 | C1 |
+| A2 | B2 | C2 |
 
-Conclusion
+# Conclusion
 
 This document demonstrates LaTeX features for pandoc extraction testing.

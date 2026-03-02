@@ -78,14 +78,14 @@ pub fn read_braced_from_chars(chars: &mut std::iter::Peekable<std::str::Chars>) 
 /// Extracts environment name from a \begin{} statement.
 ///
 /// Example: `\begin{itemize}` returns "itemize"
+/// Also handles `\begin {itemize}` (with space).
 pub fn extract_env_name(line: &str) -> Option<String> {
-    if let Some(start) = line.find("\\begin{") {
-        let after = &line[start + 7..];
-        if let Some(end) = after.find('}') {
-            return Some(after[..end].to_string());
-        }
-    }
-    None
+    // Try without space first, then with space
+    let start = line.find("\\begin{").or_else(|| line.find("\\begin {"))?;
+    let brace_pos = line[start..].find('{')?;
+    let after = &line[start + brace_pos + 1..];
+    let end = after.find('}')?;
+    Some(after[..end].to_string())
 }
 
 /// Cleans LaTeX text by removing escape sequences.
@@ -107,20 +107,84 @@ pub fn clean_text(text: &str) -> String {
 /// Collects content of an environment from begin to end.
 ///
 /// Returns the content and the index of the line after \end{environment}.
+/// Handles nested environments of the same type and single-line environments.
 pub fn collect_environment(lines: &[&str], start_idx: usize, env_name: &str) -> (String, usize) {
+    let end_marker = format!("\\end{{{}}}", env_name);
+    let begin_marker = format!("\\begin{{{}}}", env_name);
+
+    // Handle single-line environment: \begin{X}...\end{X} on same line
+    let start_line = lines[start_idx];
+    if let Some(begin_pos) = start_line.find(&begin_marker) {
+        let after_begin = &start_line[begin_pos + begin_marker.len()..];
+        if let Some(end_pos) = after_begin.find(&end_marker) {
+            let inner = &after_begin[..end_pos];
+            return (inner.to_string(), start_idx + 1);
+        }
+    }
+
     let mut content = String::new();
     let mut i = start_idx + 1;
-    let end_marker = format!("\\end{{{}}}", env_name);
+    let mut depth = 1;
 
     while i < lines.len() {
         let line = lines[i];
-        if line.trim().contains(&end_marker) {
+        let trimmed = line.trim();
+
+        // Track nesting depth for same-named environments
+        depth += trimmed.matches(&begin_marker).count();
+        depth -= trimmed.matches(&end_marker).count();
+
+        if depth == 0 {
             return (content, i + 1);
         }
+
         content.push_str(line);
         content.push('\n');
         i += 1;
     }
 
     (content, i)
+}
+
+/// Extracts a section/heading title, handling optional `[short]` arguments.
+///
+/// Supports `\section{title}`, `\section[short]{title}`, `\section*{title}`, etc.
+pub fn extract_heading_title(line: &str, command: &str) -> Option<String> {
+    let prefix = format!("\\{}", command);
+    let start = line.find(&prefix)?;
+    let after = &line[start + prefix.len()..];
+
+    // Skip optional argument [...]
+    let rest = if after.starts_with('[') {
+        let bracket_end = after.find(']')?;
+        &after[bracket_end + 1..]
+    } else {
+        after
+    };
+
+    if !rest.starts_with('{') {
+        return None;
+    }
+
+    let content = &rest[1..];
+    let mut depth = 1;
+    let mut result = String::new();
+
+    for ch in content.chars() {
+        match ch {
+            '{' => {
+                depth += 1;
+                result.push(ch);
+            }
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(clean_text(&result));
+                }
+                result.push(ch);
+            }
+            _ => result.push(ch),
+        }
+    }
+    None
 }
