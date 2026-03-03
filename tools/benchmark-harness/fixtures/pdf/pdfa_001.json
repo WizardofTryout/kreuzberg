@@ -12,6 +12,6 @@
 	},
 	"ground_truth": {
 		"text_file": "../../../../test_documents/ground_truth/pdf/pdfa_001.txt",
-		"source": "pixparse"
+		"source": "pdf_text_layer"
 	}
 }

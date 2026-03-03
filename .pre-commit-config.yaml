@@ -81,36 +81,9 @@ repos:
             "-D",
             "warnings",
           ]
-        - id: cargo-doc
-          args: [
-            "--no-deps",
-            "--document-private-items",
-            "--workspace",
-            "--exclude=kreuzberg-php",
-            "--exclude=kreuzberg-py",
-            "--exclude=kreuzberg-node",
-            "--exclude=kreuzberg-wasm",
-            "--exclude=kreuzberg_rustler",
-            "--exclude=benchmark-harness",
-            "--exclude=kreuzberg-e2e-generator",
-            "--exclude=snippet-runner",
-            "--exclude=kreuzberg-e2e-rust",
-          ]
-        - id: cargo-fix
-          args: [
-            "--allow-dirty",
-            "--allow-staged",
-            "--workspace",
-            "--exclude=kreuzberg-php",
-            "--exclude=kreuzberg-py",
-            "--exclude=kreuzberg-node",
-            "--exclude=kreuzberg-wasm",
-            "--exclude=kreuzberg_rustler",
-            "--exclude=benchmark-harness",
-            "--exclude=kreuzberg-e2e-generator",
-            "--exclude=snippet-runner",
-            "--exclude=kreuzberg-e2e-rust",
-          ]
+        # NOTE: cargo-doc and cargo-fix removed from pre-commit — they each trigger
+        # a full workspace compilation and are redundant with clippy --fix.
+        # Doc warnings are caught in CI (ci-validate).
 
   - repo: https://github.com/bnjbvr/cargo-machete
     rev: v0.9.1

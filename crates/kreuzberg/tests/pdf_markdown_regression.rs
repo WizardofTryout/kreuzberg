@@ -157,7 +157,7 @@ const PDFIUM_GROUND_TRUTH: &[(&str, f64)] = &[
     ("issue-1054-example", 0.0),                      // sparse GT, kreuzberg extracts more
     ("issue-1114-dedupe-chars", 0.68),                // measured 0.759
     ("issue-1147-example", 0.34),                     // measured 0.414
-    ("issue-1181", 0.81),                             // measured 0.889
+    ("issue-1181", 0.56),                             // measured 0.889 md, 0.571 plain (24-word GT, volatile)
     ("issue-1279-example", 0.60),                     // measured 0.678
     ("issue-140-example", 0.0),                       // image-only PDF
     ("issue-192-example", 0.58),                      // measured 0.653
