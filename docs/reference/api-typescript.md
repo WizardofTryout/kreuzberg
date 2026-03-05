@@ -319,27 +319,47 @@ Main configuration interface for extraction operations.
 
 ```typescript title="TypeScript"
 interface ExtractionConfig {
+  useCache?: boolean;
+  enableQualityProcessing?: boolean;
   ocr?: OcrConfig | null;
   forceOcr?: boolean;
   pdfOptions?: PdfConfig | null;
   chunking?: ChunkingConfig | null;
+  imageExtraction?: ImageExtractionConfig | null;
   languageDetection?: LanguageDetectionConfig | null;
   tokenReduction?: TokenReductionConfig | null;
-  imageExtraction?: ImageExtractionConfig | null;
   postProcessor?: PostProcessorConfig | null;
+  htmlOptions?: HtmlConversionOptions | null;
+  keywords?: KeywordConfig | null;
+  pages?: PageConfig | null;
+  securityLimits?: Record<string, number> | null;
+  maxConcurrentExtractions?: number;
+  outputFormat?: "plain" | "markdown" | "djot" | "html";
+  resultFormat?: "unified" | "element_based";
+  includeDocumentStructure?: boolean;
 }
 ```
 
 **Fields:**
 
+- `useCache` (boolean): Enable caching for identical inputs. Default: true
+- `enableQualityProcessing` (boolean): Enable built-in filters to improve extraction reliability. Default: false
 - `ocr` (OcrConfig | null): OCR configuration. Default: null (no OCR)
 - `forceOcr` (boolean): Force OCR even for text-based PDFs. Default: false
 - `pdfOptions` (PdfConfig | null): PDF-specific configuration. Default: null
 - `chunking` (ChunkingConfig | null): Text chunking configuration. Default: null
+- `imageExtraction` (ImageExtractionConfig | null): Image extraction from documents. Default: null
 - `languageDetection` (LanguageDetectionConfig | null): Language detection configuration. Default: null
 - `tokenReduction` (TokenReductionConfig | null): Token reduction configuration. Default: null
-- `imageExtraction` (ImageExtractionConfig | null): Image extraction from documents. Default: null
 - `postProcessor` (PostProcessorConfig | null): Post-processing configuration. Default: null
+- `htmlOptions` (HtmlConversionOptions | null): HTML to Markdown conversion options. Default: null
+- `keywords` (KeywordConfig | null): Keyword extraction configuration. Default: null
+- `pages` (PageConfig | null): Page tracking and continuous extraction options. Default: null
+- `securityLimits` (Record<string, number> | null): Safety limits (archive recursion, xml depth, etc.)
+- `maxConcurrentExtractions` (number): Maximum parallel tasks for batching. Default: 4
+- `outputFormat` ("plain" | "markdown" | "djot" | "html"): Generated text format. Default: "plain"
+- `resultFormat` ("unified" | "element_based"): Shape of extraction results. Default: "unified"
+- `includeDocumentStructure` (boolean): Construct hierarchical document tree. Default: false
 
 **Example:**
 
@@ -664,6 +684,17 @@ interface ExtractionResult {
   metadata: Metadata;
   tables: Table[];
   detectedLanguages: string[] | null;
+  chunks?: Chunk[];
+  images?: ExtractedImage[];
+  pages?: PageContent[];
+  elements?: Element[];
+  ocrElements?: OcrElement[];
+  document?: DocumentStructure | null;
+  djotContent?: DjotContent | null;
+  extractedKeywords?: ExtractedKeyword[];
+  qualityScore?: number;
+  processingWarnings: ProcessingWarning[];
+  annotations?: PdfAnnotation[];
 }
 ```
 
@@ -671,10 +702,20 @@ interface ExtractionResult {
 
 - `content` (string): Extracted text content
 - `mimeType` (string): MIME type of the processed document
-- `metadata` (Metadata): Document metadata (format-specific fields)
+- `metadata` (Metadata): Document metadata (format-specific fields, uses `snake_case` keys)
 - `tables` (Table[]): Array of extracted tables
 - `detectedLanguages` (string[] | null): Array of detected language codes (ISO 639-1) if language detection is enabled
+- `chunks` (Chunk[] | undefined): Text chunks if chunking is enabled
+- `images` (ExtractedImage[] | undefined): Extracted images if enabled
 - `pages` (PageContent[] | undefined): Per-page extracted content when page extraction is enabled via `PageConfig.extractPages = true`
+- `elements` (Element[] | undefined): Semantic elements (headings, paragraphs, etc.)
+- `ocrElements` (OcrElement[] | undefined): Granular OCR text blocks with bounding boxes
+- `document` (DocumentStructure | null): Hierarchical document structure
+- `djotContent` (DjotContent | null): Rich structural markup
+- `extractedKeywords` (ExtractedKeyword[] | undefined): Extracted keywords (RAKE/YAKE)
+- `qualityScore` (number | undefined): Document quality estimation score
+- `processingWarnings` (ProcessingWarning[]): Non-fatal warnings encountered during extraction
+- `annotations` (PdfAnnotation[] | undefined): Extracted PDF annotations and highlights
 
 **Example:**
 
@@ -683,7 +724,7 @@ const result = extractFileSync('document.pdf');
 
 console.log(`Content: ${result.content}`);
 console.log(`MIME type: ${result.mimeType}`);
-console.log(`Page count: ${result.metadata.pageCount}`);
+console.log(`Page count: ${result.metadata.page_count}`);
 console.log(`Tables: ${result.tables.length}`);
 
 if (result.detectedLanguages) {
@@ -771,33 +812,38 @@ Document metadata with format-specific fields.
 
 ```typescript title="TypeScript"
 interface Metadata {
-  // Common fields
+  // Common fields (snake_case from Rust JSON serialization)
   language?: string;
   date?: string;
   subject?: string;
-  formatType?: string;
+  format_type?: string;
+  category?: string;
+  tags?: string[];
+  document_version?: string;
+  abstract_text?: string;
+  output_format?: string;
 
   // PDF-specific fields
   title?: string;
   author?: string;
-  pageCount?: number;
-  creationDate?: string;
-  modificationDate?: string;
+  page_count?: number;
+  creation_date?: string;
+  modification_date?: string;
   creator?: string;
   producer?: string;
   keywords?: string;
 
   // Excel-specific fields
-  sheetCount?: number;
-  sheetNames?: string[];
+  sheet_count?: number;
+  sheet_names?: string[];
 
   // Email-specific fields
-  fromEmail?: string;
-  fromName?: string;
-  toEmails?: string[];
-  ccEmails?: string[];
-  bccEmails?: string[];
-  messageId?: string;
+  from_email?: string;
+  from_name?: string;
+  to_emails?: string[];
+  cc_emails?: string[];
+  bcc_emails?: string[];
+  message_id?: string;
   attachments?: string[];
 
   // Additional fields...
@@ -810,15 +856,20 @@ interface Metadata {
 - `language` (string): Document language (ISO 639-1 code)
 - `date` (string): Document date (ISO 8601 format)
 - `subject` (string): Document subject
-- `formatType` (string): Format discriminator ("pdf", "excel", "email", etc.)
+- `format_type` (string): Format discriminator ("pdf", "excel", "email", etc.)
+- `category` (string): Document category classification
+- `tags` (string[]): Associated concept tags
+- `document_version` (string): Document version string
+- `abstract_text` (string): Document abstract or summary
+- `output_format` (string): The generated output format identifier
 
-**PDF-Specific Fields** (when `formatType === "pdf"`):
+**PDF-Specific Fields** (when `format_type === "pdf"`):
 
 - `title` (string): PDF title
 - `author` (string): PDF author
-- `pageCount` (number): Number of pages
-- `creationDate` (string): Creation date (ISO 8601)
-- `modificationDate` (string): Modification date (ISO 8601)
+- `page_count` (number): Number of pages
+- `creation_date` (string): Creation date (ISO 8601)
+- `modification_date` (string): Modification date (ISO 8601)
 - `creator` (string): Creator application
 - `producer` (string): Producer application
 - `keywords` (string): PDF keywords
@@ -829,10 +880,10 @@ interface Metadata {
 const result = extractFileSync('document.pdf');
 const metadata = result.metadata;
 
-if (metadata.formatType === 'pdf') {
+if (metadata.format_type === 'pdf') {
   console.log(`Title: ${metadata.title}`);
   console.log(`Author: ${metadata.author}`);
-  console.log(`Pages: ${metadata.pageCount}`);
+  console.log(`Pages: ${metadata.page_count}`);
 }
 ```
 
