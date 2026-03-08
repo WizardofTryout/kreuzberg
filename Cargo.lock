@@ -430,7 +430,7 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
 name = "benchmark-harness"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "ahash",
  "async-trait",
@@ -1595,7 +1595,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "e2e-rust"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "async-trait",
  "hex",
@@ -3079,7 +3079,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "ahash",
  "anyhow",
@@ -3169,7 +3169,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-cli"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3185,7 +3185,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-e2e-generator"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3200,7 +3200,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-ffi"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "ahash",
  "async-trait",
@@ -3219,7 +3219,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-node"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "ahash",
  "async-trait",
@@ -3243,7 +3243,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-paddle-ocr"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "geo-clipper",
  "geo-types",
@@ -3257,7 +3257,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-pdfium-render"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "bindgen",
  "bitflags 2.11.0",
@@ -3281,7 +3281,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-php"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "ahash",
  "ctor",
@@ -3297,7 +3297,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-py"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "ahash",
  "async-trait",
@@ -3314,7 +3314,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-tesseract"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "cc",
  "cmake",
@@ -3326,7 +3326,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-wasm"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3352,7 +3352,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg_rustler"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "kreuzberg",
  "rustler",
@@ -5853,7 +5853,7 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
 name = "snippet-runner"
-version = "4.4.3"
+version = "4.4.4"
 dependencies = [
  "clap",
  "rayon",

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.4]
+
+### Fixed
+
+- **CLI test app fixes**: Fixed broken symlinks in CLI test documents, corrected `--format` to `--output-format` flag usage, fixed multipart form field name (`file=` → `files=`) in serve tests, and rewrote MCP test to use JSON-RPC stdin protocol instead of background process detection.
+- **Publish idempotency check scripts**: Fixed `check_nuget.sh` and `check-nuget-version.sh` using bash 4+ `${var,,}` syntax incompatible with bash 3.x. Fixed `check_pypi.sh` and `check_packagist.sh` writing to `$GITHUB_OUTPUT` internally instead of stdout (conflicting with workflow-level redirect). Fixed `check-rubygems-version.sh` false negatives for native gems by switching from `gem search` to RubyGems JSON API. Fixed `check-rubygems-version-python.sh` Python operator precedence bug. Fixed `check-maven-version.sh` using unreliable Solr search API instead of direct repo HEAD request. Fixed stderr redirect missing on diagnostic messages in multiple scripts.
+- **Node test app version**: Updated Node.js test app to reference v4.4.4 package version.
+
+### Changed
+
+- **CLI install with all features**: CLI test install script now uses `--all-features` flag to enable API server and MCP server subcommands.
+- **Publish workflow republish support**: Added `republish` input to publish workflow that deletes and re-creates the tag on current HEAD before publishing, enabling clean retag + full republish.
+
 ## [4.4.3]
 
 ### Added
