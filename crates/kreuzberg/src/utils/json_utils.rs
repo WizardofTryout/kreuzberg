@@ -37,6 +37,39 @@ fn to_camel_case(s: &str) -> String {
     camel
 }
 
+/// Recursively convert camelCase keys in a JSON Value to snake_case.
+///
+/// This is the inverse of `snake_to_camel`. Used by WASM bindings to accept
+/// camelCase config from JavaScript while the Rust core expects snake_case.
+pub fn camel_to_snake(val: Value) -> Value {
+    match val {
+        Value::Object(map) => {
+            let mut new_map = serde_json::Map::with_capacity(map.len());
+            for (key, value) in map {
+                let new_key = to_snake_case(&key);
+                new_map.insert(new_key, camel_to_snake(value));
+            }
+            Value::Object(new_map)
+        }
+        Value::Array(arr) => Value::Array(arr.into_iter().map(camel_to_snake).collect()),
+        _ => val,
+    }
+}
+
+/// camelCase to snake_case converter for keys.
+fn to_snake_case(s: &str) -> String {
+    let mut snake = String::with_capacity(s.len() + 4);
+    for (i, c) in s.chars().enumerate() {
+        if c.is_ascii_uppercase() && i > 0 {
+            snake.push('_');
+            snake.push(c.to_ascii_lowercase());
+        } else {
+            snake.push(c);
+        }
+    }
+    snake
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,5 +102,34 @@ mod tests {
         });
 
         assert_eq!(snake_to_camel(input), expected);
+    }
+
+    #[test]
+    fn test_camel_to_snake_basic() {
+        let input = json!({
+            "firstName": "John",
+            "lastName": "Doe",
+            "nestedObject": {
+                "streetAddress": "123 Main St"
+            },
+            "arrayOfObjects": [
+                { "itemId": 1 },
+                { "itemName": "item 2" }
+            ]
+        });
+
+        let expected = json!({
+            "first_name": "John",
+            "last_name": "Doe",
+            "nested_object": {
+                "street_address": "123 Main St"
+            },
+            "array_of_objects": [
+                { "item_id": 1 },
+                { "item_name": "item 2" }
+            ]
+        });
+
+        assert_eq!(camel_to_snake(input), expected);
     }
 }

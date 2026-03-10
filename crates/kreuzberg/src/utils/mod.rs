@@ -29,4 +29,4 @@ pub use pool::{
 
 pub use pool_sizing::{PoolSizeHint, estimate_pool_size};
 
-pub use json_utils::snake_to_camel;
+pub use json_utils::{camel_to_snake, snake_to_camel};

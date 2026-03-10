@@ -3,7 +3,10 @@
 //! This module provides type conversions between Rust and JavaScript/TypeScript types
 //! for seamless interoperability. Includes helpers for configuration and result handling.
 
-use kreuzberg::{ExtractionConfig, ExtractionResult, utils::snake_to_camel};
+use kreuzberg::{
+    ExtractionConfig, ExtractionResult,
+    utils::{camel_to_snake, snake_to_camel},
+};
 use wasm_bindgen::prelude::*;
 
 /// Parse extraction configuration from JsValue using serde-wasm-bindgen.
@@ -20,8 +23,15 @@ use wasm_bindgen::prelude::*;
 /// Result containing the parsed ExtractionConfig or a JsValue error
 pub fn parse_config(config: Option<JsValue>) -> Result<ExtractionConfig, JsValue> {
     match config {
-        Some(js_config) => serde_wasm_bindgen::from_value(js_config)
-            .map_err(|e| JsValue::from_str(&format!("Failed to parse config: {}", e))),
+        Some(js_config) => {
+            // JS consumers send camelCase keys (e.g. includeDocumentStructure).
+            // serde expects snake_case field names, so convert first:
+            // JsValue → serde_json::Value → camel_to_snake → deserialize.
+            let json_value: serde_json::Value = serde_wasm_bindgen::from_value(js_config)
+                .map_err(|e| JsValue::from_str(&format!("Failed to parse config: {e}")))?;
+            let snake_value = camel_to_snake(json_value);
+            serde_json::from_value(snake_value).map_err(|e| JsValue::from_str(&format!("Failed to parse config: {e}")))
+        }
         None => Ok(ExtractionConfig::default()),
     }
 }
