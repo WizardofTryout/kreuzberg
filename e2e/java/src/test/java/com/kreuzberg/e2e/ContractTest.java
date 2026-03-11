@@ -372,6 +372,24 @@ public class ContractTest {
   }
 
   @Test
+  public void configChunkingNoHeadings() throws Exception {
+    JsonNode config =
+        MAPPER.readTree(
+            "{\"chunking\":{\"chunker_type\":\"markdown\",\"max_chars\":300,\"max_overlap\":50}}");
+    E2EHelpers.runFixture(
+        "config_chunking_no_headings",
+        "text/book_war_and_peace_1p.txt",
+        config,
+        Arrays.asList("chunking"),
+        null,
+        true,
+        result -> {
+          E2EHelpers.Assertions.assertMinContentLength(result, 10);
+          E2EHelpers.Assertions.assertChunks(result, 2, null, true, null, false);
+        });
+  }
+
+  @Test
   public void configChunkingSmall() throws Exception {
     JsonNode config = MAPPER.readTree("{\"chunking\":{\"max_chars\":100,\"max_overlap\":20}}");
     E2EHelpers.runFixture(

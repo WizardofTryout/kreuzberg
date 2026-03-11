@@ -236,9 +236,11 @@ module E2ERuby
       expect(chunks.length).to be <= max_count if max_count
       chunks.each { |chunk| expect(chunk.content).not_to be_nil } if each_has_content
       chunks.each { |chunk| expect(chunk.embedding).not_to be_nil } if each_has_embedding
-      return unless each_has_heading_context
-
-      chunks.each { |chunk| expect(chunk.metadata&.heading_context).not_to be_nil }
+      if each_has_heading_context == true
+        chunks.each { |chunk| expect(chunk.metadata&.heading_context).not_to be_nil }
+      elsif each_has_heading_context == false
+        chunks.each { |chunk| expect(chunk.metadata&.heading_context).to be_nil }
+      end
     end
 
     def self.assert_images(result, min_count: nil, max_count: nil, formats_include: nil)

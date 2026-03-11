@@ -1353,6 +1353,9 @@ Configuration for text chunking.
 - `maxOverlap` (number): Overlap between chunks in characters (default: 200)
 - `embedding` (EmbeddingConfig | undefined): Optional embedding configuration
 - `preset` (string | undefined): Chunking preset name
+- `sizingType` ("characters" | "tokenizer" | undefined): How chunk size is measured. Use `"tokenizer"` to measure by token count using a HuggingFace tokenizer. Default: undefined (characters)
+- `sizingModel` (string | undefined): HuggingFace model ID for tokenizer-based sizing (e.g. `"bert-base-uncased"`). Required when `sizingType` is `"tokenizer"`. Default: undefined
+- `sizingCacheDir` (string | undefined): Optional directory to cache downloaded tokenizer files. Default: undefined
 
 ---
 

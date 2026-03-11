@@ -416,9 +416,18 @@ export const assertions = {
 				assertExists((chunk as PlainRecord).embedding, "Chunk missing embedding");
 			}
 		}
-		if (eachHasHeadingContext) {
+		if (eachHasHeadingContext === true) {
 			for (const chunk of chunks) {
 				assertExists(((chunk as PlainRecord).metadata as PlainRecord)?.headingContext, "Chunk missing heading_context");
+			}
+		}
+		if (eachHasHeadingContext === false) {
+			for (const chunk of chunks) {
+				assertEquals(
+					((chunk as PlainRecord).metadata as PlainRecord)?.headingContext ?? null,
+					null,
+					"Chunk should have no heading_context",
+				);
 			}
 		}
 	},
@@ -554,7 +563,7 @@ export const assertions = {
 			}
 			if (nodeTypesInclude && nodeTypesInclude.length > 0) {
 				const foundTypes = new Set(
-					nodes.map((n) => ((n as PlainRecord).content as PlainRecord)?.node_type ?? (n as PlainRecord).node_type),
+					nodes.map((n) => ((n as PlainRecord).content as PlainRecord)?.nodeType ?? (n as PlainRecord).nodeType),
 				);
 				for (const expected of nodeTypesInclude) {
 					assertEquals(
@@ -567,8 +576,8 @@ export const assertions = {
 			if (typeof hasGroups === "boolean") {
 				const hasGroupNodes = nodes.some(
 					(n) =>
-						((n as PlainRecord).content as PlainRecord)?.node_type === "group" ||
-						(n as PlainRecord).node_type === "group",
+						((n as PlainRecord).content as PlainRecord)?.nodeType === "group" ||
+						(n as PlainRecord).nodeType === "group",
 				);
 				assertEquals(hasGroupNodes, hasGroups, `Expected hasGroups=${hasGroups} but got ${hasGroupNodes}`);
 			}

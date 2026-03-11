@@ -484,6 +484,9 @@ ChunkingConfig chunking = ChunkingConfig.builder()
     .preset("large")             // Preset: "small", "medium", "large"
     .enabled(true)               // Enable chunking (default: true)
     .embedding(embeddingMap)     // Embedding configuration
+    .sizingTokenizer("bert-base-uncased") // Measure size by token count using a HuggingFace tokenizer
+    // .sizingCharacters()       // Measure size by character count (default)
+    // .sizingCacheDir("/tmp/tokenizers") // Optional: cache directory for tokenizer files
     .build();
 ```
 

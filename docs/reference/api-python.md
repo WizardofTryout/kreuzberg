@@ -531,6 +531,9 @@ Text chunking configuration for splitting long documents.
 - `max_overlap` (int): Overlap between chunks in characters. Default: 200
 - `embedding` (EmbeddingConfig | None): Embedding configuration for generating embeddings. Default: None
 - `preset` (str | None): Chunking preset to use (e.g. from `list_embedding_presets()`). Default: None
+- `sizing_type` (str | None): How chunk size is measured. Options: `"characters"` (default) or `"tokenizer"` (use a HuggingFace tokenizer). Default: None (characters)
+- `sizing_model` (str | None): HuggingFace model ID for tokenizer-based sizing (e.g. `"bert-base-uncased"`). Required when `sizing_type="tokenizer"`. Default: None
+- `sizing_cache_dir` (str | None): Optional directory to cache downloaded tokenizer files. Default: None
 
 **Example:**
 

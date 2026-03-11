@@ -228,6 +228,9 @@ assert_chunks <- function(result, min_count = NULL, max_count = NULL,
   if (isTRUE(each_has_heading_context)) {
     for (chunk in chunks) testthat::expect_false(is.null(chunk$metadata$heading_context))
   }
+  if (isFALSE(each_has_heading_context)) {
+    for (chunk in chunks) testthat::expect_true(is.null(chunk$metadata$heading_context))
+  }
 }
 
 assert_images <- function(result, min_count = NULL, max_count = NULL, formats_include = NULL) {

@@ -271,6 +271,13 @@ func assertChunks(t *testing.T, result *kreuzberg.ExtractionResult, minCount, ma
 			}
 		}
 	}
+	if eachHasHeadingContext != nil && !*eachHasHeadingContext {
+		for i, chunk := range result.Chunks {
+			if chunk.Metadata.HeadingContext != nil {
+				t.Fatalf("chunk %d should have no heading_context", i)
+			}
+		}
+	}
 }
 
 func assertImages(t *testing.T, result *kreuzberg.ExtractionResult, minCount, maxCount *int, formatsInclude []string) {

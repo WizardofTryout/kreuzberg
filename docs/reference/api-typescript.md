@@ -575,6 +575,9 @@ interface ChunkingConfig {
   maxOverlap?: number;
   embedding?: EmbeddingConfig | null;
   preset?: string | null;
+  sizingType?: "characters" | "tokenizer" | null;
+  sizingModel?: string | null;
+  sizingCacheDir?: string | null;
 }
 ```
 
@@ -584,6 +587,9 @@ interface ChunkingConfig {
 - `maxOverlap` (number): Overlap between chunks in characters. Default: 200
 - `embedding` (EmbeddingConfig | null): Embedding configuration for generating embeddings. Default: null
 - `preset` (string | null): Chunking preset to use. Default: null
+- `sizingType` ("characters" | "tokenizer" | null): How chunk size is measured. Use `"tokenizer"` to measure by token count using a HuggingFace tokenizer. Default: null (characters)
+- `sizingModel` (string | null): HuggingFace model ID for tokenizer-based sizing (e.g. `"bert-base-uncased"`). Required when `sizingType` is `"tokenizer"`. Default: null
+- `sizingCacheDir` (string | null): Optional directory to cache downloaded tokenizer files. Default: null
 
 ---
 

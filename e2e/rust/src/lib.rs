@@ -268,6 +268,15 @@ pub mod assertions {
                 );
             }
         }
+
+        if each_has_heading_context == Some(false) {
+            for (i, chunk) in chunks.iter().enumerate() {
+                assert!(
+                    chunk.metadata.heading_context.is_none(),
+                    "Expected chunk {i} to have no heading_context"
+                );
+            }
+        }
     }
 
     /// Assert image count and formats.

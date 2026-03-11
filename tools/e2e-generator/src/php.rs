@@ -264,6 +264,14 @@ class Helpers
                 );
             }
         }
+        if ($eachHasHeadingContext === false) {
+            foreach ($chunks as $i => $chunk) {
+                Assert::assertNull(
+                    $chunk->metadata->heading_context ?? null,
+                    sprintf("Chunk %d should have no heading_context", $i)
+                );
+            }
+        }
     }
 
     public static function assertImages(

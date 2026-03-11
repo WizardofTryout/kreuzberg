@@ -334,6 +334,52 @@ fn test_config_chunking_markdown() {
 }
 
 #[test]
+fn test_config_chunking_no_headings() {
+    // Tests markdown chunker on text with no headings produces null heading_context
+
+    let document_path = resolve_document("text/book_war_and_peace_1p.txt");
+    if !document_path.exists() {
+        println!(
+            "Skipping config_chunking_no_headings: missing document at {}",
+            document_path.display()
+        );
+        return;
+    }
+    let config: ExtractionConfig = serde_json::from_str(
+        r#"{
+  "chunking": {
+    "chunker_type": "markdown",
+    "max_chars": 300,
+    "max_overlap": 50
+  }
+}"#,
+    )
+    .expect("Fixture config should deserialize");
+
+    let result = match kreuzberg::extract_file_sync(&document_path, None, &config) {
+        Err(KreuzbergError::MissingDependency(dep)) => {
+            println!(
+                "Skipping config_chunking_no_headings: missing dependency {dep}",
+                dep = dep
+            );
+            return;
+        }
+        Err(KreuzbergError::UnsupportedFormat(fmt)) => {
+            println!(
+                "Skipping config_chunking_no_headings: unsupported format {fmt} (requires optional tool)",
+                fmt = fmt
+            );
+            return;
+        }
+        Err(err) => panic!("Extraction failed for config_chunking_no_headings: {err:?}"),
+        Ok(result) => result,
+    };
+
+    assertions::assert_min_content_length(&result, 10);
+    assertions::assert_chunks(&result, Some(2), None, Some(true), None, Some(false));
+}
+
+#[test]
 fn test_config_chunking_small() {
     // Tests chunking with very small chunk size produces more chunks
 

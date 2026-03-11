@@ -218,6 +218,21 @@ RSpec.describe 'contract fixtures' do
     end
   end
 
+  it 'config_chunking_no_headings' do
+    E2ERuby.skip_if_feature_unavailable('chunking')
+    E2ERuby.run_fixture(
+      'config_chunking_no_headings',
+      'text/book_war_and_peace_1p.txt',
+      { chunking: { chunker_type: 'markdown', max_chars: 300, max_overlap: 50 } },
+      requirements: %w[chunking],
+      notes: nil,
+      skip_if_missing: true
+    ) do |result|
+      E2ERuby::Assertions.assert_min_content_length(result, 10)
+      E2ERuby::Assertions.assert_chunks(result, min_count: 2, each_has_content: true, each_has_heading_context: false)
+    end
+  end
+
   it 'config_chunking_small' do
     E2ERuby.skip_if_feature_unavailable('chunking')
     E2ERuby.run_fixture(

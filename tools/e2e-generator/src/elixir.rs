@@ -374,9 +374,15 @@ defmodule E2E.Helpers do
       end
     end
 
-    if opts[:each_has_heading_context] do
+    if opts[:each_has_heading_context] == true do
       if !Enum.all?(chunks, fn chunk -> chunk.metadata && chunk.metadata.heading_context end) do
         flunk("Not all chunks have heading_context")
+      end
+    end
+
+    if opts[:each_has_heading_context] == false do
+      if !Enum.all?(chunks, fn chunk -> is_nil(chunk.metadata) || is_nil(chunk.metadata.heading_context) end) do
+        flunk("Not all chunks have no heading_context")
       end
     end
 

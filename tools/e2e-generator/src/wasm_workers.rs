@@ -388,6 +388,11 @@ export const assertions = {
                 expect(chunk.metadata?.headingContext !== undefined && chunk.metadata?.headingContext !== null).toBe(true);
             }
         }
+        if (eachHasHeadingContext === false) {
+            for (const chunk of chunks) {
+                expect(chunk.metadata?.headingContext ?? null).toBeNull();
+            }
+        }
     },
 
     assertImages(

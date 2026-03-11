@@ -293,6 +293,30 @@ describe("contract", () => {
 		assertions.assertChunks(result, 1, null, true, null, null);
 	});
 
+	it("config_chunking_no_headings", async () => {
+		const documentBytes = getFixture("text/book_war_and_peace_1p.txt");
+		if (documentBytes === null) {
+			console.warn("[SKIP] Test skipped: fixture not available in Cloudflare Workers environment");
+			return;
+		}
+
+		const config = buildConfig({ chunking: { chunker_type: "markdown", max_chars: 300, max_overlap: 50 } });
+		let result: ExtractionResult | null = null;
+		try {
+			result = await extractBytes(documentBytes, "application/octet-stream", config);
+		} catch (error) {
+			if (shouldSkipFixture(error, "config_chunking_no_headings", ["chunking"], undefined)) {
+				return;
+			}
+			throw error;
+		}
+		if (result === null) {
+			return;
+		}
+		assertions.assertMinContentLength(result, 10);
+		assertions.assertChunks(result, 2, null, true, null, false);
+	});
+
 	it("config_chunking_small", async () => {
 		const documentBytes = getFixture("pdf/fake_memo.pdf");
 		if (documentBytes === null) {

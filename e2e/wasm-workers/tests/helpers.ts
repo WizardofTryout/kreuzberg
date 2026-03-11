@@ -368,6 +368,11 @@ export const assertions = {
 				expect(chunk.metadata?.headingContext !== undefined && chunk.metadata?.headingContext !== null).toBe(true);
 			}
 		}
+		if (eachHasHeadingContext === false) {
+			for (const chunk of chunks) {
+				expect(chunk.metadata?.headingContext ?? null).toBeNull();
+			}
+		}
 	},
 
 	assertImages(
@@ -472,7 +477,7 @@ export const assertions = {
 			}
 			if (nodeTypesInclude && nodeTypesInclude.length > 0) {
 				const foundTypes = new Set(
-					nodes.map((n) => ((n as PlainRecord).content as PlainRecord)?.node_type ?? (n as PlainRecord).node_type),
+					nodes.map((n) => ((n as PlainRecord).content as PlainRecord)?.nodeType ?? (n as PlainRecord).nodeType),
 				);
 				for (const expected of nodeTypesInclude) {
 					const found = [...foundTypes].some(
@@ -484,8 +489,8 @@ export const assertions = {
 			if (typeof hasGroups === "boolean") {
 				const hasGroupNodes = nodes.some(
 					(n) =>
-						((n as PlainRecord).content as PlainRecord)?.node_type === "group" ||
-						(n as PlainRecord).node_type === "group",
+						((n as PlainRecord).content as PlainRecord)?.nodeType === "group" ||
+						(n as PlainRecord).nodeType === "group",
 				);
 				expect(hasGroupNodes).toBe(hasGroups);
 			}

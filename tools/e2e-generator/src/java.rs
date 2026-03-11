@@ -404,6 +404,12 @@ public final class E2EHelpers {
                             "Expected each chunk to have heading_context");
                 }
             }
+            if (chunks != null && eachHasHeadingContext != null && !eachHasHeadingContext) {
+                for (var chunk : chunks) {
+                    assertNull(chunk.getMetadata().getHeadingContext(),
+                            "Expected each chunk to have no heading_context");
+                }
+            }
         }
 
         public static void assertImages(

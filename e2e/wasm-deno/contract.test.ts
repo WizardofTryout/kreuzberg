@@ -252,6 +252,26 @@ Deno.test("config_chunking_markdown", { permissions: { read: true, net: true } }
 	assertions.assertChunks(result, 1, null, true, null, null);
 });
 
+Deno.test("config_chunking_no_headings", { permissions: { read: true, net: true } }, async () => {
+	const config = buildConfig({ chunking: { chunker_type: "markdown", max_chars: 300, max_overlap: 50 } });
+	let result: ExtractionResult | null = null;
+	try {
+		const documentBytes = await resolveDocument("text/book_war_and_peace_1p.txt");
+		// Sync file extraction - WASM uses extractBytes with pre-read bytes
+		result = await extractBytes(documentBytes, "application/octet-stream", config);
+	} catch (error) {
+		if (shouldSkipFixture(error, "config_chunking_no_headings", ["chunking"], undefined)) {
+			return;
+		}
+		throw error;
+	}
+	if (result === null) {
+		return;
+	}
+	assertions.assertMinContentLength(result, 10);
+	assertions.assertChunks(result, 2, null, true, null, false);
+});
+
 Deno.test("config_chunking_small", { permissions: { read: true, net: true } }, async () => {
 	const config = buildConfig({ chunking: { max_chars: 100, max_overlap: 20 } });
 	let result: ExtractionResult | null = null;

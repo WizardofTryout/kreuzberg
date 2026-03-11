@@ -273,6 +273,9 @@ result = Kreuzberg.extract_file_sync("document.pdf", config: config)
   - `chunk_size` (Integer): Maximum chunk size in tokens. Default: 512
   - `chunk_overlap` (Integer): Overlap between chunks. Default: 50
   - `chunking_strategy` (String): Strategy ("fixed", "semantic"). Default: "fixed"
+  - `sizing_type` (String, nil): How chunk size is measured. Options: `"characters"` (default) or `"tokenizer"`. Default: nil (characters)
+  - `sizing_model` (String, nil): HuggingFace model ID for tokenizer-based sizing (e.g. `"bert-base-uncased"`). Required when `sizing_type` is `"tokenizer"`. Default: nil
+  - `sizing_cache_dir` (String, nil): Optional directory to cache downloaded tokenizer files. Default: nil
 
 - `language_detection` (Hash): Language detection options
   - `enabled` (Boolean): Enable language detection. Default: true

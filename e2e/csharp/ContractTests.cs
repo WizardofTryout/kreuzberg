@@ -179,6 +179,20 @@ namespace Kreuzberg.E2E.Contract
         }
 
         [SkippableFact]
+        public void ConfigChunkingNoHeadings()
+        {
+            TestHelpers.SkipIfFeatureUnavailable("chunking");
+            TestHelpers.SkipIfLegacyOfficeDisabled("text/book_war_and_peace_1p.txt");
+            TestHelpers.SkipIfOfficeTestOnWindows("text/book_war_and_peace_1p.txt");
+            var documentPath = TestHelpers.EnsureDocument("text/book_war_and_peace_1p.txt", true);
+            var config = TestHelpers.BuildConfig("{\"chunking\":{\"chunker_type\":\"markdown\",\"max_chars\":300,\"max_overlap\":50}}");
+
+            var result = KreuzbergClient.ExtractFileSync(documentPath, config);
+            TestHelpers.AssertMinContentLength(result, 10);
+            TestHelpers.AssertChunks(result, 2, null, true, null, false);
+        }
+
+        [SkippableFact]
         public void ConfigChunkingSmall()
         {
             TestHelpers.SkipIfFeatureUnavailable("chunking");

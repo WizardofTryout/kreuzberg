@@ -272,6 +272,12 @@ export interface ChunkingConfig {
 	maxChars?: number;
 	/** Overlap between chunks */
 	maxOverlap?: number;
+	/** Sizing type: "characters" (default) or "tokenizer" */
+	sizingType?: "characters" | "tokenizer";
+	/** HuggingFace model ID for tokenizer sizing (e.g., "Xenova/gpt-4o") */
+	sizingModel?: string;
+	/** Optional cache directory for tokenizer files */
+	sizingCacheDir?: string;
 }
 
 /**

@@ -1041,7 +1041,7 @@ Configuration for document extraction, controlling extraction behavior and featu
 
 **Properties:**
 
-- `Chunking` (ChunkingConfig?): Text chunking configuration for splitting long documents.
+- `Chunking` (ChunkingConfig?): Text chunking configuration for splitting long documents. Includes `Sizing` property (ChunkSizingConfig?) to control how chunk size is measured -- by character count (default) or by token count using a HuggingFace tokenizer. ChunkSizingConfig has properties: `SizingType` (string: `"characters"` or `"tokenizer"`), `Model` (string: HuggingFace model ID, e.g. `"bert-base-uncased"`), and `CacheDir` (string?: optional tokenizer cache directory).
 - `EnableQualityProcessing` (bool?): Whether to enable quality processing to improve extraction quality.
 - `ForceOcr` (bool?): Whether to force OCR processing even for documents with text.
 - `HtmlOptions` (HtmlConversionOptions?): HTML conversion options for HTML documents.

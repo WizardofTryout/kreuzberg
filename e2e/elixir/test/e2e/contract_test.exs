@@ -275,6 +275,28 @@ defmodule E2E.ContractTest do
       end
     end
 
+    test "config_chunking_no_headings" do
+      case E2E.Helpers.run_fixture(
+             "config_chunking_no_headings",
+             "text/book_war_and_peace_1p.txt",
+             %{chunking: %{chunker_type: "markdown", max_chars: 300, max_overlap: 50}},
+             requirements: ["chunking"],
+             notes: nil,
+             skip_if_missing: true
+           ) do
+        {:ok, result} ->
+          result
+          |> E2E.Helpers.assert_min_content_length(10)
+          |> E2E.Helpers.assert_chunks(min_count: 2, each_has_content: true, each_has_heading_context: false)
+
+        {:skipped, reason} ->
+          IO.puts("SKIPPED: #{reason}")
+
+        {:error, reason} ->
+          flunk("Extraction failed: #{inspect(reason)}")
+      end
+    end
+
     test "config_chunking_small" do
       case E2E.Helpers.run_fixture(
              "config_chunking_small",

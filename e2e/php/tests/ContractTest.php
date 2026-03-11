@@ -255,6 +255,27 @@ class ContractTest extends TestCase
     }
 
     /**
+     * Tests markdown chunker on text with no headings produces null heading_context
+     */
+    public function test_config_chunking_no_headings(): void
+    {
+        $documentPath = Helpers::resolveDocument('text/book_war_and_peace_1p.txt');
+        if (!file_exists($documentPath)) {
+            $this->markTestSkipped('Skipping config_chunking_no_headings: missing document at ' . $documentPath);
+        }
+
+        Helpers::skipIfFeatureUnavailable('chunking');
+
+        $config = Helpers::buildConfig(['chunking' => ['chunker_type' => 'markdown', 'max_chars' => 300, 'max_overlap' => 50]]);
+
+        $kreuzberg = new Kreuzberg($config);
+        $result = $kreuzberg->extractFile($documentPath);
+
+        Helpers::assertMinContentLength($result, 10);
+        Helpers::assertChunks($result, 2, null, true, null, false);
+    }
+
+    /**
      * Tests chunking with very small chunk size produces more chunks
      */
     public function test_config_chunking_small(): void

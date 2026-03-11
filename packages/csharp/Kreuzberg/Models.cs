@@ -2395,6 +2395,39 @@ public sealed class ChunkingConfig
     /// </summary>
     [JsonPropertyName("enabled")]
     public bool? Enabled { get; init; }
+
+    /// <summary>
+    /// Chunk sizing configuration. Controls how chunk size is measured.
+    /// Use <c>new { type = "characters" }</c> for character-based (default)
+    /// or <c>new { type = "tokenizer", model = "Xenova/gpt-4o" }</c> for token-based.
+    /// </summary>
+    [JsonPropertyName("sizing")]
+    public ChunkSizingConfig? Sizing { get; init; }
+}
+
+/// <summary>
+/// Configuration for how chunk size is measured.
+/// </summary>
+public sealed class ChunkSizingConfig
+{
+    /// <summary>
+    /// Sizing type: "characters" (default) or "tokenizer".
+    /// </summary>
+    [JsonPropertyName("type")]
+    public string? Type { get; init; }
+
+    /// <summary>
+    /// HuggingFace model ID for tokenizer sizing (e.g., "Xenova/gpt-4o").
+    /// Only used when Type is "tokenizer".
+    /// </summary>
+    [JsonPropertyName("model")]
+    public string? Model { get; init; }
+
+    /// <summary>
+    /// Optional cache directory for tokenizer files.
+    /// </summary>
+    [JsonPropertyName("cache_dir")]
+    public string? CacheDir { get; init; }
 }
 
 /// <summary>

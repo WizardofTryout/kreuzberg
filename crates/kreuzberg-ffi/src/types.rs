@@ -63,7 +63,6 @@ impl Drop for CStringGuard {
 /// All pointer fields are owned by the caller and must be freed using `kreuzberg_free_string`.
 /// The struct itself must be freed using `kreuzberg_free_extraction_result`.
 #[repr(C)]
-#[repr(C)]
 pub struct CExtractionResult {
     /// JSON-serialized PDF annotations array (null-terminated, or null pointer if none, must be freed with kreuzberg_free_string)
     pub annotations_json: *mut c_char,
@@ -147,7 +146,6 @@ pub struct CBytesWithMime {
 ///
 /// - The `results` array must be freed using `kreuzberg_free_batch_result`
 /// - Each individual result in the array must also be freed
-#[repr(C)]
 #[repr(C)]
 pub struct CBatchResult {
     /// Number of results

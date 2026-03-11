@@ -216,6 +216,21 @@ def test_config_chunking_markdown() -> None:
     helpers.assert_chunks(result, min_count=1, each_has_content=True)
 
 
+def test_config_chunking_no_headings() -> None:
+    """Tests markdown chunker on text with no headings produces null heading_context"""
+
+    document_path = helpers.resolve_document("text/book_war_and_peace_1p.txt")
+    if not document_path.exists():
+        pytest.skip(f"Skipping config_chunking_no_headings: missing document at {document_path}")
+
+    config = helpers.build_config({"chunking": {"chunker_type": "markdown", "max_chars": 300, "max_overlap": 50}})
+
+    result = extract_file_sync(document_path, None, config)
+
+    helpers.assert_min_content_length(result, 10)
+    helpers.assert_chunks(result, min_count=2, each_has_content=True, each_has_heading_context=False)
+
+
 def test_config_chunking_small() -> None:
     """Tests chunking with very small chunk size produces more chunks"""
 

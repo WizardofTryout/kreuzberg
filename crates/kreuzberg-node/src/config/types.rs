@@ -252,6 +252,12 @@ pub struct JsChunkingConfig {
     pub preset: Option<String>,
     /// Chunker type: "text" (default) or "markdown"
     pub chunker_type: Option<String>,
+    /// Sizing type: "characters" (default) or "tokenizer"
+    pub sizing_type: Option<String>,
+    /// HuggingFace model ID for tokenizer sizing (e.g., "Xenova/gpt-4o")
+    pub sizing_model: Option<String>,
+    /// Optional cache directory for tokenizer files
+    pub sizing_cache_dir: Option<String>,
 }
 
 impl From<JsChunkingConfig> for RustChunkingConfig {
@@ -260,6 +266,7 @@ impl From<JsChunkingConfig> for RustChunkingConfig {
             Some("markdown") => ChunkerType::Markdown,
             _ => ChunkerType::Text,
         };
+        let sizing = resolve_chunk_sizing(val.sizing_type, val.sizing_model, val.sizing_cache_dir);
         RustChunkingConfig {
             max_characters: val.max_chars.unwrap_or(1000) as usize,
             overlap: val.max_overlap.unwrap_or(200) as usize,
@@ -267,8 +274,22 @@ impl From<JsChunkingConfig> for RustChunkingConfig {
             chunker_type: ct,
             embedding: val.embedding.map(Into::into),
             preset: val.preset,
-            sizing: Default::default(),
+            sizing,
         }
+    }
+}
+
+fn resolve_chunk_sizing(
+    sizing_type: Option<String>,
+    sizing_model: Option<String>,
+    sizing_cache_dir: Option<String>,
+) -> kreuzberg::ChunkSizing {
+    match sizing_type.as_deref() {
+        Some("tokenizer") => kreuzberg::ChunkSizing::Tokenizer {
+            model: sizing_model.unwrap_or_else(|| "Xenova/gpt-4o".to_string()),
+            cache_dir: sizing_cache_dir.map(std::path::PathBuf::from),
+        },
+        _ => kreuzberg::ChunkSizing::Characters,
     }
 }
 
@@ -1124,6 +1145,20 @@ impl TryFrom<ExtractionConfig> for JsExtractionConfig {
                 chunker_type: match chunk.chunker_type {
                     ChunkerType::Text => None,
                     ChunkerType::Markdown => Some("markdown".to_string()),
+                },
+                sizing_type: match &chunk.sizing {
+                    kreuzberg::ChunkSizing::Characters => None,
+                    kreuzberg::ChunkSizing::Tokenizer { .. } => Some("tokenizer".to_string()),
+                },
+                sizing_model: match &chunk.sizing {
+                    kreuzberg::ChunkSizing::Tokenizer { model, .. } => Some(model.clone()),
+                    _ => None,
+                },
+                sizing_cache_dir: match &chunk.sizing {
+                    kreuzberg::ChunkSizing::Tokenizer { cache_dir, .. } => {
+                        cache_dir.as_ref().and_then(|p| p.to_str().map(String::from))
+                    }
+                    _ => None,
                 },
             }),
             images: val.images.map(|img| JsImageExtractionConfig {

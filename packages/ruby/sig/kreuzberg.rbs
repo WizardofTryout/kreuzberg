@@ -259,6 +259,9 @@ module Kreuzberg
       attr_reader preset: String?
       attr_reader embedding: Embedding?
       attr_reader enabled: bool?
+      attr_reader sizing_type: String?
+      attr_reader sizing_model: String?
+      attr_reader sizing_cache_dir: String?
 
       def initialize: (
         ?max_chars: Integer?,
@@ -267,7 +270,10 @@ module Kreuzberg
         ?embedding: (Embedding | Hash[Symbol, untyped])?,
         ?chunk_size: Integer?,
         ?chunk_overlap: Integer?,
-        ?enabled: bool
+        ?enabled: bool,
+        ?sizing_type: String?,
+        ?sizing_model: String?,
+        ?sizing_cache_dir: String?
       ) -> void
       def to_h: () -> Hash[Symbol, untyped]
     end

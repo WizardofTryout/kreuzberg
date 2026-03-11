@@ -342,6 +342,33 @@ describe("contract fixtures", () => {
 	);
 
 	it(
+		"config_chunking_no_headings",
+		() => {
+			const documentPath = resolveDocument("text/book_war_and_peace_1p.txt");
+			if (!existsSync(documentPath)) {
+				console.warn("Skipping config_chunking_no_headings: missing document at", documentPath);
+				return;
+			}
+			const config = buildConfig({ chunking: { chunker_type: "markdown", max_chars: 300, max_overlap: 50 } });
+			let result: ExtractionResult | null = null;
+			try {
+				result = extractFileSync(documentPath, null, config);
+			} catch (error) {
+				if (shouldSkipFixture(error, "config_chunking_no_headings", ["chunking"], undefined)) {
+					return;
+				}
+				throw error;
+			}
+			if (result === null) {
+				return;
+			}
+			assertions.assertMinContentLength(result, 10);
+			chunkAssertions.assertChunks(result, 2, null, true, null, false);
+		},
+		TEST_TIMEOUT_MS,
+	);
+
+	it(
 		"config_chunking_small",
 		() => {
 			const documentPath = resolveDocument("pdf/fake_memo.pdf");

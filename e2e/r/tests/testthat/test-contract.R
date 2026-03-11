@@ -148,7 +148,7 @@ test_that("config_chunking_heading_context", {
   skip_if_feature_unavailable("chunking")
   result <- run_fixture(
     "config_chunking_heading_context",
-    "markdown/comprehensive.md",
+    "markdown/extraction_test.md",
     list(chunking = list(chunker_type = "markdown", max_chars = 300L, max_overlap = 50L)),
     requirements = c("chunking"),
     notes = NULL,
@@ -171,6 +171,20 @@ test_that("config_chunking_markdown", {
   assert_expected_mime(result, c("application/pdf"))
   assert_min_content_length(result, 10L)
   assert_chunks(result, min_count = 1L, each_has_content = TRUE)
+})
+
+test_that("config_chunking_no_headings", {
+  skip_if_feature_unavailable("chunking")
+  result <- run_fixture(
+    "config_chunking_no_headings",
+    "text/book_war_and_peace_1p.txt",
+    list(chunking = list(chunker_type = "markdown", max_chars = 300L, max_overlap = 50L)),
+    requirements = c("chunking"),
+    notes = NULL,
+    skip_if_missing = TRUE
+  )
+  assert_min_content_length(result, 10L)
+  assert_chunks(result, min_count = 2L, each_has_content = TRUE, each_has_heading_context = FALSE)
 })
 
 test_that("config_chunking_small", {

@@ -712,9 +712,14 @@ export const chunkAssertions = {
 				expect((chunk as PlainRecord).embedding).toBeDefined();
 			}
 		}
-		if (eachHasHeadingContext) {
+		if (eachHasHeadingContext === true) {
 			for (const chunk of chunks) {
 				expect(((chunk as PlainRecord).metadata as PlainRecord)?.headingContext).toBeDefined();
+			}
+		}
+		if (eachHasHeadingContext === false) {
+			for (const chunk of chunks) {
+				expect(((chunk as PlainRecord).metadata as PlainRecord)?.headingContext ?? null).toBeNull();
 			}
 		}
 	},

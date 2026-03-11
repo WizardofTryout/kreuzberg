@@ -673,6 +673,8 @@ class ChunkingConfig:
     embedding: EmbeddingConfig | None
     preset: str | None
     chunker_type: str | None
+    sizing_type: str
+    sizing_model: str | None
 
     def __init__(
         self,
@@ -682,6 +684,9 @@ class ChunkingConfig:
         embedding: EmbeddingConfig | None = None,
         preset: str | None = None,
         chunker_type: str | None = None,
+        sizing_type: str | None = None,
+        sizing_model: str | None = None,
+        sizing_cache_dir: str | None = None,
     ) -> None: ...
 
 class ImageExtractionConfig:

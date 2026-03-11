@@ -509,6 +509,16 @@ public static class TestHelpers
                 }
             }
         }
+        if (eachHasHeadingContext == false)
+        {
+            for (var i = 0; i < chunks.Count; i++)
+            {
+                if (chunks[i].Metadata?.HeadingContext is not null)
+                {
+                    throw new XunitException($"Chunk {i} should have no heading_context");
+                }
+            }
+        }
     }
 
     public static void AssertImages(

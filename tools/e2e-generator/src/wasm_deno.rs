@@ -418,9 +418,14 @@ export const assertions = {
                 assertExists((chunk as PlainRecord).embedding, "Chunk missing embedding");
             }
         }
-        if (eachHasHeadingContext) {
+        if (eachHasHeadingContext === true) {
             for (const chunk of chunks) {
                 assertExists(((chunk as PlainRecord).metadata as PlainRecord)?.headingContext, "Chunk missing heading_context");
+            }
+        }
+        if (eachHasHeadingContext === false) {
+            for (const chunk of chunks) {
+                assertEquals(((chunk as PlainRecord).metadata as PlainRecord)?.headingContext ?? null, null, "Chunk should have no heading_context");
             }
         }
     },

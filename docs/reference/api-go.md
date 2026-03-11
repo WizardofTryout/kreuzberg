@@ -607,10 +607,19 @@ type ChunkingConfig struct {
 	MaxChars     *int             // Maximum characters per chunk
 	MaxOverlap   *int             // Overlap between chunks in characters
 	Preset       *string          // Chunking preset name
+	Sizing       *ChunkSizingConfig // Chunk size measurement configuration
+}
+
+type ChunkSizingConfig struct {
+	SizingType string  // "characters" (default) or "tokenizer"
+	Model      string  // HuggingFace model ID (required when SizingType is "tokenizer")
+	CacheDir   *string // Optional directory to cache downloaded tokenizer files
 }
 ```
 
 **Note:** The Go binding maintains both `MaxChars`/`MaxOverlap` (recommended) and `ChunkSize`/`ChunkOverlap` (deprecated) for backward compatibility. New code should use `MaxChars` and `MaxOverlap`.
+
+The `Sizing` field controls how chunk size is measured. By default, `MaxChars` counts characters. Set `SizingType` to `"tokenizer"` with a HuggingFace `Model` ID (e.g. `"bert-base-uncased"`) to measure by token count instead.
 
 ---
 

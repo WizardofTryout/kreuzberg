@@ -47,6 +47,7 @@ kreuzberg = { workspace = true, features = [
     "ocr",
     "language-detection",
     "chunking",
+    "chunking-tokenizers",
     "embeddings",
     "quality",
     "keywords",
