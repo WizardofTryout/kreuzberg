@@ -98,8 +98,14 @@ pub(super) fn finalize_paragraph(lines: Vec<PdfLine>) -> PdfParagraph {
     let first_word = first_text.split_whitespace().next().unwrap_or("");
     let is_list_item = lines.len() <= MAX_LIST_ITEM_LINES && is_list_prefix(first_word);
 
-    // Detect code blocks: all lines must be monospace (and there must be at least one line)
-    let is_code_block = !lines.is_empty() && lines.iter().all(|l| l.is_monospace);
+    // Detect code blocks: monospace font OR syntax-based heuristic for 3+ line blocks
+    let is_code_block = if !lines.is_empty() && lines.iter().all(|l| l.is_monospace) {
+        true
+    } else if lines.len() >= 3 && !is_list_item {
+        looks_like_code(&lines)
+    } else {
+        false
+    };
 
     PdfParagraph {
         dominant_font_size,
@@ -262,19 +268,50 @@ fn text_to_paragraph(text: &str, font_size: f32, is_bold: bool, is_list_item: bo
 /// Check if text looks like a list item prefix.
 pub(super) fn is_list_prefix(text: &str) -> bool {
     let trimmed = text.trim();
-    // Bullet characters: hyphen, asterisk, bullet, en dash, em dash
-    if matches!(trimmed, "-" | "*" | "\u{2022}" | "\u{2013}" | "\u{2014}") {
+    // Bullet characters: hyphen, asterisk, bullet, en dash, em dash, triangular bullet, white bullet
+    if matches!(
+        trimmed,
+        "-" | "*"
+            | "\u{2022}"
+            | "\u{2013}"
+            | "\u{2014}"
+            | "\u{2023}"
+            | "\u{25E6}"
+            | "\u{25AA}"
+            | "\u{25CF}"
+            | "\u{2043}"
+            | "\u{27A2}"
+    ) {
         return true;
     }
     let bytes = trimmed.as_bytes();
     if bytes.is_empty() {
         return false;
     }
-    // Numbered: 1. 2) etc.
+    // Numbered: 1. 2) 3: etc.
     let digit_end = bytes.iter().position(|&b| !b.is_ascii_digit()).unwrap_or(bytes.len());
     if digit_end > 0 && digit_end < bytes.len() {
         let suffix = bytes[digit_end];
-        if suffix == b'.' || suffix == b')' {
+        if suffix == b'.' || suffix == b')' || suffix == b':' {
+            return true;
+        }
+    }
+    // Parenthesized numbers/letters: (1) (a) (i) (A)
+    if bytes.len() >= 3 && bytes[0] == b'(' && bytes[bytes.len() - 1] == b')' {
+        let inner = &trimmed[1..trimmed.len() - 1];
+        if inner.chars().all(|c| c.is_ascii_digit())
+            || (inner.len() == 1 && inner.chars().next().is_some_and(|c| c.is_ascii_alphabetic()))
+            || is_roman_numeral(inner)
+        {
+            return true;
+        }
+    }
+    // Bracketed numbers/letters: [1] [a]
+    if bytes.len() >= 3 && bytes[0] == b'[' && bytes[bytes.len() - 1] == b']' {
+        let inner = &trimmed[1..trimmed.len() - 1];
+        if inner.chars().all(|c| c.is_ascii_digit())
+            || (inner.len() == 1 && inner.chars().next().is_some_and(|c| c.is_ascii_alphabetic()))
+        {
             return true;
         }
     }
@@ -290,6 +327,98 @@ pub(super) fn is_list_prefix(text: &str) -> bool {
         }
     }
     false
+}
+
+/// Heuristic: does this block of lines look like source code?
+/// Checks for consistent indentation, high syntax character ratio, or programming keywords.
+fn looks_like_code(lines: &[PdfLine]) -> bool {
+    let texts: Vec<String> = lines
+        .iter()
+        .map(|l| l.segments.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" "))
+        .collect();
+
+    let total_chars: usize = texts.iter().map(|t| t.len()).sum();
+    if total_chars == 0 {
+        return false;
+    }
+
+    // Count syntax characters: ; { } ( ) = > < | & ^ ~ # @ ! [ ] / \
+    let syntax_chars: usize = texts
+        .iter()
+        .flat_map(|t| t.chars())
+        .filter(|c| {
+            matches!(
+                c,
+                ';' | '{'
+                    | '}'
+                    | '('
+                    | ')'
+                    | '='
+                    | '<'
+                    | '>'
+                    | '|'
+                    | '&'
+                    | '^'
+                    | '~'
+                    | '#'
+                    | '@'
+                    | '['
+                    | ']'
+                    | '/'
+                    | '\\'
+            )
+        })
+        .count();
+    let syntax_ratio = syntax_chars as f32 / total_chars as f32;
+
+    // Count lines with leading whitespace (4+ spaces or tab)
+    let indented_count = texts
+        .iter()
+        .filter(|t| {
+            let leading: usize = t.chars().take_while(|c| *c == ' ').count();
+            leading >= 4 || t.starts_with('\t')
+        })
+        .count();
+    let indent_ratio = indented_count as f32 / texts.len() as f32;
+
+    // Check for programming keywords
+    let full_text = texts.join(" ");
+    let keyword_count = [
+        "def ",
+        "function ",
+        "class ",
+        "import ",
+        "return ",
+        "if ",
+        "for ",
+        "while ",
+        "const ",
+        "let ",
+        "var ",
+        "fn ",
+        "pub ",
+        "use ",
+        "struct ",
+        "enum ",
+        "async ",
+        "await ",
+        "try ",
+        "catch ",
+        "throw ",
+        "raise ",
+        "except ",
+        "print(",
+        "println!",
+        "console.log",
+        "System.out",
+    ]
+    .iter()
+    .filter(|kw| full_text.contains(*kw))
+    .count();
+
+    // Code if: high syntax ratio (>8%), or consistent indentation (>60%) with some syntax,
+    // or multiple programming keywords
+    syntax_ratio > 0.08 || (indent_ratio > 0.6 && syntax_ratio > 0.03) || keyword_count >= 3
 }
 
 /// Check if text is a roman numeral (i-xii or I-XII range).

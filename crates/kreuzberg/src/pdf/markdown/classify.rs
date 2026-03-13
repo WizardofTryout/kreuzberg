@@ -277,7 +277,14 @@ pub(super) fn demote_unnumbered_subsections(all_pages: &mut [Vec<PdfParagraph>])
         // Demote unnumbered H2s between these two numbered H2s
         for &(page_idx, para_idx, is_numbered) in &h2_info[start + 1..end] {
             if !is_numbered {
-                all_pages[page_idx][para_idx].heading_level = Some(3);
+                // Don't demote headings confirmed by the layout model.
+                let layout_confirmed = matches!(
+                    all_pages[page_idx][para_idx].layout_class,
+                    Some(super::types::LayoutHintClass::SectionHeader | super::types::LayoutHintClass::Title)
+                );
+                if !layout_confirmed {
+                    all_pages[page_idx][para_idx].heading_level = Some(3);
+                }
             }
         }
     }
@@ -308,9 +315,16 @@ pub(super) fn demote_heading_runs(all_pages: &mut [Vec<PdfParagraph>]) {
 
             let run_len = run_end - run_start;
             if run_len > MAX_CONSECUTIVE {
-                // Demote all but the first heading in the run
+                // Demote all but the first heading in the run, unless
+                // the layout model confirmed it as a heading region.
                 for para in &mut page[run_start + 1..run_end] {
-                    para.heading_level = None;
+                    let layout_confirmed = matches!(
+                        para.layout_class,
+                        Some(super::types::LayoutHintClass::SectionHeader | super::types::LayoutHintClass::Title)
+                    );
+                    if !layout_confirmed {
+                        para.heading_level = None;
+                    }
                 }
             }
 

@@ -8,6 +8,12 @@ Go North on Edgell Rd, turn RIGHT on Boston Post Road (RT-20) and a quick LEFT t
 
 <!-- image -->
 
+Directions: Maynard Rod &amp; Gun Club
+
+Rev:
+
+May 21, 2021
+
 Wal
 
 CHT 27
@@ -26,6 +32,12 @@ Take the exit for RT 117 East to Stow, Turn LEFT that the lights at the end of t
 
 <!-- image -->
 
+Directions: Maynard Rod &amp; Gun Club
+
+Rev:
+
+May 21, 2021
+
 Main St
 
 ## From the intersection of Rt. 128 and Mass Pike
@@ -33,3 +45,7 @@ Main St
 Take Route 20 East toward Waltham. Turn LEFT at the lights at Stow Street, at the traffic lights on Rt 117 Turn LEFT. Follow RT-117 West for 9 ½ miles till you see St. Johns Lutheran Church and turn RIGHT on to North Rd.  (North RD, Sudbury becomes Waltham Street, Maynard when you cross the town line).  Old Mill Road will be about one-half mile up the street on your RIGHT. (Look for the orange and black Maynard Rod and Gun Club Sign on the telephone Pole at the corner of Old Mill Rd and Waltham St.) Old Mill Rd is a narrow street, play nice. Turn RIGHT on to Old Mill Road and follow to the RIGHT into the Rod and Gun Parking Lot. The Pavilion will be the large building down the hill.
 
 <!-- image -->
+
+Directions: Maynard Rod &amp; Gun Club
+
+Rev: May 21, 2021

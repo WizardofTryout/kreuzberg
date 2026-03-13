@@ -38,6 +38,14 @@ Date Tested isT
 
 TESTING LABORATORY IS ACCREDITED BY:
 
+Report  No.
+
+： HS1908140115A-3
+
+Version
+
+： A
+
 IECQ ISO/EC 17025 certificate of independent test laboratory approval
 
 <!-- image -->

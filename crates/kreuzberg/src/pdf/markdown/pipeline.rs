@@ -588,6 +588,13 @@ pub fn render_document_as_markdown_with_tables(
                     all_paras
                 };
                 classify_paragraphs(&mut paras, &heading_map);
+                // Apply layout hint overrides to the standard pipeline output.
+                // This path runs when the page didn't qualify for region-based
+                // assembly (multi-column, oversized regions, no text-class hints).
+                // Without this, layout detection results are silently discarded.
+                if let Some(hints) = layout_hints.and_then(|h| h.get(i)) {
+                    super::layout_classify::apply_layout_overrides(&mut paras, hints, 0.5, 0.2);
+                }
                 merge_continuation_paragraphs(&mut paras);
                 paras
             };

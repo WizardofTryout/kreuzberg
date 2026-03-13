@@ -50,13 +50,51 @@ Page:1 of 13
 
 Report Year:
 
+Report Status:
+
+1/9/2013 6:25 AM
+
+Data Last Update:
+
+09/17/2012
+
+Submission Date:
+
+01/08/2013
+
+Print Date:
+
 <!-- image -->
 
 For buildings For buildings which are planned for rebuild, retrofit or replacement this report shall identify;  Whether the hospital owner intends to rebuild, retrofit or replace the building to SPC2, SPC3, SPC4 or SPC5 per 130061(c)(1)(A).  The deadline, as described in Section 130060 or 130061.5,for rebuild, retrofit or replacement of the building that the hospital owner intends to meet, and the applicable extension for which the hospital owner has been approved per  Section 130061(c)(1)(B)
 
 <!-- image -->
 
+Report Status:
+
+1/9/2013 6:25 AM
+
+Data Last Update:
+
+09/17/2012
+
+Submission Date:
+
+01/08/2013
+
+Print Date:
+
 <!-- image -->
+
+Report Status:
+
+1/9/2013 6:25 AM
+
+Data Last Update:
+
+Submission Date:
+
+01/08/2013
 
 2012
 
@@ -159,6 +197,20 @@ Total Beds this Building
 - [ ] Renal Dialysis
 
 - [ ] Obstetrical Cesarean/Deliv
+
+Report Status:
+
+1/9/2013 6:25 AM
+
+Data Last Update:
+
+09/17/2012
+
+Submission Date:
+
+01/08/2013
+
+Print Date:
 
 2012
 
@@ -292,9 +344,17 @@ McAuley Wing
 
 Provide the number of Inpatient beds and patient days per type of unit per building per Section 130061(c)(1)(F)
 
-<!-- image -->
+Report Status:
 
 <!-- image -->
+
+1/9/2013 6:25 AM
+
+<!-- image -->
+
+1/9/2013 6:25 AM
+
+Print Date:
 
 Building Number:
 
@@ -367,6 +427,18 @@ San Francisco
 Page:8 of 13
 
 Report Year:
+
+Report Status:
+
+Data Last Update:
+
+1/9/2013 6:25 AM
+
+Submission Date:
+
+01/08/2013
+
+Print Date:
 
 Report Year:
 
@@ -441,6 +513,20 @@ Remove from GAC service by 1/1/2030
 Configuration:
 
 <!-- image -->
+
+Report Status:
+
+1/9/2013 6:25 AM
+
+Data Last Update:
+
+09/17/2012
+
+Submission Date:
+
+01/08/2013
+
+Print Date:
 
 Report Year:
 
@@ -517,6 +603,20 @@ Remove from GAC service by 1/1/2030
 Configuration:
 
 Report the final configuration of all buildings on the hospital campus showing how each building will comply with the SPC-5/NPC-4 or 5 requirements whether by retrofit or by replacement and the type of service that will be provided in each general actue care hospital building per Section 130061(c)(5)
+
+Report Status:
+
+1/9/2013 6:25 AM
+
+Data Last Update:
+
+09/17/2012
+
+Submission Date:
+
+01/08/2013
+
+Print Date:
 
 12460
 
@@ -623,6 +723,18 @@ Total Beds this Building
 - [ ] Obstetrical Recovery
 
 - [ ] Newborn/ WellBaby
+
+Report Status:
+
+Data Last Update:
+
+1/9/2013 6:25 AM
+
+Submission Date:
+
+01/08/2013
+
+Print Date:
 
 Report Year:
 
@@ -793,5 +905,17 @@ Main Tower
 0
 
 0
+
+Report Status:
+
+Data Last Update:
+
+1/9/2013 6:25 AM
+
+Submission Date:
+
+01/08/2013
+
+Print Date:
 
 <!-- image -->

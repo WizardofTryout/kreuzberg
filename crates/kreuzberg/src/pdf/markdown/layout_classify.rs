@@ -98,22 +98,21 @@ fn apply_spatial_overrides(
 /// 3. Each hint occupies a fractional range `[(page_height - top)/page_height, (page_height - bottom)/page_height]`.
 /// 4. Match each paragraph to the hint with the most fractional overlap.
 ///
-/// This is more accurate than point-estimate matching because it accounts for
-/// hints that span large vertical ranges (e.g., a code block or table covering
-/// half the page).
+/// Structure tree paragraphs lack positional data so we cannot do spatial matching.
+/// We use conservative fractional-overlap matching: each paragraph is assigned a
+/// fraction of the page [i/n, (i+1)/n] and matched against hint bounding boxes
+/// converted to page fractions. Only high-confidence, high-overlap matches are applied.
 fn apply_proportional_overrides(paragraphs: &mut [PdfParagraph], hints: &[LayoutHint], min_confidence: f32) {
     let n = paragraphs.len();
     if n == 0 {
         return;
     }
 
-    // Filter hints by confidence.
     let confident_hints: Vec<&LayoutHint> = hints.iter().filter(|h| h.confidence >= min_confidence).collect();
     if confident_hints.is_empty() {
         return;
     }
 
-    // Infer page height from hint coordinates (max top value).
     let page_height = hints.iter().map(|h| h.top).fold(0.0_f32, f32::max);
     if page_height <= 0.0 {
         return;
@@ -127,23 +126,19 @@ fn apply_proportional_overrides(paragraphs: &mut [PdfParagraph], hints: &[Layout
     );
 
     // Precompute each hint's fractional range on the page.
-    // In PDF coords, y=0 is bottom, y=page_height is top.
-    // Reading order: top-to-bottom → fraction 0.0 = top of page, 1.0 = bottom.
     let hint_ranges: Vec<(f32, f32, &LayoutHint)> = confident_hints
         .iter()
         .map(|h| {
-            let frac_start = (page_height - h.top) / page_height; // top of hint → lower fraction
-            let frac_end = (page_height - h.bottom) / page_height; // bottom of hint → higher fraction
+            let frac_start = (page_height - h.top) / page_height;
+            let frac_end = (page_height - h.bottom) / page_height;
             (frac_start.max(0.0), frac_end.min(1.0), *h)
         })
         .collect();
 
     for (i, para) in paragraphs.iter_mut().enumerate() {
-        // This paragraph occupies fractional range [i/n, (i+1)/n]
         let para_start = i as f32 / n as f32;
         let para_end = (i as f32 + 1.0) / n as f32;
 
-        // Find the hint with the most overlap.
         let best = hint_ranges
             .iter()
             .filter_map(|&(h_start, h_end, hint)| {
@@ -155,36 +150,21 @@ fn apply_proportional_overrides(paragraphs: &mut [PdfParagraph], hints: &[Layout
             .max_by(|a, b| a.1.total_cmp(&b.1));
 
         if let Some((hint, overlap)) = best {
-            tracing::trace!(
-                para_idx = i,
-                total_paragraphs = n,
-                ?hint.class,
-                hint_confidence = hint.confidence,
-                overlap,
-                para_frac = format_args!("[{:.2}, {:.2}]", para_start, para_end),
-                "Proportional match candidate"
-            );
             let para_span = para_end - para_start;
             let overlap_frac = if para_span > 0.0 { overlap / para_span } else { 0.0 };
 
             match hint.class {
-                // Furniture: reliably at page extremes, lower overlap threshold
                 LayoutHintClass::PageHeader if i == 0 && overlap_frac > 0.25 => {
-                    tracing::trace!(para_idx = i, ?hint.class, "Applying furniture override");
                     apply_hint_to_paragraph(para, hint);
                 }
                 LayoutHintClass::PageFooter if i == n - 1 && overlap_frac > 0.25 => {
-                    tracing::trace!(para_idx = i, ?hint.class, "Applying furniture override");
                     apply_hint_to_paragraph(para, hint);
                 }
-                // Headings: apply layout model heading detection to struct tree
-                // paragraphs that don't already have a heading from the tree.
-                // Requires high overlap and word count guard.
                 LayoutHintClass::SectionHeader | LayoutHintClass::Title
                     if para.heading_level.is_none()
                         && !para.is_list_item
                         && !para.is_code_block
-                        && overlap_frac > 0.7 =>
+                        && overlap_frac > 0.3 =>
                 {
                     let word_count: usize = para
                         .lines
@@ -192,7 +172,7 @@ fn apply_proportional_overrides(paragraphs: &mut [PdfParagraph], hints: &[Layout
                         .flat_map(|l| l.segments.iter())
                         .map(|s| s.text.split_whitespace().count())
                         .sum();
-                    if word_count <= 12 {
+                    if word_count <= super::constants::MAX_HEADING_WORD_COUNT {
                         let text: String = para
                             .lines
                             .iter()
@@ -304,10 +284,12 @@ pub(super) fn apply_hint_to_paragraph(para: &mut PdfParagraph, hint: &LayoutHint
         }
         LayoutHintClass::SectionHeader => {
             if !is_sep {
-                // Layout model says SectionHeader — set heading level 2.
+                // Layout model says SectionHeader — infer heading level from section
+                // numbering in text (e.g., "3.2 Methods" → H3, unnumbered → H2).
                 // Override font-size classification when layout has high confidence.
                 if para.heading_level.is_none() || hint.confidence >= 0.7 {
-                    para.heading_level = Some(2);
+                    let level = infer_heading_level_from_text(&para_text, hint.class);
+                    para.heading_level = Some(level);
                 }
             }
         }

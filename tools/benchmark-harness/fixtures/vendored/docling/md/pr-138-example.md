@@ -97,6 +97,8 @@ Comparison rate calculated on a $150,000 secured loan over a 25 year term. WARNI
 | Extra Variable Rate                    | Investment Home Loan Extra Variable Rate 4.95% p.a.                                                                                                                                     |
 | Extra Variable Interest Only Rate      | Investment Home Loan Extra Variable Interest Only Rate 5.69% p.a.                                                                                                                       |
 
+Call us on 13 2224 , 8am to 8pm, 7 days. Visit commbank.com.au or drop into any branch.
+
 <!-- image -->
 
 Australian credit licence 234945
