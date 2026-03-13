@@ -11,11 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **dBASE (.dbf) format support**: Extract table data from dBASE files as markdown tables with field type support via native Rust `dbase` crate.
-- **Hangul Word Processor (.hwp/.hwpx) support**: Extract text content from HWP 5.0 documents (standard Korean document format) via native Rust `hwpers` crate.
-- **Office template/macro format variants**: Added support for `.docm`, `.dotx`, `.dotm`, `.dot` (Word), `.potx`, `.potm`, `.pot` (PowerPoint), `.xltx`, `.xlt` (Excel) — all extracted natively using existing OOXML/OLE parsers.
-- **E2E test fixtures**: Added `dbf_basic`, `hwp_basic`, and `hwp_styled` fixtures for end-to-end testing.
-- **Benchmark fixtures**: Added `dbf_stations` and `hwp_basic` benchmark fixtures with ground truth files.
+- **dBASE (.dbf) format support**: Extract table data from dBASE files as markdown tables with field type support.
+- **Hangul Word Processor (.hwp/.hwpx) support**: Extract text content from HWP 5.0 documents (standard Korean document format).
+- **Office template/macro format variants**: Added support for `.docm`, `.dotx`, `.dotm`, `.dot` (Word), `.potx`, `.potm`, `.pot` (PowerPoint), `.xltx`, `.xlt` (Excel) formats.
 
 ### Changed
 
