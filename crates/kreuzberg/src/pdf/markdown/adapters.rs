@@ -5,6 +5,7 @@ use pdfium_render::prelude::{ContentRole, ExtractedBlock};
 
 use super::content::{ContentElement, ElementLevel, ExtractionSource, PageContent, SemanticRole};
 use super::geometry::Rect;
+use super::types::LayoutHintClass;
 use crate::pdf::hierarchy::SegmentData;
 
 // ── Structure tree adapter ──────────────────────────────────────────────
@@ -61,6 +62,7 @@ fn flatten_blocks(blocks: &[ExtractedBlock], elements: &mut Vec<ContentElement>)
             semantic_role: Some(semantic_role),
             level: ElementLevel::Block,
             list_label,
+            layout_class: None,
         });
     }
 }
@@ -115,6 +117,7 @@ pub(super) fn from_segments(
                 semantic_role: None,
                 level: ElementLevel::Line,
                 list_label: None,
+                layout_class: None,
             }
         })
         .collect();
@@ -188,16 +191,15 @@ pub(crate) fn from_ocr_elements(
                 .map(|s| s as f32);
 
             // Map block type to semantic role.
-            let mut semantic_role = meta
-                .get("block_type")
-                .and_then(|v| v.as_str())
-                .and_then(|bt| match bt {
-                    "PT_HEADING_TEXT" => Some(SemanticRole::Heading { level: 1 }),
-                    "PT_TABLE" => Some(SemanticRole::TableCell),
-                    "PT_CAPTION_TEXT" => Some(SemanticRole::Caption),
-                    "PT_EQUATION" | "PT_INLINE_EQUATION" => Some(SemanticRole::Formula),
-                    _ => None,
-                });
+            let block_type_str = meta.get("block_type").and_then(|v| v.as_str());
+
+            let mut semantic_role = block_type_str.and_then(|bt| match bt {
+                "PT_HEADING_TEXT" => Some(SemanticRole::Heading { level: 1 }),
+                "PT_TABLE" => Some(SemanticRole::TableCell),
+                "PT_CAPTION_TEXT" => Some(SemanticRole::Caption),
+                "PT_EQUATION" | "PT_INLINE_EQUATION" => Some(SemanticRole::Formula),
+                _ => None,
+            });
 
             // Override with list item if paragraph info says so.
             if meta
@@ -207,6 +209,16 @@ pub(crate) fn from_ocr_elements(
             {
                 semantic_role = Some(SemanticRole::ListItem);
             }
+
+            // Map block type to layout hint class for layout-aware processing.
+            let layout_class = block_type_str.and_then(|bt| match bt {
+                "PT_HEADING_TEXT" => Some(LayoutHintClass::SectionHeader),
+                "PT_TABLE" => Some(LayoutHintClass::Table),
+                "PT_CAPTION_TEXT" => Some(LayoutHintClass::Caption),
+                "PT_EQUATION" | "PT_INLINE_EQUATION" => Some(LayoutHintClass::Formula),
+                "PT_FLOWING_TEXT" => Some(LayoutHintClass::Text),
+                _ => None,
+            });
 
             ContentElement {
                 text: e.text.clone(),
@@ -219,6 +231,7 @@ pub(crate) fn from_ocr_elements(
                 semantic_role,
                 level,
                 list_label: None,
+                layout_class,
             }
         })
         .collect();

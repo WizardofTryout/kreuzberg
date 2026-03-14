@@ -74,6 +74,9 @@ pub(crate) struct ContentElement {
     pub level: ElementLevel,
     /// List item label (e.g. "1.", "a)", "•") when `semantic_role == ListItem`.
     pub list_label: Option<String>,
+    /// Layout class hint from a layout detection model (e.g. OCR block type).
+    /// `None` when layout detection is unavailable or not applicable.
+    pub layout_class: Option<super::types::LayoutHintClass>,
 }
 
 /// All content extracted from a single page.
