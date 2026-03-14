@@ -1091,7 +1091,7 @@ pub(super) fn perform_ocr(
                     tables.push(OcrTable {
                         cells: cleaned,
                         markdown: markdown_table,
-                        page_number: 0,
+                        page_number: 1,
                         bounding_box: bbox,
                     });
                 }
@@ -1101,7 +1101,7 @@ pub(super) fn perform_ocr(
 
     // Extract structured OcrElements via Tesseract iterators (rich metadata:
     // font attributes, block types, paragraph info).
-    let iterator_elements = extract_elements_via_iterator(&api, 0, config.min_confidence);
+    let iterator_elements = extract_elements_via_iterator(&api, 1, config.min_confidence);
     match iterator_elements {
         Ok(elements) if !elements.is_empty() => {
             ocr_elements = Some(elements);

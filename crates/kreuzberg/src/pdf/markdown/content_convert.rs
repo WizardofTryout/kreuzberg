@@ -356,10 +356,19 @@ fn build_paragraph_from_lines(line_groups: &[&Vec<usize>], elements: &[ContentEl
             0.0
         };
 
+        // Compute per-line dominant font size from this line's segments (median).
+        let line_font_size = if !segments.is_empty() {
+            let mut sizes: Vec<f32> = segments.iter().map(|s| s.font_size).collect();
+            sizes.sort_by(|a, b| a.total_cmp(b));
+            sizes[sizes.len() / 2]
+        } else {
+            dominant_font_size
+        };
+
         pdf_lines.push(PdfLine {
             segments,
             baseline_y: avg_baseline,
-            dominant_font_size,
+            dominant_font_size: line_font_size,
             is_bold: line_is_bold,
             is_monospace: line_is_monospace,
         });

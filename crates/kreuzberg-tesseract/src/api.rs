@@ -95,9 +95,13 @@ impl TesseractAPI {
     /// Returns a new instance of the Tesseract API.
     pub fn new() -> Self {
         // SAFETY: TessBaseAPICreate() is a C FFI function that allocates and initializes
-        // a new Tesseract engine handle. It always returns a valid opaque pointer (never null).
-        // The returned handle is owned exclusively by this Rust struct and will be freed in Drop.
+        // a new Tesseract engine handle. It returns a valid opaque pointer on success or
+        // null on allocation failure. The returned handle is owned exclusively by this
+        // Rust struct and will be freed in Drop.
         let handle = unsafe { TessBaseAPICreate() };
+        if handle.is_null() {
+            panic!("TessBaseAPICreate returned null: Tesseract engine allocation failed");
+        }
         TesseractAPI {
             handle: Arc::new(Mutex::new(handle)),
             config: Arc::new(Mutex::new(TesseractConfiguration {
@@ -1024,14 +1028,18 @@ impl TesseractAPI {
     /// Returns the processed text as a string.
     pub fn process_pages(&self, filename: &str, retry_config: Option<&str>, timeout_millisec: i32) -> Result<String> {
         let filename = CString::new(filename).map_err(|_| TesseractError::NullByteInString)?;
-        let retry_config = retry_config
+        let retry_config_cstr = retry_config
             .map(|s| CString::new(s).map_err(|_| TesseractError::NullByteInString))
             .transpose()?;
+        // Extract the pointer before the FFI call. retry_config_cstr must remain alive
+        // until TessBaseAPIProcessPages returns to prevent a dangling pointer.
+        let retry_ptr = retry_config_cstr.as_ref().map_or(std::ptr::null(), |c| c.as_ptr());
         let handle = self.handle.lock().map_err(|_| TesseractError::MutexLockError)?;
         // SAFETY: TessBaseAPIProcessPages() is safe because:
         // 1. *handle is a valid pointer to an initialized Tesseract engine
         // 2. filename.as_ptr() is a valid null-terminated C string from CString
-        // 3. retry_config.map_or(...) either returns null or a valid C string pointer
+        // 3. retry_ptr is either null or a valid C string pointer from retry_config_cstr,
+        //    which is kept alive for the duration of this call
         // 4. timeout_millisec is a user-provided i32 value
         // 5. std::ptr::null_mut() is a valid null renderer pointer (no rendering)
         // 6. The returned pointer is either null or points to an allocated C string
@@ -1039,7 +1047,7 @@ impl TesseractAPI {
             TessBaseAPIProcessPages(
                 *handle,
                 filename.as_ptr(),
-                retry_config.map_or(std::ptr::null(), |rc| rc.as_ptr()),
+                retry_ptr,
                 timeout_millisec,
                 std::ptr::null_mut(),
             )

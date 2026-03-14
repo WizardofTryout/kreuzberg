@@ -375,7 +375,11 @@ impl ResultIterator {
                 Ok(word) => words.push(word),
                 // NullPointerError means the text pointer was null; skip this position.
                 // InvalidParameterError means bounding box failed; skip this position.
-                Err(TesseractError::NullPointerError) | Err(TesseractError::InvalidParameterError) => {}
+                // Utf8Error means the text was not valid UTF-8; skip this word rather than
+                // aborting, so the remaining words in the iterator are not lost.
+                Err(TesseractError::NullPointerError)
+                | Err(TesseractError::InvalidParameterError)
+                | Err(TesseractError::Utf8Error(_)) => {}
                 Err(e) => return Err(e),
             }
 

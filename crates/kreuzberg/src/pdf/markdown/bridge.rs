@@ -304,11 +304,6 @@ fn filter_sidebar_characters(char_infos: &mut Vec<CharInfo>, page_width: f32) {
     }
 }
 
-/// Extract text segments from a PDF page using pdfium's text API.
-///
-/// Uses `page.text().all()` for correct text content (pdfium handles font matrices,
-/// CMap lookups, word boundaries) and per-character origins for line-level positioning.
-/// This produces better recall than `PdfiumParagraph::from_objects()` which can miss
 /// Build the text for a single line from character info, inserting spaces where
 /// large X-position gaps indicate word or column boundaries.
 ///
@@ -562,6 +557,11 @@ fn assemble_segments_from_chars(char_infos: &[CharInfo], repair_map: Option<&[(c
     segments
 }
 
+/// Extract text segments from a PDF page using pdfium's text API.
+///
+/// Uses `page.text().all()` for correct text content (pdfium handles font matrices,
+/// CMap lookups, word boundaries) and per-character origins for line-level positioning.
+/// This produces better recall than `PdfiumParagraph::from_objects()` which can miss
 /// content when font metrics are broken.
 ///
 /// Strategy:

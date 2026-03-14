@@ -105,7 +105,7 @@ pub fn inject_image_placeholders(markdown: &str, images: &[crate::types::Extract
 /// Normalize bullet/number list prefix to standard markdown syntax.
 fn normalize_list_prefix(text: &str) -> String {
     let trimmed = text.trim_start();
-    // Bullet chars → "- "
+    // Standard bullet chars (•, *) → "- "
     if trimmed.starts_with('\u{2022}') || trimmed.starts_with("* ") {
         let rest = if trimmed.starts_with('\u{2022}') {
             trimmed['\u{2022}'.len_utf8()..].trim_start()
@@ -116,6 +116,30 @@ fn normalize_list_prefix(text: &str) -> String {
     }
     if trimmed.starts_with("- ") {
         return text.trim_start().to_string();
+    }
+    // Dash-like bullet chars: replace the leading character with "- " instead of
+    // prepending, to avoid double prefixes like "- – text".
+    // Covers: en dash (–), em dash (—), hyphen-minus variants (−, ‐, ‑, ‒, ―).
+    const DASH_BULLETS: &[char] = &[
+        '–', // U+2013 EN DASH
+        '—', // U+2014 EM DASH
+        '−', // U+2212 MINUS SIGN
+        '‐', // U+2010 HYPHEN
+        '‑', // U+2011 NON-BREAKING HYPHEN
+        '‒', // U+2012 FIGURE DASH
+        '―', // U+2015 HORIZONTAL BAR
+        '➤', // U+27A4
+        '►', // U+25BA
+        '▶', // U+25B6
+        '○', // U+25CB
+        '●', // U+25CF
+        '◦', // U+25E6
+    ];
+    for &ch in DASH_BULLETS {
+        if trimmed.starts_with(ch) {
+            let rest = trimmed[ch.len_utf8()..].trim_start();
+            return format!("- {rest}");
+        }
     }
     // Numbered prefix: keep as-is (e.g. "1. text")
     let bytes = trimmed.as_bytes();
