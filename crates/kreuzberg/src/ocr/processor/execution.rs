@@ -10,13 +10,13 @@ use super::validation::{
 use crate::core::config::ExtractionConfig;
 use crate::image::normalize_image_dpi;
 use crate::ocr::cache::OcrCache;
-use crate::ocr::conversion::{TsvRow, tsv_row_to_element};
+use crate::ocr::conversion::{TsvRow, iterator_word_to_element, tsv_row_to_element};
 use crate::ocr::error::OcrError;
 use crate::ocr::hocr::convert_hocr_to_markdown;
 use crate::ocr::table::{extract_words_from_tsv, post_process_table, reconstruct_table, table_to_markdown};
 use crate::ocr::types::{BatchItemResult, TesseractConfig};
 use crate::types::{OcrExtractionResult, OcrTable, OcrTableBoundingBox};
-use kreuzberg_tesseract::{TessPageSegMode, TesseractAPI};
+use kreuzberg_tesseract::{TessPageSegMode, TessPolyBlockType, TesseractAPI};
 use std::collections::HashMap;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -366,6 +366,102 @@ const MIN_ORIENTATION_CONFIDENCE: f32 = 0.5;
 /// # Returns
 ///
 /// OCR extraction result containing text and optional tables
+
+/// Check whether a center point (x, y) lies within a bounding box.
+fn point_in_bbox(x: i32, y: i32, left: i32, top: i32, right: i32, bottom: i32) -> bool {
+    x >= left && x <= right && y >= top && y <= bottom
+}
+
+/// Extract OcrElements via Tesseract's iterator APIs with rich metadata.
+///
+/// Uses ResultIterator for word-level text, bounding boxes, confidence, and font
+/// attributes, plus PageIterator for block type and paragraph info. This replaces
+/// TSV-based extraction with significantly richer metadata.
+fn extract_elements_via_iterator(
+    api: &TesseractAPI,
+    page_number: usize,
+    min_confidence: f64,
+) -> Result<Vec<OcrElement>, OcrError> {
+    // Obtain page iterator for block/paragraph spatial data.
+    let page_iter = match api.get_page_iterator() {
+        Ok(iter) => iter,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let blocks = match page_iter.extract_all_blocks() {
+        Ok(b) => b,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let paragraphs = match page_iter.extract_all_paragraphs() {
+        Ok(p) => p,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    // Obtain result iterator for word-level data (text, confidence, font attrs).
+    let result_iter = match api.get_iterator() {
+        Ok(iter) => iter,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let words = match result_iter.extract_all_words() {
+        Ok(w) => w,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    // Block types that should be filtered out (non-text / noise regions).
+    let skip_block_types = [
+        TessPolyBlockType::PT_NOISE,
+        TessPolyBlockType::PT_FLOWING_IMAGE,
+        TessPolyBlockType::PT_HEADING_IMAGE,
+        TessPolyBlockType::PT_PULLOUT_IMAGE,
+        TessPolyBlockType::PT_HORZ_LINE,
+        TessPolyBlockType::PT_VERT_LINE,
+    ];
+
+    let mut elements = Vec::new();
+
+    for word in &words {
+        // Skip low-confidence words.
+        if (word.confidence as f64) < min_confidence {
+            continue;
+        }
+
+        // Skip empty/whitespace-only text.
+        if word.text.trim().is_empty() {
+            continue;
+        }
+
+        // Compute word center for spatial containment checks.
+        let cx = (word.left + word.right) / 2;
+        let cy = (word.top + word.bottom) / 2;
+
+        // Find parent block and determine its type.
+        let parent_block = blocks
+            .iter()
+            .find(|b| point_in_bbox(cx, cy, b.left, b.top, b.right, b.bottom));
+
+        let block_type = parent_block.map(|b| b.block_type);
+
+        // Skip words in non-text block types.
+        if let Some(bt) = block_type {
+            if skip_block_types.contains(&bt) {
+                continue;
+            }
+        }
+
+        // Find parent paragraph for justification/list metadata.
+        let para_info = paragraphs
+            .iter()
+            .find(|p| point_in_bbox(cx, cy, p.left, p.top, p.right, p.bottom));
+
+        let element = iterator_word_to_element(word, block_type, para_info, page_number);
+        elements.push(element);
+    }
+
+    Ok(elements)
+}
+
 pub(super) fn perform_ocr(
     image_bytes: &[u8],
     config: &TesseractConfig,
@@ -836,11 +932,21 @@ pub(super) fn perform_ocr(
         }
     }
 
-    // Parse TSV data into structured OcrElements if available
-    if let Some(ref tsv_data) = tsv_data_for_tables {
-        let elements = parse_tsv_to_elements(tsv_data, config.min_confidence);
-        if !elements.is_empty() {
+    // Extract structured OcrElements via Tesseract iterators (rich metadata:
+    // font attributes, block types, paragraph info).
+    let iterator_elements = extract_elements_via_iterator(&api, 0, config.min_confidence);
+    match iterator_elements {
+        Ok(elements) if !elements.is_empty() => {
             ocr_elements = Some(elements);
+        }
+        _ => {
+            // Fallback: parse TSV if iterator extraction fails
+            if let Some(ref tsv_data) = tsv_data_for_tables {
+                let elements = parse_tsv_to_elements(tsv_data, config.min_confidence);
+                if !elements.is_empty() {
+                    ocr_elements = Some(elements);
+                }
+            }
         }
     }
 
