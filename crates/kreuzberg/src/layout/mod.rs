@@ -9,6 +9,7 @@
 
 pub mod engine;
 pub mod error;
+pub(crate) mod inference_timings;
 mod model_manager;
 pub mod models;
 pub mod postprocessing;
@@ -16,7 +17,7 @@ pub mod preprocessing;
 pub mod session;
 pub mod types;
 
-pub use engine::{CustomModelVariant, LayoutEngine, LayoutEngineConfig, LayoutPreset, ModelBackend};
+pub use engine::{CustomModelVariant, DetectTimings, LayoutEngine, LayoutEngineConfig, LayoutPreset, ModelBackend};
 pub use error::LayoutError;
 pub use model_manager::LayoutModelManager;
 pub use models::LayoutModel;

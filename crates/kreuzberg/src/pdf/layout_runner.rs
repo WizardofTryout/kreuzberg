@@ -51,8 +51,17 @@ pub struct PageLayoutResult {
 /// Timing breakdown for a single page.
 #[derive(Debug, Clone)]
 pub struct PageTiming {
+    /// Time to render the PDF page to a raster image (amortized from batch render).
     pub render_ms: f64,
+    /// Time spent in image preprocessing (resize, normalize, tensor construction).
+    pub preprocess_ms: f64,
+    /// Time for the ONNX model session.run() call (actual neural network inference).
+    pub onnx_ms: f64,
+    /// Total model inference time (preprocess + onnx), as measured by the engine.
     pub inference_ms: f64,
+    /// Time spent in postprocessing (confidence filtering, overlap resolution).
+    pub postprocess_ms: f64,
+    /// Time to map pixel-space bounding boxes to PDF coordinate space.
     pub mapping_ms: f64,
 }
 
@@ -78,12 +87,45 @@ impl LayoutTimingReport {
         self.per_page.iter().map(|p| p.inference_ms).sum::<f64>() / self.per_page.len() as f64
     }
 
+    pub fn avg_preprocess_ms(&self) -> f64 {
+        if self.per_page.is_empty() {
+            return 0.0;
+        }
+        self.per_page.iter().map(|p| p.preprocess_ms).sum::<f64>() / self.per_page.len() as f64
+    }
+
+    pub fn avg_onnx_ms(&self) -> f64 {
+        if self.per_page.is_empty() {
+            return 0.0;
+        }
+        self.per_page.iter().map(|p| p.onnx_ms).sum::<f64>() / self.per_page.len() as f64
+    }
+
+    pub fn avg_postprocess_ms(&self) -> f64 {
+        if self.per_page.is_empty() {
+            return 0.0;
+        }
+        self.per_page.iter().map(|p| p.postprocess_ms).sum::<f64>() / self.per_page.len() as f64
+    }
+
     pub fn total_inference_ms(&self) -> f64 {
         self.per_page.iter().map(|p| p.inference_ms).sum()
     }
 
     pub fn total_render_ms(&self) -> f64 {
         self.per_page.iter().map(|p| p.render_ms).sum()
+    }
+
+    pub fn total_preprocess_ms(&self) -> f64 {
+        self.per_page.iter().map(|p| p.preprocess_ms).sum()
+    }
+
+    pub fn total_onnx_ms(&self) -> f64 {
+        self.per_page.iter().map(|p| p.onnx_ms).sum()
+    }
+
+    pub fn total_postprocess_ms(&self) -> f64 {
+        self.per_page.iter().map(|p| p.postprocess_ms).sum()
     }
 }
 
@@ -160,9 +202,21 @@ pub fn detect_layout_for_document(
     // Render pages and extract dimensions in a single pdfium session.
     // This avoids deadlocking on the global PDFIUM_OPERATION_LOCK mutex,
     // since pdfium is not reentrant.
+    let render_start = Instant::now();
     let (images, page_dimensions) = render_and_get_dimensions(pdf_bytes)?;
+    let total_render_ms = render_start.elapsed().as_secs_f64() * 1000.0;
     let page_count = images.len();
     tracing::Span::current().record("page_count", page_count);
+
+    // Amortize render time evenly across pages for per-page reporting.
+    let render_ms_per_page = if page_count > 0 { total_render_ms / page_count as f64 } else { 0.0 };
+
+    tracing::info!(
+        total_render_ms,
+        page_count,
+        render_ms_per_page,
+        "PDF rendering complete"
+    );
 
     let mut results = Vec::with_capacity(page_count);
     let mut timings = Vec::with_capacity(page_count);
@@ -192,8 +246,11 @@ pub fn detect_layout_for_document(
                     render_height_px: 0,
                 });
                 timings.push(PageTiming {
-                    render_ms: 0.0,
+                    render_ms: render_ms_per_page,
+                    preprocess_ms: 0.0,
+                    onnx_ms: 0.0,
                     inference_ms: 0.0,
+                    postprocess_ms: 0.0,
                     mapping_ms: 0.0,
                 });
             }
@@ -206,7 +263,7 @@ pub fn detect_layout_for_document(
         };
 
         let inference_start = Instant::now();
-        let detection = engine.detect(&rgb_image).map_err(|e| {
+        let (detection, detect_timings) = engine.detect_timed(&rgb_image).map_err(|e| {
             crate::pdf::error::PdfError::RenderingFailed(format!(
                 "Layout detection failed on page {}: {}",
                 page_index, e
@@ -222,13 +279,21 @@ pub fn detect_layout_for_document(
         tracing::debug!(
             page = page_index,
             detections = page_result.regions.len(),
+            render_ms = render_ms_per_page,
+            preprocess_ms = detect_timings.preprocess_ms,
+            onnx_ms = detect_timings.onnx_ms,
             inference_ms,
+            postprocess_ms = detect_timings.postprocess_ms,
+            mapping_ms,
             "Layout detection complete for page"
         );
 
         timings.push(PageTiming {
-            render_ms: 0.0, // rendering was batched above
+            render_ms: render_ms_per_page,
+            preprocess_ms: detect_timings.preprocess_ms,
+            onnx_ms: detect_timings.onnx_ms,
             inference_ms,
+            postprocess_ms: detect_timings.postprocess_ms,
             mapping_ms,
         });
         results.push(page_result);
@@ -236,21 +301,30 @@ pub fn detect_layout_for_document(
 
     let total_ms = total_start.elapsed().as_secs_f64() * 1000.0;
 
+    // Build the report early so we can log its aggregate stats.
+    let report = LayoutTimingReport {
+        total_ms,
+        per_page: timings,
+    };
+
     tracing::info!(
         page_count,
         total_ms,
+        total_render_ms,
+        total_inference_ms = report.total_inference_ms(),
+        total_preprocess_ms = report.total_preprocess_ms(),
+        total_onnx_ms = report.total_onnx_ms(),
+        total_postprocess_ms = report.total_postprocess_ms(),
+        avg_render_ms = report.avg_render_ms(),
+        avg_preprocess_ms = report.avg_preprocess_ms(),
+        avg_onnx_ms = report.avg_onnx_ms(),
+        avg_inference_ms = report.avg_inference_ms(),
+        avg_postprocess_ms = report.avg_postprocess_ms(),
         total_detections = results.iter().map(|r| r.regions.len()).sum::<usize>(),
         "Layout detection complete for document"
     );
 
-    Ok((
-        results,
-        LayoutTimingReport {
-            total_ms,
-            per_page: timings,
-        },
-        images,
-    ))
+    Ok((results, report, images))
 }
 
 /// Run layout detection on pre-rendered images.
@@ -502,17 +576,26 @@ mod tests {
             per_page: vec![
                 PageTiming {
                     render_ms: 10.0,
+                    preprocess_ms: 5.0,
+                    onnx_ms: 70.0,
                     inference_ms: 80.0,
+                    postprocess_ms: 0.5,
                     mapping_ms: 0.1,
                 },
                 PageTiming {
                     render_ms: 12.0,
+                    preprocess_ms: 6.0,
+                    onnx_ms: 74.0,
                     inference_ms: 85.0,
+                    postprocess_ms: 0.5,
                     mapping_ms: 0.1,
                 },
                 PageTiming {
                     render_ms: 11.0,
+                    preprocess_ms: 5.5,
+                    onnx_ms: 72.0,
                     inference_ms: 82.0,
+                    postprocess_ms: 0.5,
                     mapping_ms: 0.1,
                 },
             ],
@@ -521,6 +604,12 @@ mod tests {
         assert!((report.avg_inference_ms() - 82.333).abs() < 0.1);
         assert!((report.total_inference_ms() - 247.0).abs() < 0.01);
         assert!((report.total_render_ms() - 33.0).abs() < 0.01);
+        assert!((report.avg_preprocess_ms() - 5.5).abs() < 0.01);
+        assert!((report.avg_onnx_ms() - 72.0).abs() < 0.01);
+        assert!((report.avg_postprocess_ms() - 0.5).abs() < 0.001);
+        assert!((report.total_preprocess_ms() - 16.5).abs() < 0.01);
+        assert!((report.total_onnx_ms() - 216.0).abs() < 0.01);
+        assert!((report.total_postprocess_ms() - 1.5).abs() < 0.001);
     }
 
     #[test]

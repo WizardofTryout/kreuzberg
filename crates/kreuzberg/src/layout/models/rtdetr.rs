@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use image::RgbImage;
 use ndarray::Array;
 use ort::{inputs, session::Session, value::Tensor};
@@ -47,6 +49,9 @@ impl RtDetrModel {
         let orig_width = img.width();
         let orig_height = img.height();
 
+        // --- Preprocessing timing ---
+        let preprocess_start = Instant::now();
+
         // Letterbox preprocessing: resize preserving aspect ratio, pad to 640×640.
         let (input_tensor, scale, pad_x, pad_y) = preprocessing::preprocess_imagenet_letterbox(img, INPUT_SIZE);
         let images_tensor = Tensor::from_array(input_tensor)?;
@@ -57,10 +62,19 @@ impl RtDetrModel {
             .map_err(|e| LayoutError::InvalidOutput(format!("Failed to create sizes tensor: {e}")))?;
         let sizes_tensor = Tensor::from_array(sizes)?;
 
+        let preprocess_ms = preprocess_start.elapsed().as_secs_f64() * 1000.0;
+        tracing::debug!(preprocess_ms, "RT-DETR preprocessing complete");
+
+        // --- ONNX inference timing ---
+        let onnx_start = Instant::now();
+
         let outputs = self.session.run(inputs![
             self.input_names[0].as_str() => images_tensor,
             self.input_names[1].as_str() => sizes_tensor
         ])?;
+
+        let onnx_ms = onnx_start.elapsed().as_secs_f64() * 1000.0;
+        tracing::debug!(onnx_ms, "RT-DETR ONNX session.run() complete");
 
         // Extract output tensors: try i64 labels first, then f32 boxes/scores.
         let mut float_data: Vec<Vec<f32>> = Vec::new();
@@ -131,6 +145,18 @@ impl RtDetrModel {
         }
 
         LayoutDetection::sort_by_confidence_desc(&mut detections);
+
+        // Publish granular timings via the thread-local side-channel so that
+        // LayoutEngine::detect_timed() can populate PageTiming without changing
+        // the LayoutModel trait signature.
+        crate::layout::inference_timings::set(preprocess_ms, onnx_ms);
+
+        tracing::debug!(
+            preprocess_ms,
+            onnx_ms,
+            detections = detections.len(),
+            "RT-DETR inference breakdown"
+        );
 
         Ok(detections)
     }

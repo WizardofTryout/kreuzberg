@@ -6,6 +6,7 @@
 
 use std::fmt;
 use std::path::PathBuf;
+use std::time::Instant;
 use std::str::FromStr;
 
 use image::RgbImage;
@@ -116,6 +117,19 @@ impl LayoutEngineConfig {
     }
 }
 
+/// Granular timing breakdown for a single `detect()` call.
+#[derive(Debug, Clone, Default)]
+pub struct DetectTimings {
+    /// Time spent in image preprocessing (resize, letterbox, normalize, tensor allocation).
+    pub preprocess_ms: f64,
+    /// Time for the ONNX `session.run()` call (actual neural network computation).
+    pub onnx_ms: f64,
+    /// Total time from start of model call to end of raw output decoding.
+    pub model_total_ms: f64,
+    /// Time spent in postprocessing heuristics (confidence filtering, overlap resolution).
+    pub postprocess_ms: f64,
+}
+
 /// High-level layout detection engine.
 ///
 /// Wraps model loading, inference, and postprocessing into a single
@@ -192,20 +206,55 @@ impl LayoutEngine {
     /// Returns a [`DetectionResult`] with bounding boxes, classes, and confidence scores.
     /// If `apply_heuristics` is enabled in config, postprocessing is applied automatically.
     pub fn detect(&mut self, img: &RgbImage) -> Result<DetectionResult, LayoutError> {
+        let (result, _timings) = self.detect_timed(img)?;
+        Ok(result)
+    }
+
+    /// Run layout detection on an image and return granular timing data.
+    ///
+    /// Identical to [`detect`] but also returns a [`DetectTimings`] breakdown.
+    /// Use this when you need per-step profiling (preprocess / onnx / postprocess).
+    pub fn detect_timed(&mut self, img: &RgbImage) -> Result<(DetectionResult, DetectTimings), LayoutError> {
+        // Model inference (includes preprocessing + ONNX run internally).
+        let model_start = Instant::now();
         let mut detections = if let Some(threshold) = self.config.confidence_threshold {
             self.model.detect_with_threshold(img, threshold)?
         } else {
             self.model.detect(img)?
         };
+        let model_total_ms = model_start.elapsed().as_secs_f64() * 1000.0;
+
+        // Retrieve granular preprocess/onnx split recorded by the model implementation
+        // via the thread-local side-channel.
+        let (preprocess_ms, onnx_ms) = crate::layout::inference_timings::take();
 
         let page_width = img.width();
         let page_height = img.height();
 
+        // Postprocessing heuristics (confidence filtering, overlap resolution).
+        let postprocess_start = Instant::now();
         if self.config.apply_heuristics {
             heuristics::apply_heuristics(&mut detections, page_width as f32, page_height as f32);
         }
+        let postprocess_ms = postprocess_start.elapsed().as_secs_f64() * 1000.0;
 
-        Ok(DetectionResult::new(page_width, page_height, detections))
+        tracing::info!(
+            preprocess_ms,
+            onnx_ms,
+            model_total_ms,
+            postprocess_ms,
+            final_detections = detections.len(),
+            "Layout engine detect_timed() breakdown"
+        );
+
+        let timings = DetectTimings {
+            preprocess_ms,
+            onnx_ms,
+            model_total_ms,
+            postprocess_ms,
+        };
+
+        Ok((DetectionResult::new(page_width, page_height, detections), timings))
     }
 
     /// Get the model name.
