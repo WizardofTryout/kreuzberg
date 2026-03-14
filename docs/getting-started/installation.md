@@ -1,322 +1,300 @@
+---
+description: "Install Kreuzberg — pick Python, TypeScript, Rust, Go, CLI/Docker, or any of 12 supported languages."
+---
+
 # Installation
 
-Kreuzberg is available in multiple formats optimized for different runtimes: native bindings for server-side languages and WebAssembly for JavaScript environments. Choose the package that matches your runtime environment.
+Kreuzberg ships native bindings for 12 languages and a standalone CLI. Pick your stack, run one command, and start extracting.
 
-## Which Package Should I Install?
+Every package includes **prebuilt binaries** for Linux (x86_64 / aarch64), macOS (Apple Silicon), and Windows — no compile step needed.
 
-| Runtime/Environment    | Package                   | Performance      | Best For                                          |
-| ---------------------- | ------------------------- | ---------------- | ------------------------------------------------- |
-| **Node.js**            | `@kreuzberg/node`         | Fastest (native) | Server-side Node applications, native performance |
-| **Bun**                | `@kreuzberg/node`         | Fastest (native) | Bun runtime, native performance                   |
-| **Browser**            | `@kreuzberg/wasm`         | Good (WASM)      | Client-side apps, no native dependencies          |
-| **Deno**               | `@kreuzberg/wasm`         | Good (WASM)      | Deno runtime, pure WASM execution                 |
-| **Cloudflare Workers** | `@kreuzberg/wasm`         | Good (WASM)      | Serverless functions, edge computing              |
-| **Python**             | `kreuzberg`               | Fastest (native) | Server-side Python, native performance            |
-| **Ruby**               | `kreuzberg`               | Fastest (native) | Ruby applications, native performance             |
-| **R**                  | `kreuzberg`               | Fastest (native) | R/RStudio, statistical computing                  |
-| **Elixir**             | `kreuzberg`               | Fastest (native) | Elixir/Phoenix apps, BEAM runtime                 |
-| **Java**               | `dev.kreuzberg:kreuzberg` | Fastest (native) | Server-side Java apps, FFM API                    |
-| **Go**                 | `github.com/.../go/v4`    | Fastest (native) | Server-side Go, cgo bindings                      |
-| **PHP**                | `kreuzberg/kreuzberg`     | Fastest (native) | PHP applications, ext-ffi                         |
-| **C#/.NET**            | `Kreuzberg` (NuGet)       | Fastest (native) | .NET applications, P/Invoke                       |
-| **Rust**               | `kreuzberg` crate         | Fastest (native) | Rust projects, full control                       |
-| **C/C++**              | `libkreuzberg_ffi`        | Fastest (native) | C/C++ applications, custom FFI integrations       |
-| **CLI/Docker**         | `kreuzberg-cli`           | Fastest (native) | Command-line usage, batch processing              |
+<div class="cli-hero" markdown>
 
-### Performance Notes
+## :material-console: CLI / Docker { #cli--docker }
 
-- **Native bindings** (@kreuzberg/node, kreuzberg Python/Ruby/R): ~100% performance, compiled C/C++ speed, full feature access
-- **WASM**: ~60-80% performance relative to native, pure JavaScript, zero native dependencies, works anywhere JavaScript runs
+The fastest way to try Kreuzberg - no SDK, no code, just your terminal.
 
-Choose **native bindings** for server-side applications requiring maximum performance. Choose **WASM** for browser/edge environments or when avoiding native dependencies is essential.
+=== "Install script"
 
-## Architecture Support
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/kreuzberg-dev/kreuzberg/main/scripts/install.sh | bash
+    ```
 
-All Kreuzberg packages support both x86_64 and aarch64 (ARM64) architectures:
+=== "Homebrew"
 
-- **x86_64**: Linux, Windows
-- **aarch64 (ARM64)**: Linux, macOS (Apple Silicon)
+    ```bash
+    brew install kreuzberg-dev/tap/kreuzberg
+    ```
 
-Precompiled binaries are available for all major platform combinations. On aarch64 systems, installation is as fast as on x86_64—no compilation required.
+=== "Cargo"
 
-## System Dependencies
+    ```bash
+    cargo install kreuzberg-cli
+    ```
 
-System dependencies vary by package:
+=== "Docker (CLI image)"
 
-### Native Bindings Only (Python, Ruby, Node.js)
+    ```bash
+    docker pull ghcr.io/kreuzberg-dev/kreuzberg-cli:latest
+    docker run -v $(pwd):/data ghcr.io/kreuzberg-dev/kreuzberg-cli:latest extract /data/document.pdf
+    ```
 
-- Rust toolchain (`rustup`) for building the core and bindings.
-- C/C++ build tools (Xcode Command Line Tools on macOS, MSVC Build Tools on Windows, `build-essential` on Linux).
-- Tesseract OCR (optional but recommended). Install via Homebrew (`brew install tesseract`), apt (`sudo apt install tesseract-ocr`), or Windows installers.
-- Pdfium binaries are fetched automatically during builds; no manual steps required.
+=== "Docker (full image)"
 
-### WASM (@kreuzberg/wasm)
+    ```bash
+    docker pull ghcr.io/kreuzberg-dev/kreuzberg:latest
+    ```
 
-No system dependencies required. WASM binaries are prebuilt and included in the npm package.
+[CLI Usage](../cli/usage.md){ .install-btn .install-btn--ghost }
+[API Server Guide](../guides/api-server.md){ .install-btn .install-btn--solid }
 
-## Python
+</div>
 
-```bash title="Terminal"
-pip install kreuzberg
-```
+---
 
-```bash title="Terminal"
-uv pip install kreuzberg
-```
+## Choose your language
 
-Optional extras:
+<div class="grid cards install-cards" markdown>
 
-```bash title="Terminal"
-pip install 'kreuzberg[easyocr]'
-```
+-   :fontawesome-brands-python:{ .lg .middle } **Python**
 
-PyPI wheels include precompiled binaries for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windows.
+    ---
 
-Next steps: [Python Quick Start](quickstart.md) • [Python API Reference](../reference/api-python.md)
+    ```bash
+    pip install kreuzberg
+    ```
 
-## TypeScript (Node.js / Bun) - Native <span class="version-badge">v4.0.0</span>
+    [API Reference](../reference/api-python.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](quickstart.md){ .install-btn .install-btn--solid }
 
-Use `@kreuzberg/node` for server-side TypeScript/Node.js applications requiring maximum performance.
+-   :fontawesome-brands-node-js:{ .lg .middle } **TypeScript (Node.js / Bun)**
 
-```bash title="Terminal"
-npm install @kreuzberg/node
-```
+    ---
 
-```bash title="Terminal"
-pnpm add @kreuzberg/node
-```
+    ```bash
+    npm install @kreuzberg/node
+    ```
 
-```bash title="Terminal"
-yarn add @kreuzberg/node
-```
+    [API Reference](../reference/api-typescript.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](#typescript){ .install-btn .install-btn--solid }
 
-The package ships with prebuilt N-API binaries for Linux, macOS (Apple Silicon), and Windows. If you need to build from source, ensure Rust is available on your PATH and rerun the install command.
+-   :fontawesome-brands-js:{ .lg .middle } **TypeScript (Browser / Edge)**
 
-N-API binaries support Linux x86_64, Linux aarch64, macOS (Apple Silicon), and Windows.
+    ---
 
-**Note for pnpm workspaces**: If you're using pnpm in a monorepo/workspace setup, you may need to configure automatic peer dependency installation. Add the following to your `.npmrc` file in the workspace root:
+    ```bash
+    npm install @kreuzberg/wasm
+    ```
 
-```ini title=".npmrc"
-auto-install-peers=true
-```
+    [API Reference](../reference/api-wasm.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](#typescript){ .install-btn .install-btn--solid }
 
-This ensures the platform-specific optional dependencies are installed correctly.
+-   :fontawesome-brands-rust:{ .lg .middle } **Rust**
 
-**Performance**: Native bindings provide ~100% performance through NAPI-RS compiled bindings.
+    ---
 
-Next steps: [TypeScript Quick Start](../guides/extraction.md#typescript-nodejs) • [TypeScript API Reference](../reference/api-typescript.md)
+    ```bash
+    cargo add kreuzberg
+    ```
 
-## TypeScript/JavaScript (Browser / Edge) - WASM <span class="version-badge">v4.0.0</span>
+    [API Reference](../reference/api-rust.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](quickstart.md){ .install-btn .install-btn--solid }
 
-Use `@kreuzberg/wasm` for client-side JavaScript applications, serverless environments, and runtimes where native binaries are unavailable or undesirable.
+-   :fontawesome-brands-golang:{ .lg .middle } **Go**
 
-### When to Use WASM
+    ---
 
-- Client-side browser applications
-- Cloudflare Workers or other edge computing platforms
-- Deno or other JavaScript runtimes
-- Environments where native dependencies cannot be installed
-- Scenarios where package size reduction matters
+    ```bash
+    go get github.com/kreuzberg-dev/kreuzberg/packages/go/v4@latest
+    ```
 
-### When to Use Native (@kreuzberg/node)
+    [API Reference](../reference/api-go.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](quickstart.md){ .install-btn .install-btn--solid }
 
-- Server-side Node.js applications (10-40% faster)
-- Bun runtime
-- Maximum performance requirements
-- Full feature access with no limitations
+-   :fontawesome-brands-java:{ .lg .middle } **Java**
 
-### Installation
+    ---
 
-```bash title="Terminal"
-npm install @kreuzberg/wasm
-```
+    ```gradle
+    implementation 'dev.kreuzberg:kreuzberg:4.4.2'
+    ```
 
-```bash title="Terminal"
-pnpm add @kreuzberg/wasm
-```
+    [API Reference](../reference/api-java.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](#java){ .install-btn .install-btn--solid }
 
-```bash title="Terminal"
-yarn add @kreuzberg/wasm
-```
+-   :material-language-ruby:{ .lg .middle } **Ruby**
 
-**Performance**: WASM bindings provide ~60-80% of native performance with zero native dependencies.
+    ---
 
-### Browser Usage
+    ```bash
+    gem install kreuzberg
+    ```
 
-```html title="index.html"
-<!DOCTYPE html>
-<html>
-  <head>
+    [API Reference](../reference/api-ruby.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](quickstart.md){ .install-btn .install-btn--solid }
+
+-   :material-language-csharp:{ .lg .middle } **C# / .NET** <span class="version-badge unreleased">Unreleased</span>
+
+    ---
+
+    ```bash
+    dotnet add package Kreuzberg
+    ```
+
+    [API Reference](../reference/api-csharp.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](../guides/csharp.md){ .install-btn .install-btn--solid }
+
+-   :fontawesome-brands-php:{ .lg .middle } **PHP** <span class="version-badge unreleased">Unreleased</span>
+
+    ---
+
+    ```bash
+    composer require kreuzberg/kreuzberg
+    ```
+
+    [API Reference](../reference/api-php.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](quickstart.md){ .install-btn .install-btn--solid }
+
+-   :simple-elixir:{ .lg .middle } **Elixir**
+
+    ---
+
+    ```elixir
+    {:kreuzberg, "~> 4.0"}
+    ```
+
+    [API Reference](../reference/api-elixir.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](#elixir){ .install-btn .install-btn--solid }
+
+-   :simple-r:{ .lg .middle } **R** <span class="version-badge unreleased">Unreleased</span>
+
+    ---
+
+    ```r
+    install.packages("kreuzberg",
+      repos = "https://kreuzberg-dev.r-universe.dev")
+    ```
+
+    [API Reference](../reference/api-r.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](quickstart.md){ .install-btn .install-btn--solid }
+
+-   :simple-cplusplus:{ .lg .middle } **C / C++** <span class="version-badge unreleased">Unreleased</span>
+
+    ---
+
+    ```bash
+    cargo build -p kreuzberg-ffi
+    ```
+
+    [API Reference](../reference/api-c.md){ .install-btn .install-btn--ghost }
+    [:material-lightning-bolt: Quick Start](#c-c-unreleased){ .install-btn .install-btn--solid }
+
+</div>
+
+---
+
+## System requirements
+
+Most of the time you won't need anything beyond the install command above. The table below only matters if you're building from source or want OCR:
+
+| Dependency | When you need it |
+|---|---|
+| Rust toolchain (`rustup`) | Building any native binding from source |
+| C/C++ compiler | Building native bindings (Xcode CLI tools / `build-essential` / MSVC) |
+| Tesseract OCR | Optional — `brew install tesseract` / `apt install tesseract-ocr` |
+| PDFium | Auto-fetched during builds |
+
+The WASM package (`@kreuzberg/wasm`) has **zero** system dependencies.
+
+---
+
+## Language-specific notes
+
+For most languages the install command above is all you need. The sections below cover edge cases and alternative install methods where they come up.
+
+### TypeScript
+
+Two npm packages target different runtimes:
+
+| Package | Best for | Performance |
+|---|---|---|
+| `@kreuzberg/node` | Node.js, Bun — server-side apps | Native (100%) |
+| `@kreuzberg/wasm` | Browsers, Deno, Cloudflare Workers | WASM (~60-80%) |
+
+Both work with **pnpm** (`pnpm add`) and **yarn** (`yarn add`) as well.
+
+!!! note "pnpm workspaces"
+    In monorepos, add this to your root `.npmrc` so platform-specific optional deps resolve correctly:
+    ```ini
+    auto-install-peers=true
+    ```
+
+??? example "WASM — Browser usage"
+    ```html
     <script type="module">
       import { initWasm, extractFromFile } from "@kreuzberg/wasm";
 
-      window.initKreuzberg = async () => {
-        await initWasm();
-        console.log("Kreuzberg initialized");
-      };
+      await initWasm();
 
-      window.extractFile = async (file) => {
-        const result = await extractFromFile(file);
+      const input = document.getElementById("file");
+      input.addEventListener("change", async (e) => {
+        const result = await extractFromFile(e.target.files[0]);
         console.log(result.content);
-      };
+      });
     </script>
-  </head>
-  <body>
     <input type="file" id="file" />
-  </body>
-</html>
-```
+    ```
 
-### Deno
+??? example "WASM — Deno"
+    ```typescript
+    import { initWasm, extractFile } from "npm:@kreuzberg/wasm";
 
-```typescript title="main.ts"
-import { initWasm, extractFile } from "npm:@kreuzberg/wasm";
-
-await initWasm();
-const result = await extractFile("./document.pdf");
-console.log(result.content);
-```
-
-### Cloudflare Workers
-
-```typescript title="worker.ts"
-import { initWasm, extractBytes } from "@kreuzberg/wasm";
-
-export default {
-  async fetch(request: Request): Promise<Response> {
     await initWasm();
+    const result = await extractFile("./document.pdf");
+    console.log(result.content);
+    ```
 
-    const file = await request.arrayBuffer();
-    const bytes = new Uint8Array(file);
-    const result = await extractBytes(bytes, "application/pdf");
+??? example "WASM — Cloudflare Workers"
+    ```typescript
+    import { initWasm, extractBytes } from "@kreuzberg/wasm";
 
-    return new Response(JSON.stringify({ content: result.content }));
-  },
-};
-```
+    export default {
+      async fetch(request: Request): Promise<Response> {
+        await initWasm();
+        const bytes = new Uint8Array(await request.arrayBuffer());
+        const result = await extractBytes(bytes, "application/pdf");
+        return Response.json({ content: result.content });
+      },
+    };
+    ```
 
-### Optional Features
+**Supported runtimes:** Chrome 74+, Firefox 79+, Safari 14+, Edge 79+, Node.js 22+, Deno 1.35+, Cloudflare Workers.
 
-OCR support requires browser Web Workers and additional memory. Enable it selectively:
+### Java
 
-```typescript title="ocr-example.ts"
-import { initWasm, enableOcr, extractFromFile } from "@kreuzberg/wasm";
+=== "Maven"
 
-await initWasm();
+    ```xml
+    <dependency>
+        <groupId>dev.kreuzberg</groupId>
+        <artifactId>kreuzberg</artifactId>
+        <version>4.4.2</version>
+    </dependency>
+    ```
 
-const fileInput = document.getElementById("file");
-fileInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
+=== "Gradle"
 
-  if (file.type.startsWith("image/")) {
-    // Enable OCR only for images
-    await enableOcr();
-  }
+    ```gradle
+    implementation 'dev.kreuzberg:kreuzberg:4.4.2'
+    ```
 
-  const result = await extractFromFile(file);
-  console.log(result.content);
-});
-```
+Requires Java 25+ (FFM/Panama API). Native libraries are bundled in the JAR.
 
-WASM bindings work in:
+### Elixir
 
-- Modern browsers (Chrome 74+, Firefox 79+, Safari 14+, Edge 79+)
-- Node.js 22+
-- Deno 1.35+
-- Cloudflare Workers
-- Other JavaScript runtimes with WebAssembly support
+Add to `mix.exs`:
 
-Next steps: [WASM Quick Start](quickstart.md#basic-extraction) • [WASM API Reference](../reference/api-wasm.md)
-
-## Ruby <span class="version-badge">v4.0.0</span>
-
-```bash title="Terminal"
-gem install kreuzberg
-```
-
-Bundler projects can add it to the Gemfile:
-
-```ruby title="Gemfile"
-gem 'kreuzberg', '~> 4.0'
-```
-
-Native extension builds require Ruby 3.2.0 or higher (including Ruby 4.x) plus MSYS2 on Windows. Set `RBENV_VERSION`/`chruby` accordingly and ensure `bundle config set build.kreuzberg --with-cflags="-std=c++17"` if your compiler defaults are older.
-
-Next steps: [Ruby Quick Start](../guides/extraction.md#ruby) • [Ruby API Reference](../reference/api-ruby.md)
-
-## R <span class="version-badge unreleased">Unreleased</span>
-
-Install from r-universe:
-
-```r title="R Console"
-install.packages("kreuzberg", repos = "https://kreuzberg-dev.r-universe.dev")
-```
-
-Or install from GitHub source:
-
-```r title="R Console"
-remotes::install_github("kreuzberg-dev/kreuzberg", subdir = "packages/r")
-```
-
-**Requirements:** R >= 4.2, Rust toolchain (cargo, rustc >= 1.91)
-
-The package uses extendr to compile Rust code directly into a native R extension. Building from source requires a working Rust toolchain on your PATH.
-
-Next steps: [R Quick Start](../guides/extraction.md#r) • [R API Reference](../reference/api-r.md)
-
-## Rust
-
-```bash title="Terminal"
-cargo add kreuzberg
-```
-
-Or edit `Cargo.toml` manually:
-
-```toml title="Cargo.toml"
-[dependencies]
-kreuzberg = "4.0"
-```
-
-Enable optional features as needed:
-
-```bash title="Terminal"
-cargo add kreuzberg --features "excel stopwords ocr"
-```
-
-Next steps: [Rust API Reference](../reference/api-rust.md)
-
-## C / C++ <span class="version-badge unreleased">Unreleased</span>
-
-Build the FFI library from source:
-
-```bash title="Terminal"
-cargo build --release -p kreuzberg-ffi
-```
-
-The build produces a static library (`libkreuzberg_ffi.a` / `kreuzberg_ffi.lib`) and a C header (`crates/kreuzberg-ffi/kreuzberg.h`). Include the header and link against the static library in your project:
-
-```makefile title="Makefile"
-HEADER_DIR = path/to/crates/kreuzberg-ffi
-LIBDIR     = path/to/target/release
-
-CFLAGS  = -Wall -Wextra -I$(HEADER_DIR)
-LDFLAGS = -L$(LIBDIR) -lkreuzberg_ffi -lpthread -ldl -lm
-
-my_app: my_app.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
-```
-
-On macOS, add `-framework CoreFoundation -framework Security` to `LDFLAGS`. On Windows, link `-lws2_32 -luserenv -lbcrypt` instead.
-
-**Requirements:** C compiler (gcc, clang, or MSVC), Rust toolchain for building the FFI crate
-
-Next steps: [C API Reference](../reference/api-c.md)
-
-## Elixir <span class="version-badge">v4.0.0</span>
-
-Add Kreuzberg to your `mix.exs`:
-
-```elixir title="mix.exs"
+```elixir
 def deps do
   [
     {:kreuzberg, "~> 4.0"}
@@ -324,21 +302,15 @@ def deps do
 end
 ```
 
-Then install:
-
-```bash title="Terminal"
+```bash
 mix deps.get
 ```
 
-The package ships with prebuilt native binaries for Linux, macOS (Apple Silicon), and Windows via RustlerPrecompiled. If prebuilt binaries are unavailable for your platform, the package will automatically fall back to compiling from source, which requires Rust to be available on your PATH.
+Ships prebuilt NIF binaries via RustlerPrecompiled. Falls back to compiling from source if no prebuilt matches your platform (requires Rust).
 
-Precompiled NIF binaries for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windows.
+### Rust
 
-**Performance**: Native NIF bindings provide ~100% performance through Rustler compiled bindings.
-
-Next steps: [Elixir Quick Start](quickstart.md) • [Elixir API Reference](../reference/api-elixir.md)
-
-## Java <span class="version-badge">v4.0.0</span>
+Enable features selectively:
 
 Add to Maven `pom.xml`:
 
@@ -350,107 +322,49 @@ Add to Maven `pom.xml`:
 </dependency>
 ```
 
-Or Gradle:
+Or pin a version in `Cargo.toml`:
 
 ```gradle title="build.gradle"
 implementation 'dev.kreuzberg:kreuzberg:4.4.6'
 ```
 
-**Requirements:** Java 25+ (FFM/Panama API)
+### C / C++ <span class="version-badge unreleased">Unreleased</span>
 
-The package bundles native libraries for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windows.
+Build the FFI library from source:
 
-View on [Maven Central](https://central.sonatype.com/artifact/dev.kreuzberg/kreuzberg).
-
-Next steps: [Java Quick Start](quickstart.md) • [Java API Reference](../reference/api-java.md)
-
-## Go <span class="version-badge">v4.0.0</span>
-
-```bash title="Terminal"
-go get github.com/kreuzberg-dev/kreuzberg/packages/go/v4@latest
+```bash
+cargo build --release -p kreuzberg-ffi
 ```
 
-**Requirements:** go 1.26+ with cgo, C compiler, libkreuzberg_ffi.a static library at build time
+This produces `libkreuzberg_ffi.a` and a header at `crates/kreuzberg-ffi/kreuzberg.h`. Link into your project:
 
-Kreuzberg Go binaries are **statically linked** — once built, they are self-contained and require no runtime library dependencies.
+```makefile
+HEADER_DIR = path/to/crates/kreuzberg-ffi
+LIBDIR     = path/to/target/release
 
-For external projects, download pre-built static libraries from [GitHub Releases](https://github.com/kreuzberg-dev/kreuzberg/releases) or build from source.
+CFLAGS  = -Wall -Wextra -I$(HEADER_DIR)
+LDFLAGS = -L$(LIBDIR) -lkreuzberg_ffi -lpthread -ldl -lm
 
-Next steps: [Go Quick Start](quickstart.md) • [Go API Reference](../reference/api-go.md)
-
-## PHP <span class="version-badge unreleased">Unreleased</span>
-
-```bash title="Terminal"
-composer require kreuzberg/kreuzberg
+my_app: my_app.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 ```
 
-**Requirements:** PHP 8.2+, ext-ffi enabled
+!!! tip "Platform-specific linker flags"
+    **macOS:** add `-framework CoreFoundation -framework Security`
+    **Windows:** add `-lws2_32 -luserenv -lbcrypt`
 
-The package includes prebuilt native extensions for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windows.
+[API Reference →](../reference/api-c.md)
 
-Next steps: [PHP Quick Start](quickstart.md) • [PHP API Reference](../reference/api-php.md)
+---
 
-## C# / .NET <span class="version-badge unreleased">Unreleased</span>
+## Development setup
 
-```bash title="Terminal"
-dotnet add package Kreuzberg
+Working on the Kreuzberg repo itself:
+
+```bash
+task setup      # installs all language toolchains
+task lint        # linters across all languages
+task dev:test    # full test suite
 ```
 
-Or via Package Manager Console:
-
-```powershell title="Package Manager Console"
-Install-Package Kreuzberg
-```
-
-**Requirements:** .NET 10.0+
-
-The package includes prebuilt native libraries for Linux (x86_64, aarch64), macOS (Apple Silicon), and Windows.
-
-Next steps: [C# Quick Start](quickstart.md) • [C# API Reference](../reference/api-csharp.md) • [C# Bindings Guide](../guides/csharp.md)
-
-## CLI
-
-Install script (Linux / macOS):
-
-```bash title="Terminal"
-curl -fsSL https://raw.githubusercontent.com/kreuzberg-dev/kreuzberg/main/scripts/install.sh | bash
-```
-
-Homebrew tap (macOS / Linux):
-
-```bash title="Terminal"
-brew install kreuzberg-dev/tap/kreuzberg
-```
-
-Cargo install:
-
-```bash title="Terminal"
-cargo install kreuzberg-cli
-```
-
-Docker (CLI-only image):
-
-```bash title="Terminal"
-docker pull ghcr.io/kreuzberg-dev/kreuzberg-cli:latest
-docker run -v $(pwd):/data ghcr.io/kreuzberg-dev/kreuzberg-cli:latest extract /data/document.pdf
-```
-
-Docker (full image with all extensions):
-
-```bash title="Terminal"
-docker pull ghcr.io/kreuzberg-dev/kreuzberg:latest
-```
-
-Next steps: [CLI Usage](../cli/usage.md) • [API Server Guide](../guides/api-server.md)
-
-## Development Environment
-
-To work on the repository itself:
-
-```bash title="Terminal"
-task setup      # Install all dependencies (Python, Node.js, Ruby, Rust)
-task lint       # Run linters across all languages
-task dev:test   # Execute full test suite (Rust, Python, Ruby, TypeScript)
-```
-
-See [Contributing](../contributing.md) for branch naming, coding conventions, and test expectations.
+See [Contributing](../contributing.md) for conventions and expectations.

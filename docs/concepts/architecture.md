@@ -55,7 +55,7 @@ Kreuzberg provides two TypeScript implementations optimized for different enviro
 - **Native (`@kreuzberg/node`)**: Uses NAPI-RS to compile native C++ bindings. Provides maximum performance on Node.js, Bun, and Deno. Requires compilation but delivers native speeds.
 - **WASM (`@kreuzberg/wasm`)**: Uses wasm-bindgen to compile pure WebAssembly. Works in browsers, Cloudflare Workers, and any JavaScript runtime. 60-80% of native speed with zero native dependencies.
 
-See [Installation Guide](../getting-started/installation.md#which-package-should-i-install) for which to use in your environment.
+See [Installation Guide](../getting-started/installation.md#typescript) for which to use in your environment.
 
 ## Rust Core Structure
 
