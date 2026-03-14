@@ -1057,7 +1057,10 @@ mod tests {
         // The body elements from the left column must follow Header in the left column.
         let l1_pos = texts.iter().position(|t| t == "L1").unwrap();
         let l2_pos = texts.iter().position(|t| t == "L2").unwrap();
-        assert!(header_pos < l1_pos, "Header (y=762) should precede L1 (y=662) in spatial order");
+        assert!(
+            header_pos < l1_pos,
+            "Header (y=762) should precede L1 (y=662) in spatial order"
+        );
         assert!(l1_pos < l2_pos, "L1 (y=662) should precede L2 (y=612) in spatial order");
     }
 

@@ -214,13 +214,34 @@ pub(super) fn repair_contextual_ligatures(text: &str) -> Cow<'_, str> {
         };
 
         match ch {
-            '!' if prev_is_alpha && next_is_vowel => { result.push_str("ff"); repaired = true; }
-            '!' if prev_is_alpha && next_is_alpha => { result.push_str("fi"); repaired = true; }
-            '!' if prev_is_alpha && next_byte_idx >= bytes.len() => { result.push_str("fi"); repaired = true; }
-            '"' if prev_is_alpha && next_is_alpha => { result.push_str("ffi"); repaired = true; }
-            '#' if prev_is_alpha && next_is_alpha => { result.push_str("fi"); repaired = true; }
-            '#' if prev_is_space_or_start && next_is_lower => { result.push_str("fi"); repaired = true; }
-            '!' if prev_is_space_or_start && next_is_lower => { result.push_str("fi"); repaired = true; }
+            '!' if prev_is_alpha && next_is_vowel => {
+                result.push_str("ff");
+                repaired = true;
+            }
+            '!' if prev_is_alpha && next_is_alpha => {
+                result.push_str("fi");
+                repaired = true;
+            }
+            '!' if prev_is_alpha && next_byte_idx >= bytes.len() => {
+                result.push_str("fi");
+                repaired = true;
+            }
+            '"' if prev_is_alpha && next_is_alpha => {
+                result.push_str("ffi");
+                repaired = true;
+            }
+            '#' if prev_is_alpha && next_is_alpha => {
+                result.push_str("fi");
+                repaired = true;
+            }
+            '#' if prev_is_space_or_start && next_is_lower => {
+                result.push_str("fi");
+                repaired = true;
+            }
+            '!' if prev_is_space_or_start && next_is_lower => {
+                result.push_str("fi");
+                repaired = true;
+            }
             _ => result.push(ch),
         }
 
@@ -229,7 +250,11 @@ pub(super) fn repair_contextual_ligatures(text: &str) -> Cow<'_, str> {
         byte_idx = next_byte_idx;
     }
 
-    if repaired { Cow::Owned(result) } else { Cow::Borrowed(text) }
+    if repaired {
+        Cow::Owned(result)
+    } else {
+        Cow::Borrowed(text)
+    }
 }
 
 /// Check if text contains ligature corruption patterns.
@@ -406,7 +431,7 @@ pub(super) fn normalize_unicode_text(text: &str) -> Cow<'_, str> {
         text.replace(['\u{2018}', '\u{2019}'], "'")  // curly single quotes
             .replace(['\u{201C}', '\u{201D}'], "\"") // curly double quotes
             .replace('\u{2044}', "/")  // fraction slash
-            .replace('\u{2022}', "\u{00B7}") // bullet → middle dot
+            .replace('\u{2022}', "\u{00B7}"), // bullet → middle dot
     )
 }
 
@@ -451,10 +476,7 @@ pub(super) fn normalize_text_encoding(text: &str) -> Cow<'_, str> {
 /// The repair function returns `Cow<'_, str>`: if it returns `Cow::Borrowed`,
 /// the segment text is unchanged and no allocation is performed. Only
 /// `Cow::Owned` results trigger an update.
-pub(super) fn apply_to_all_segments<'a>(
-    paragraphs: &mut [PdfParagraph],
-    repair_fn: impl Fn(&'a str) -> Cow<'a, str>,
-) {
+pub(super) fn apply_to_all_segments<'a>(paragraphs: &mut [PdfParagraph], repair_fn: impl Fn(&'a str) -> Cow<'a, str>) {
     for para in paragraphs {
         for line in &mut para.lines {
             for seg in &mut line.segments {

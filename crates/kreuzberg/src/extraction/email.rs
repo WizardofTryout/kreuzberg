@@ -651,8 +651,10 @@ fn read_msg_string_prop<F: std::io::Read + std::io::Seek>(
     // Fallback to PT_STRING8 (001E), decoded with the message code page.
     let ansi_path = format!("{base}/__substg1.0_{prop_id:04X}001E");
     read_msg_stream(comp, &ansi_path).map(|buf| {
-        let encoding = codepage.map(encoding_for_windows_codepage).unwrap_or(encoding_rs::WINDOWS_1252);
-let (decoded, _, _) = encoding.decode(&buf);
+        let encoding = codepage
+            .map(encoding_for_windows_codepage)
+            .unwrap_or(encoding_rs::WINDOWS_1252);
+        let (decoded, _, _) = encoding.decode(&buf);
         decoded.trim_end_matches('\0').to_string()
     })
 }

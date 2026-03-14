@@ -85,7 +85,9 @@ fn extract_structure_tree_pages(
                     for p in &paragraphs {
                         for l in &p.lines {
                             for s in &l.segments {
-                                if !all_text.is_empty() { all_text.push(' '); }
+                                if !all_text.is_empty() {
+                                    all_text.push(' ');
+                                }
                                 all_text.push_str(&s.text);
                             }
                         }
@@ -646,7 +648,9 @@ pub fn render_document_as_markdown_with_tables(
                 for p in &paragraphs {
                     for l in &p.lines {
                         for s in &l.segments {
-                            if !all_text.is_empty() { all_text.push(' '); }
+                            if !all_text.is_empty() {
+                                all_text.push(' ');
+                            }
                             all_text.push_str(&s.text);
                         }
                     }

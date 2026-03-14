@@ -1902,8 +1902,16 @@ impl TesseractAPI {
         // when the corresponding box is successfully pushed (boxGetGeometry succeeded).
         // Collecting all `count` IDs unconditionally would leave the ID vecs longer
         // than the boxes vec whenever boxGetGeometry fails for some indices.
-        let mut block_ids_vec: Option<Vec<i32>> = if blockids_ptr.is_null() { None } else { Some(Vec::with_capacity(n)) };
-        let mut para_ids_vec: Option<Vec<i32>> = if paraids_ptr.is_null() { None } else { Some(Vec::with_capacity(n)) };
+        let mut block_ids_vec: Option<Vec<i32>> = if blockids_ptr.is_null() {
+            None
+        } else {
+            Some(Vec::with_capacity(n))
+        };
+        let mut para_ids_vec: Option<Vec<i32>> = if paraids_ptr.is_null() {
+            None
+        } else {
+            Some(Vec::with_capacity(n))
+        };
         for i in 0..count {
             let mut x = 0_i32;
             let mut y = 0_i32;
@@ -2007,7 +2015,11 @@ impl TesseractAPI {
         // Collect block_ids in lock-step with boxes so the two arrays stay aligned.
         // Pushing IDs unconditionally for all `count` indices would leave block_ids
         // longer than boxes when boxGetGeometry fails for some entries.
-        let mut block_ids_vec: Option<Vec<i32>> = if blockids_ptr.is_null() { None } else { Some(Vec::with_capacity(n)) };
+        let mut block_ids_vec: Option<Vec<i32>> = if blockids_ptr.is_null() {
+            None
+        } else {
+            Some(Vec::with_capacity(n))
+        };
         for i in 0..count {
             let mut x = 0_i32;
             let mut y = 0_i32;

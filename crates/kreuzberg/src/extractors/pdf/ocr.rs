@@ -398,12 +398,8 @@ pub(crate) async fn extract_with_ocr(
             };
 
             // Convert OcrElements to PageContent via unified adapter.
-            let mut page_content = crate::pdf::markdown::adapters::from_ocr_elements(
-                elements,
-                width as f32,
-                height as f32,
-                page_idx + 1,
-            );
+            let mut page_content =
+                crate::pdf::markdown::adapters::from_ocr_elements(elements, width as f32, height as f32, page_idx + 1);
 
             // Reorder for multi-column reading order.
             crate::pdf::markdown::reorder_elements_reading_order(&mut page_content.elements);
@@ -412,8 +408,7 @@ pub(crate) async fn extract_with_ocr(
             let paragraphs = crate::pdf::markdown::content_to_paragraphs(&page_content);
 
             // Filter page furniture (headers/footers).
-            let paragraphs: Vec<_> =
-                paragraphs.into_iter().filter(|p| !p.is_page_furniture).collect();
+            let paragraphs: Vec<_> = paragraphs.into_iter().filter(|p| !p.is_page_furniture).collect();
 
             // Interleave paragraphs and SLANet tables by vertical position.
             //

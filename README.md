@@ -50,6 +50,9 @@
   <a href="https://docs.kreuzberg.dev">
     <img src="https://img.shields.io/badge/docs-kreuzberg.dev-blue" alt="Documentation">
   </a>
+  <a href="https://huggingface.co/Kreuzberg">
+    <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow" alt="Hugging Face">
+  </a>
 </div>
 
 <img width="3384" height="573" alt="Linkedin- Banner" src="https://github.com/user-attachments/assets/1b6c6ad7-3b6d-4171-b1c9-f2026cc9deb8" />
