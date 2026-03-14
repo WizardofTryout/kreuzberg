@@ -1,5 +1,7 @@
 //! Markdown rendering for paragraphs and lines with inline bold/italic markup.
 
+use std::borrow::Cow;
+
 use crate::pdf::hierarchy::SegmentData;
 
 use super::lines::needs_space_between;
@@ -217,22 +219,42 @@ fn should_dehyphenate(prev: &str, next: &str) -> bool {
 ///
 /// Also escapes `_` as `\_` unless the text contains `://` (to preserve URLs).
 ///
+/// Uses a single-pass scan: if no special characters are found, returns a
+/// borrowed `Cow` with no allocation.
+///
 /// Visibility is `pub(in crate::pdf::markdown)` so child modules such as
 /// `crate::pdf::markdown::regions::slanet` can import it.
-pub(in crate::pdf::markdown) fn escape_html_entities(text: &str) -> String {
-    let mut s = text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
-    // Escape underscores only when not a URL (URLs contain "://")
-    if !s.contains("://") {
-        s = s.replace('_', "\\_");
+pub(in crate::pdf::markdown) fn escape_html_entities(text: &str) -> Cow<'_, str> {
+    // Determine which replacements are needed with a fast pre-scan.
+    let is_url = text.contains("://");
+    let needs_amp = text.contains('&');
+    let needs_lt = text.contains('<');
+    let needs_gt = text.contains('>');
+    let needs_underscore = !is_url && text.contains('_');
+
+    if !needs_amp && !needs_lt && !needs_gt && !needs_underscore {
+        return Cow::Borrowed(text);
     }
-    s
+
+    // Single allocation: build result in one pass.
+    let mut result = String::with_capacity(text.len() + 16);
+    for ch in text.chars() {
+        match ch {
+            '&' => result.push_str("&amp;"),
+            '<' => result.push_str("&lt;"),
+            '>' => result.push_str("&gt;"),
+            '_' if !is_url => result.push_str("\\_"),
+            _ => result.push(ch),
+        }
+    }
+    Cow::Owned(result)
 }
 
 /// Render an entire body paragraph with inline bold/italic markup.
 fn render_paragraph_with_inline_markup(para: &PdfParagraph) -> String {
     let all_segments: Vec<&SegmentData> = para.lines.iter().flat_map(|l| l.segments.iter()).collect();
     let rendered = render_segment_refs_with_markup(&all_segments);
-    escape_html_entities(&rendered)
+    escape_html_entities(&rendered).into_owned()
 }
 
 /// Core inline markup renderer working on segment references.

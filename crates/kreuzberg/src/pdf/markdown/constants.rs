@@ -3,7 +3,7 @@
 /// Baseline Y tolerance as a fraction of the smaller font size for same-line grouping.
 pub(super) const BASELINE_Y_TOLERANCE_FRACTION: f32 = 0.5;
 /// Multiplier for baseline line spacing (Q1) to detect paragraph breaks.
-pub(super) const PARAGRAPH_GAP_MULTIPLIER: f32 = 1.5;
+pub(super) const PARAGRAPH_GAP_MULTIPLIER: f32 = 1.8;
 /// Font size change threshold (in points) to trigger a paragraph break.
 pub(super) const FONT_SIZE_CHANGE_THRESHOLD: f32 = 1.5;
 /// Left indent change threshold (in points) to trigger a paragraph break.

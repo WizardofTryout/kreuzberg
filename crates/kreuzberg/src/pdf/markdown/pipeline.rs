@@ -81,13 +81,15 @@ fn extract_structure_tree_pages(
                 // paragraph text (not page.text()) since structure tree
                 // text may differ from the page text layer.
                 {
-                    let all_text: String = paragraphs
-                        .iter()
-                        .flat_map(|p| p.lines.iter())
-                        .flat_map(|l| l.segments.iter())
-                        .map(|s| s.text.as_str())
-                        .collect::<Vec<_>>()
-                        .join(" ");
+                    let mut all_text = String::new();
+                    for p in &paragraphs {
+                        for l in &p.lines {
+                            for s in &l.segments {
+                                if !all_text.is_empty() { all_text.push(' '); }
+                                all_text.push_str(&s.text);
+                            }
+                        }
+                    }
                     if text_has_ligature_corruption(&all_text) {
                         apply_to_all_segments(&mut paragraphs, repair_contextual_ligatures);
                     }
@@ -640,13 +642,15 @@ pub fn render_document_as_markdown_with_tables(
             // chars_to_segments didn't catch encoding issues (pdfium
             // doesn't always flag broken ToUnicode CMaps).
             {
-                let all_text: String = paragraphs
-                    .iter()
-                    .flat_map(|p| p.lines.iter())
-                    .flat_map(|l| l.segments.iter())
-                    .map(|s| s.text.as_str())
-                    .collect::<Vec<_>>()
-                    .join(" ");
+                let mut all_text = String::new();
+                for p in &paragraphs {
+                    for l in &p.lines {
+                        for s in &l.segments {
+                            if !all_text.is_empty() { all_text.push(' '); }
+                            all_text.push_str(&s.text);
+                        }
+                    }
+                }
                 if text_has_ligature_corruption(&all_text) {
                     apply_to_all_segments(&mut paragraphs, repair_contextual_ligatures);
                 }

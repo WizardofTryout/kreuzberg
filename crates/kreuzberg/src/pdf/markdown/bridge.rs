@@ -298,10 +298,19 @@ fn filter_sidebar_characters(char_infos: &mut Vec<CharInfo>, page_width: f32) {
         return;
     }
 
-    // Remove sidebar characters (reverse order to preserve indices)
-    for &idx in margin_indices.iter().rev() {
-        char_infos.remove(idx);
+    // Remove sidebar characters using a swap-compact to avoid O(n²) shifting.
+    let mut keep = vec![true; char_infos.len()];
+    for &idx in &margin_indices {
+        keep[idx] = false;
     }
+    let mut write = 0;
+    for read in 0..char_infos.len() {
+        if keep[read] {
+            char_infos.swap(write, read);
+            write += 1;
+        }
+    }
+    char_infos.truncate(write);
 }
 
 /// Build the text for a single line from character info, inserting spaces where

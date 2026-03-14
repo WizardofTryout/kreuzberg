@@ -14,6 +14,8 @@
 //! 3. **Unicode normalization** – curly quotes, fraction slash, and other PDF-specific
 //!    Unicode characters are normalized to their ASCII equivalents.
 
+use std::borrow::Cow;
+
 use memchr::memchr3;
 use pdfium_render::prelude::*;
 
@@ -124,20 +126,20 @@ pub(super) fn apply_ligature_repairs(text: &str, repair_map: &[(char, &str)]) ->
     // space followed by a lowercase letter, remove the space.
     let ligature_endings: &[&str] = &["fi", "fl", "ff", "ffi", "ffl"];
     let mut collapsed = String::with_capacity(result.len());
-    let chars: Vec<char> = result.chars().collect();
-    let mut i = 0;
-    while i < chars.len() {
-        if chars[i] == ' ' && i > 0 && i + 1 < chars.len() && chars[i + 1].is_lowercase() {
-            // Check if the text before the space ends with a ligature expansion
-            let should_collapse = ligature_endings.iter().any(|lig| collapsed.ends_with(lig));
-            if should_collapse {
-                // Skip the space
-                i += 1;
-                continue;
+    let mut chars = result.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == ' ' && !collapsed.is_empty() {
+            // Look ahead: is the next character a lowercase letter?
+            if chars.peek().is_some_and(|&nc| nc.is_lowercase()) {
+                // Check if the text before the space ends with a ligature expansion
+                let should_collapse = ligature_endings.iter().any(|lig| collapsed.ends_with(lig));
+                if should_collapse {
+                    // Skip the space — don't push it
+                    continue;
+                }
             }
         }
-        collapsed.push(chars[i]);
-        i += 1;
+        collapsed.push(ch);
     }
 
     collapsed
@@ -161,12 +163,13 @@ pub(super) fn apply_ligature_repairs(text: &str, repair_map: &[(char, &str)]) ->
 /// - Normal `!` appears at word/sentence boundaries, not between letters
 /// - Normal `"` appears at word boundaries (quotation marks), not mid-word
 /// - Normal `#` appears at word start (hashtags) or after non-letters, not mid-word
-pub(super) fn repair_contextual_ligatures(text: &str) -> String {
+pub(super) fn repair_contextual_ligatures(text: &str) -> Cow<'_, str> {
     if text.len() < 2 {
-        return text.to_string();
+        return Cow::Borrowed(text);
     }
 
     let mut result = String::with_capacity(text.len() + 16);
+    let mut repaired = false;
     let bytes = text.as_bytes();
     let chars = text.chars().peekable();
     let mut byte_idx = 0;
@@ -211,13 +214,13 @@ pub(super) fn repair_contextual_ligatures(text: &str) -> String {
         };
 
         match ch {
-            '!' if prev_is_alpha && next_is_vowel => result.push_str("ff"),
-            '!' if prev_is_alpha && next_is_alpha => result.push_str("fi"),
-            '!' if prev_is_alpha && next_byte_idx >= bytes.len() => result.push_str("fi"),
-            '"' if prev_is_alpha && next_is_alpha => result.push_str("ffi"),
-            '#' if prev_is_alpha && next_is_alpha => result.push_str("fi"),
-            '#' if prev_is_space_or_start && next_is_lower => result.push_str("fi"),
-            '!' if prev_is_space_or_start && next_is_lower => result.push_str("fi"),
+            '!' if prev_is_alpha && next_is_vowel => { result.push_str("ff"); repaired = true; }
+            '!' if prev_is_alpha && next_is_alpha => { result.push_str("fi"); repaired = true; }
+            '!' if prev_is_alpha && next_byte_idx >= bytes.len() => { result.push_str("fi"); repaired = true; }
+            '"' if prev_is_alpha && next_is_alpha => { result.push_str("ffi"); repaired = true; }
+            '#' if prev_is_alpha && next_is_alpha => { result.push_str("fi"); repaired = true; }
+            '#' if prev_is_space_or_start && next_is_lower => { result.push_str("fi"); repaired = true; }
+            '!' if prev_is_space_or_start && next_is_lower => { result.push_str("fi"); repaired = true; }
             _ => result.push(ch),
         }
 
@@ -226,7 +229,7 @@ pub(super) fn repair_contextual_ligatures(text: &str) -> String {
         byte_idx = next_byte_idx;
     }
 
-    result
+    if repaired { Cow::Owned(result) } else { Cow::Borrowed(text) }
 }
 
 /// Check if text contains ligature corruption patterns.
@@ -335,14 +338,32 @@ pub(super) fn text_has_broken_word_spacing(text: &str) -> bool {
 /// - The fragment is a single alphabetic character
 /// - It's not a common standalone word ("a", "I", "A")
 /// - The next word starts with a lowercase letter (continuation)
-pub(super) fn repair_broken_word_spacing(text: &str) -> String {
+pub(super) fn repair_broken_word_spacing(text: &str) -> Cow<'_, str> {
     if text.is_empty() {
-        return text.to_string();
+        return Cow::Borrowed(text);
+    }
+
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let mut repaired = false;
+
+    // Quick pre-scan: check if any joins would be made before allocating.
+    for window in words.windows(2) {
+        let w = window[0];
+        let next = window[1];
+        if w.len() == 1 && w.chars().next().is_some_and(|c| c.is_alphabetic()) {
+            let ch = w.chars().next().unwrap();
+            if ch != 'a' && ch != 'I' && ch != 'A' && next.chars().next().is_some_and(|c| c.is_lowercase()) {
+                repaired = true;
+                break;
+            }
+        }
+    }
+
+    if !repaired {
+        return Cow::Borrowed(text);
     }
 
     let mut result = String::with_capacity(text.len());
-    let words: Vec<&str> = text.split_whitespace().collect();
-
     let mut i = 0;
     while i < words.len() {
         if i > 0 && !result.is_empty() {
@@ -369,7 +390,7 @@ pub(super) fn repair_broken_word_spacing(text: &str) -> String {
         i += 1;
     }
 
-    result
+    Cow::Owned(result)
 }
 
 /// Normalize Unicode characters commonly found in PDFs to their ASCII equivalents.
@@ -377,14 +398,16 @@ pub(super) fn repair_broken_word_spacing(text: &str) -> String {
 /// Matches docling's `sanitize_text()` normalizations for curly quotes, fraction
 /// slash, and bullet characters. This improves TF1 by ensuring extracted text
 /// matches ground truth tokenization.
-pub(super) fn normalize_unicode_text(text: &str) -> String {
+pub(super) fn normalize_unicode_text(text: &str) -> Cow<'_, str> {
     if !text.contains(['\u{2018}', '\u{2019}', '\u{201C}', '\u{201D}', '\u{2044}', '\u{2022}']) {
-        return text.to_string();
+        return Cow::Borrowed(text);
     }
-    text.replace(['\u{2018}', '\u{2019}'], "'")  // curly single quotes
-        .replace(['\u{201C}', '\u{201D}'], "\"") // curly double quotes
-        .replace('\u{2044}', "/")  // fraction slash
-        .replace('\u{2022}', "\u{00B7}") // bullet → middle dot
+    Cow::Owned(
+        text.replace(['\u{2018}', '\u{2019}'], "'")  // curly single quotes
+            .replace(['\u{201C}', '\u{201D}'], "\"") // curly double quotes
+            .replace('\u{2044}', "/")  // fraction slash
+            .replace('\u{2022}', "\u{00B7}") // bullet → middle dot
+    )
 }
 
 /// Normalize text encoding: handle soft hyphens and strip control characters.
@@ -393,10 +416,10 @@ pub(super) fn normalize_unicode_text(text: &str) -> String {
 ///   hyphen-rejoining logic can merge word fragments.
 /// - `\u{00AD}` mid-text → removed (invisible break hint).
 /// - C0 control characters (U+0000–U+001F except `\t`, `\n`, `\r`) → removed.
-pub(super) fn normalize_text_encoding(text: &str) -> String {
+pub(super) fn normalize_text_encoding(text: &str) -> Cow<'_, str> {
     // Fast path: no special characters present
     if !text.contains('\u{00AD}') && !text.bytes().any(|b| b < 0x20 && b != b'\t' && b != b'\n' && b != b'\r') {
-        return text.to_string();
+        return Cow::Borrowed(text);
     }
 
     let mut result = String::with_capacity(text.len());
@@ -420,15 +443,29 @@ pub(super) fn normalize_text_encoding(text: &str) -> String {
         }
     }
 
-    result
+    Cow::Owned(result)
 }
 
 /// Apply a text transformation to every segment in every paragraph.
-pub(super) fn apply_to_all_segments(paragraphs: &mut [PdfParagraph], repair_fn: impl Fn(&str) -> String) {
+///
+/// The repair function returns `Cow<'_, str>`: if it returns `Cow::Borrowed`,
+/// the segment text is unchanged and no allocation is performed. Only
+/// `Cow::Owned` results trigger an update.
+pub(super) fn apply_to_all_segments<'a>(
+    paragraphs: &mut [PdfParagraph],
+    repair_fn: impl Fn(&'a str) -> Cow<'a, str>,
+) {
     for para in paragraphs {
         for line in &mut para.lines {
             for seg in &mut line.segments {
-                seg.text = repair_fn(&seg.text);
+                // SAFETY: We extend the lifetime of the borrow to 'a here.
+                // This is sound because we only use the Cow result before the next
+                // mutable access to seg.text, and Cow::Borrowed does not escape.
+                let text_ref: &'a str = unsafe { &*(seg.text.as_str() as *const str) };
+                if let Cow::Owned(s) = repair_fn(text_ref) {
+                    seg.text = s;
+                }
+                // Cow::Borrowed means unchanged — no allocation needed
             }
         }
     }
