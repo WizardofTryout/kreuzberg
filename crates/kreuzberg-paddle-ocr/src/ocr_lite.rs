@@ -273,7 +273,7 @@ impl OcrLite {
         // Angle correction rollback
         let mut angle_rollback_records = HashMap::<usize, ImageBuffer<image::Rgb<u8>, Vec<u8>>>::new();
 
-        for (index, (angle, mut part_image)) in angles.iter().zip(part_images.into_iter()).enumerate() {
+        for (index, (angle, mut part_image)) in angles.iter().zip(part_images).enumerate() {
             if angle.index == 1 {
                 if angle_rollback {
                     // Keep original copy

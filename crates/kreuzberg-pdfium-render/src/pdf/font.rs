@@ -758,7 +758,7 @@ impl<'a> PdfFont<'a> {
             return String::new();
         }
 
-        let mut buffer = create_byte_buffer(buffer_length as usize);
+        let mut buffer = create_byte_buffer(buffer_length);
 
         let result =
             self.bindings
@@ -794,7 +794,7 @@ impl<'a> PdfFont<'a> {
             return String::new();
         }
 
-        let mut buffer = create_byte_buffer(buffer_length as usize);
+        let mut buffer = create_byte_buffer(buffer_length);
 
         let result =
             self.bindings

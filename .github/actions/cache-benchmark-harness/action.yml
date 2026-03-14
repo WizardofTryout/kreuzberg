@@ -174,6 +174,12 @@ runs:
         echo "target-dir=$TARGET_DIR" >> "$GITHUB_OUTPUT"
         echo "✓ Target directory: $TARGET_DIR"
 
+    # Detect architecture for cache keys (shell expansion doesn't work in YAML with: context)
+    - name: Detect architecture
+      id: detect-arch
+      shell: bash
+      run: echo "arch=$(uname -m)" >> "$GITHUB_OUTPUT"
+
     # Restore from cache
     - name: Restore benchmark-harness binary from cache
       id: cache-restore
@@ -182,8 +188,8 @@ runs:
         binding-name: benchmark-harness
         cache-key: ${{ steps.generate-cache-key.outputs.cache-key }}
         cache-restore-keys: |
-          harness-${{ inputs.build-profile }}-$(uname -m)-src-
-          harness-${{ inputs.build-profile }}-$(uname -m)-
+          harness-${{ inputs.build-profile }}-${{ steps.detect-arch.outputs.arch }}-src-
+          harness-${{ inputs.build-profile }}-${{ steps.detect-arch.outputs.arch }}-
           harness-${{ inputs.build-profile }}-
         cache-paths: |
           ${{ steps.target-paths.outputs.target-dir }}/benchmark-harness

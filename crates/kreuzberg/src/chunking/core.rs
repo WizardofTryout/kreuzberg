@@ -80,7 +80,7 @@ pub fn chunk_text(
         }
     };
 
-    let mut chunks = build_chunks(text, text_chunks.into_iter(), page_boundaries)?;
+    let mut chunks = build_chunks(text, text_chunks, page_boundaries)?;
 
     // For Markdown chunker, resolve heading context for each chunk.
     if config.chunker_type == ChunkerType::Markdown {

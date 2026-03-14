@@ -32,12 +32,10 @@ pub fn extract_tables_from_events(events: &[Event]) -> Vec<Table> {
             Event::Str(s) if in_table_cell => {
                 current_cell.push_str(s.as_ref());
             }
-            Event::End(Container::TableCell { .. }) => {
-                if in_table_cell {
-                    current_row.push(current_cell.trim().to_string());
-                    current_cell = String::new();
-                    in_table_cell = false;
-                }
+            Event::End(Container::TableCell { .. }) if in_table_cell => {
+                current_row.push(current_cell.trim().to_string());
+                current_cell = String::new();
+                in_table_cell = false;
             }
             Event::End(Container::TableRow { .. }) => {
                 if !current_row.is_empty()

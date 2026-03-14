@@ -22,8 +22,7 @@ name = "benchmark_harness"
 path = "src/lib.rs"
 
 [dependencies]
-kreuzberg = { workspace = true, features = ["bundled-pdfium", "full"] }
-
+kreuzberg = { path = "../../crates/kreuzberg", features = ["full", "bundled-pdfium"] }
 tokio = { workspace = true, features = ["full"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -45,6 +44,8 @@ pprof = { version = "0.15", features = ["flamegraph", "criterion"], optional = t
 tikv-jemallocator = { version = "0.6", optional = true }
 tikv-jemalloc-ctl = { version = "0.6", features = ["stats"], optional = true }
 tempfile = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 

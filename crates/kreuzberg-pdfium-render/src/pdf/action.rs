@@ -64,10 +64,7 @@ impl<'a> PdfAction<'a> {
         document: FPDF_DOCUMENT,
         bindings: &'a dyn PdfiumLibraryBindings,
     ) -> Self {
-        #[allow(clippy::unnecessary_cast)]
-        match PdfActionType::from_pdfium(bindings.FPDFAction_GetType(handle) as u32)
-            .unwrap_or(PdfActionType::Unsupported)
-        {
+        match PdfActionType::from_pdfium(bindings.FPDFAction_GetType(handle) as u32).unwrap_or(PdfActionType::Unsupported) {
             PdfActionType::Unsupported => PdfAction::Unsupported(PdfActionUnsupported::from_pdfium(handle, bindings)),
             PdfActionType::GoToDestinationInSameDocument => {
                 PdfAction::LocalDestination(PdfActionLocalDestination::from_pdfium(handle, document, bindings))

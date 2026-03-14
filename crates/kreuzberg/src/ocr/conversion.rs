@@ -48,8 +48,15 @@ use super::table::HocrWord;
 /// Returns an error if:
 /// - `box_points` has fewer than 4 points (malformed detection)
 /// - `angle_index` is outside the valid range (0-3)
+///
+/// Returns `Ok(None)` if the detection is filtered out due to low `box_score`.
 #[cfg(feature = "paddle-ocr")]
-pub fn text_block_to_element(block: &TextBlock, page_number: usize) -> Result<OcrElement> {
+pub fn text_block_to_element(block: &TextBlock, page_number: usize) -> Result<Option<OcrElement>> {
+    // Filter ghost detections: box_score below 0.3 indicates unreliable detection
+    if block.box_score < 0.3 {
+        return Ok(None);
+    }
+
     // Validate box_points - PaddleOCR must provide exactly 4 points
     if block.box_points.len() < 4 {
         return Err(KreuzbergError::ocr(format!(
@@ -81,11 +88,13 @@ pub fn text_block_to_element(block: &TextBlock, page_number: usize) -> Result<Oc
         None
     };
 
-    Ok(OcrElement::new(block.text.clone(), geometry, confidence)
-        .with_level(OcrElementLevel::Line) // PaddleOCR detects lines
-        .with_page_number(page_number)
-        .with_rotation_opt(rotation)
-        .with_metadata("backend", serde_json::json!("paddle-ocr")))
+    Ok(Some(
+        OcrElement::new(block.text.clone(), geometry, confidence)
+            .with_level(OcrElementLevel::Line) // PaddleOCR detects lines
+            .with_page_number(page_number)
+            .with_rotation_opt(rotation)
+            .with_metadata("backend", serde_json::json!("paddle-ocr")),
+    ))
 }
 
 /// Tesseract TSV row data for conversion.
@@ -172,6 +181,100 @@ pub fn tsv_row_to_element(row: &TsvRow) -> OcrElement {
 
     if let Some(pid) = parent_id {
         element = element.with_parent_id(pid);
+    }
+
+    element
+}
+
+/// Convert a Tesseract iterator WordData to a unified OcrElement with rich metadata.
+///
+/// Unlike `tsv_row_to_element` which only has text, bbox, and confidence,
+/// this populates font attributes (bold, italic, monospace, pointsize) and
+/// block/paragraph context from the Tesseract layout analysis.
+///
+/// # Arguments
+///
+/// * `word` - WordData from the Tesseract result iterator
+/// * `block_type` - Optional block type from Tesseract layout analysis
+/// * `para_info` - Optional paragraph metadata (justification, list item flag)
+/// * `page_number` - 1-indexed page number
+///
+/// # Returns
+///
+/// An `OcrElement` at `Word` level with all available font and layout metadata.
+#[cfg(feature = "ocr")]
+pub fn iterator_word_to_element(
+    word: &kreuzberg_tesseract::WordData,
+    block_type: Option<kreuzberg_tesseract::TessPolyBlockType>,
+    para_info: Option<&kreuzberg_tesseract::ParaInfo>,
+    page_number: usize,
+) -> OcrElement {
+    // Compute width/height from right/bottom - left/top, clamping to zero if inverted.
+    let left = word.left.max(0) as u32;
+    let top = word.top.max(0) as u32;
+    let width = (word.right - word.left).max(0) as u32;
+    let height = (word.bottom - word.top).max(0) as u32;
+
+    let geometry = OcrBoundingGeometry::Rectangle {
+        left,
+        top,
+        width,
+        height,
+    };
+    let confidence = OcrConfidence::from_tesseract(word.confidence as f64);
+
+    let mut element = OcrElement::new(word.text.clone(), geometry, confidence)
+        .with_level(OcrElementLevel::Word)
+        .with_page_number(page_number)
+        .with_metadata("backend", serde_json::json!("tesseract-iterator"));
+
+    // Populate font attributes when available.
+    if let Some(ref attrs) = word.font_attrs {
+        element = element
+            .with_metadata("is_bold", serde_json::json!(attrs.is_bold))
+            .with_metadata("is_italic", serde_json::json!(attrs.is_italic))
+            .with_metadata("is_monospace", serde_json::json!(attrs.is_monospace))
+            .with_metadata("is_serif", serde_json::json!(attrs.is_serif))
+            .with_metadata("is_smallcaps", serde_json::json!(attrs.is_smallcaps));
+        if attrs.pointsize > 0 {
+            element = element.with_metadata("pointsize", serde_json::json!(attrs.pointsize));
+        }
+    }
+
+    // Populate block type when available.
+    if let Some(bt) = block_type {
+        let block_type_str = match bt {
+            kreuzberg_tesseract::TessPolyBlockType::PT_UNKNOWN => "PT_UNKNOWN",
+            kreuzberg_tesseract::TessPolyBlockType::PT_FLOWING_TEXT => "PT_FLOWING_TEXT",
+            kreuzberg_tesseract::TessPolyBlockType::PT_HEADING_TEXT => "PT_HEADING_TEXT",
+            kreuzberg_tesseract::TessPolyBlockType::PT_PULLOUT_TEXT => "PT_PULLOUT_TEXT",
+            kreuzberg_tesseract::TessPolyBlockType::PT_EQUATION => "PT_EQUATION",
+            kreuzberg_tesseract::TessPolyBlockType::PT_INLINE_EQUATION => "PT_INLINE_EQUATION",
+            kreuzberg_tesseract::TessPolyBlockType::PT_TABLE => "PT_TABLE",
+            kreuzberg_tesseract::TessPolyBlockType::PT_VERTICAL_TEXT => "PT_VERTICAL_TEXT",
+            kreuzberg_tesseract::TessPolyBlockType::PT_CAPTION_TEXT => "PT_CAPTION_TEXT",
+            kreuzberg_tesseract::TessPolyBlockType::PT_FLOWING_IMAGE => "PT_FLOWING_IMAGE",
+            kreuzberg_tesseract::TessPolyBlockType::PT_HEADING_IMAGE => "PT_HEADING_IMAGE",
+            kreuzberg_tesseract::TessPolyBlockType::PT_PULLOUT_IMAGE => "PT_PULLOUT_IMAGE",
+            kreuzberg_tesseract::TessPolyBlockType::PT_HORZ_LINE => "PT_HORZ_LINE",
+            kreuzberg_tesseract::TessPolyBlockType::PT_VERT_LINE => "PT_VERT_LINE",
+            kreuzberg_tesseract::TessPolyBlockType::PT_NOISE => "PT_NOISE",
+            kreuzberg_tesseract::TessPolyBlockType::PT_COUNT => "PT_COUNT",
+        };
+        element = element.with_metadata("block_type", serde_json::json!(block_type_str));
+    }
+
+    // Populate paragraph info when available.
+    if let Some(para) = para_info {
+        let justification_str = match para.justification {
+            kreuzberg_tesseract::TessParagraphJustification::JUSTIFICATION_UNKNOWN => "unknown",
+            kreuzberg_tesseract::TessParagraphJustification::JUSTIFICATION_LEFT => "left",
+            kreuzberg_tesseract::TessParagraphJustification::JUSTIFICATION_CENTER => "center",
+            kreuzberg_tesseract::TessParagraphJustification::JUSTIFICATION_RIGHT => "right",
+        };
+        element = element
+            .with_metadata("is_list_item", serde_json::json!(para.is_list_item))
+            .with_metadata("justification", serde_json::json!(justification_str));
     }
 
     element
@@ -383,7 +486,9 @@ mod tests {
             text_score: 0.88,
         };
 
-        let element = text_block_to_element(&block, 1).expect("Valid TextBlock");
+        let element = text_block_to_element(&block, 1)
+            .expect("Valid TextBlock")
+            .expect("box_score is high enough");
 
         assert_eq!(element.text, "Test text");
         assert_eq!(element.level, OcrElementLevel::Line);

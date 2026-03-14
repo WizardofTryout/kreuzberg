@@ -435,13 +435,11 @@ impl TypstParser {
                     in_bracket = true;
                     cell.clear();
                 }
-                ']' => {
-                    if in_bracket {
-                        let trimmed = cell.trim().to_string();
-                        cells.push(trimmed);
-                        in_bracket = false;
-                        cell.clear();
-                    }
+                ']' if in_bracket => {
+                    let trimmed = cell.trim().to_string();
+                    cells.push(trimmed);
+                    in_bracket = false;
+                    cell.clear();
                 }
                 _ if in_bracket => {
                     cell.push(ch);

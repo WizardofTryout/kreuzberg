@@ -218,10 +218,8 @@ pub fn parse_section_properties_streaming(reader: &mut Reader<&[u8]>) -> Section
             Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) => {
                 apply_section_element(e, &mut props);
             }
-            Ok(Event::End(ref e)) => {
-                if e.name().as_ref() == b"w:sectPr" {
-                    break;
-                }
+            Ok(Event::End(ref e)) if e.name().as_ref() == b"w:sectPr" => {
+                break;
             }
             Ok(Event::Eof) => break,
             Err(_) => break,

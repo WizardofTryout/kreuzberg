@@ -6,7 +6,7 @@
 use super::interned::InternedString;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 /// String pool for MIME types.
 ///
@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// Pre-interning is deferred until first access to reduce startup memory usage.
 pub(super) struct MimeStringPool {
     pool: dashmap::DashMap<String, Arc<String>>,
-    initialized: AtomicBool,
+    initialized: Mutex<bool>,
 }
 
 impl MimeStringPool {
@@ -23,14 +23,14 @@ impl MimeStringPool {
     pub(super) fn new() -> Self {
         MimeStringPool {
             pool: dashmap::DashMap::new(),
-            initialized: AtomicBool::new(false),
+            initialized: Mutex::new(false),
         }
     }
 
     /// Ensure all known MIME types are pre-interned (one-time initialization).
-    #[inline]
     fn ensure_initialized(&self) {
-        if self.initialized.load(Ordering::Acquire) {
+        let mut initialized = self.initialized.lock().unwrap();
+        if *initialized {
             return;
         }
 
@@ -125,9 +125,7 @@ impl MimeStringPool {
             self.pool.insert(mime_type.to_string(), Arc::new(mime_type.to_string()));
         }
 
-        let _ = self
-            .initialized
-            .compare_exchange(false, true, Ordering::Release, Ordering::Relaxed);
+        *initialized = true;
     }
 
     /// Get or intern a MIME type string.
@@ -199,7 +197,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Flaky test - concurrent interning may not always share the same Arc"]
     fn test_concurrent_interning() {
         use std::sync::Arc as StdArc;
         use std::thread;

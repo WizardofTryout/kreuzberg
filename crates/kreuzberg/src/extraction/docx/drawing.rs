@@ -232,23 +232,19 @@ fn parse_position(reader: &mut Reader<&[u8]>, element_name: &str) -> Option<i64>
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                if e.local_name().as_ref() == b"posOffset" {
-                    let mut text_buf = Vec::new();
-                    if let Ok(Event::Text(t)) = reader.read_event_into(&mut text_buf)
-                        && let Ok(text) = t.decode()
-                    {
-                        result = text.parse::<i64>().ok();
-                    }
-                    // Consume the posOffset end tag
-                    let mut end_buf = Vec::new();
-                    let _ = reader.read_event_into(&mut end_buf);
+            Ok(Event::Start(ref e)) if e.local_name().as_ref() == b"posOffset" => {
+                let mut text_buf = Vec::new();
+                if let Ok(Event::Text(t)) = reader.read_event_into(&mut text_buf)
+                    && let Ok(text) = t.decode()
+                {
+                    result = text.parse::<i64>().ok();
                 }
+                // Consume the posOffset end tag
+                let mut end_buf = Vec::new();
+                let _ = reader.read_event_into(&mut end_buf);
             }
-            Ok(Event::End(e)) => {
-                if e.local_name().as_ref() == element_bytes {
-                    return result;
-                }
+            Ok(Event::End(e)) if e.local_name().as_ref() == element_bytes => {
+                return result;
             }
             Ok(Event::Eof) => {
                 return result;

@@ -16,6 +16,8 @@ name: CI R
       - 'crates/kreuzberg/**'
       - 'crates/kreuzberg-ffi/**'
       - 'crates/kreuzberg-tesseract/**'
+      - 'crates/kreuzberg-pdfium-render/**'
+      - 'crates/kreuzberg-paddle-ocr/**'
       - 'packages/r/**'
       - 'e2e/r/**'
       - 'test_documents/**'
@@ -36,6 +38,8 @@ name: CI R
       - 'crates/kreuzberg/**'
       - 'crates/kreuzberg-ffi/**'
       - 'crates/kreuzberg-tesseract/**'
+      - 'crates/kreuzberg-pdfium-render/**'
+      - 'crates/kreuzberg-paddle-ocr/**'
       - 'packages/r/**'
       - 'e2e/r/**'
       - 'test_documents/**'
@@ -73,27 +77,27 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         id: checkout
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
       - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: r-${{ matrix.os }}
           use-sccache: 'true'
           report-stats: 'true'
 
       - name: Setup R
-        uses: r-lib/actions/setup-r@v2
+        uses: r-lib/actions/setup-r@6f6e5bc62fba3a704f74e7ad7ef7676c5c6a2590 # v2.11.4
         with:
           r-version: '4.3'
 
@@ -132,7 +136,7 @@ jobs:
 
       - name: Cleanup Rust cache
         if: always() && steps.checkout.outcome == 'success'
-        uses: ./.github/actions/cleanup-rust-cache
+        uses: kreuzberg-dev/actions/cleanup-rust-cache@v1.0.0 # v1.0.0
 
   test-r:
     name: R Tests (${{ matrix.os }})
@@ -147,24 +151,24 @@ jobs:
     env:
       RUSTC_WRAPPER: ""
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         id: checkout
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: r-test-${{ matrix.os }}
           use-sccache: 'true'
           report-stats: 'true'
 
       - name: Setup R
-        uses: r-lib/actions/setup-r@v2
+        uses: r-lib/actions/setup-r@6f6e5bc62fba3a704f74e7ad7ef7676c5c6a2590 # v2.11.4
         with:
           r-version: '4.3'
 

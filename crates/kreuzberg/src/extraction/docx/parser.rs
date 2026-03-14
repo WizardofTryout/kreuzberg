@@ -1095,10 +1095,8 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         current_run = Some(run);
                     }
-                    b"w:t" => {
-                        if !in_field_instruction {
-                            in_text = true;
-                        }
+                    b"w:t" if !in_field_instruction => {
+                        in_text = true;
                     }
                     b"w:fldChar" => {
                         for attr in e.attributes().flatten() {

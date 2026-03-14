@@ -198,10 +198,8 @@ impl MdxExtractor {
                 Event::Start(Tag::BlockQuote(_)) => {
                     text.push_str("\n> ");
                 }
-                Event::Start(Tag::Paragraph) => {
-                    if !in_heading {
-                        text.push('\n');
-                    }
+                Event::Start(Tag::Paragraph) if !in_heading => {
+                    text.push('\n');
                 }
                 Event::End(TagEnd::Paragraph) => {
                     text.push('\n');
@@ -297,12 +295,10 @@ impl MdxExtractor {
                 Event::Code(s) if in_table_cell => {
                     current_cell.push_str(s);
                 }
-                Event::End(TagEnd::TableCell) => {
-                    if in_table_cell {
-                        current_row.push(current_cell.trim().to_string());
-                        current_cell = String::new();
-                        in_table_cell = false;
-                    }
+                Event::End(TagEnd::TableCell) if in_table_cell => {
+                    current_row.push(current_cell.trim().to_string());
+                    current_cell = String::new();
+                    in_table_cell = false;
                 }
                 Event::End(TagEnd::TableHead) => {
                     if !current_row.is_empty()

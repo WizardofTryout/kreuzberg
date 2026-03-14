@@ -1,6 +1,6 @@
 [package]
 name = "kreuzberg-rb"
-version = "4.4.5"
+version = "4.4.6"
 edition = "2024"
 rust-version = "1.91"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
@@ -12,9 +12,6 @@ readme = "README.md"
 description = "Ruby bindings (Magnus) for Kreuzberg - high-performance document intelligence framework"
 keywords = ["ruby", "magnus", "document", "extraction", "bindings"]
 categories = ["api-bindings", "text-processing"]
-
-[lints.clippy]
-collapsible_if = "allow"
 
 [lib]
 name = "kreuzberg_rb"

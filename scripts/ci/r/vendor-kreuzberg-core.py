@@ -362,8 +362,10 @@ def main() -> None:
                 )
             # Only update pdfium-render path if it was actually copied
             if "kreuzberg-pdfium-render" in copied_crates:
+                # Match pdfium-render dep with package = "kreuzberg-pdfium-render" and any
+                # combination of path/version fields, replacing them with the vendored path.
                 content = re.sub(
-                    r'pdfium-render = \{ package = "kreuzberg-pdfium-render", version = "[^"]*"',
+                    r'pdfium-render = \{ package = "kreuzberg-pdfium-render",(?:\s*path = "[^"]*",)?(?:\s*version = "[^"]*")',
                     'pdfium-render = { package = "kreuzberg-pdfium-render", path = "../kreuzberg-pdfium-render"',
                     content
                 )

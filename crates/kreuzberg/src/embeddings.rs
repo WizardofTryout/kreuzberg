@@ -181,6 +181,10 @@ pub fn get_or_init_model(
     cache_dir: Option<std::path::PathBuf>,
 ) -> crate::Result<CachedEmbedding> {
     let cache_directory = cache_dir.unwrap_or_else(|| {
+        // Use KREUZBERG_CACHE_DIR if set, matching layout/paddle-ocr cache resolution
+        if let Ok(env_path) = std::env::var("KREUZBERG_CACHE_DIR") {
+            return std::path::PathBuf::from(env_path).join("embeddings");
+        }
         let mut path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         path.push(".kreuzberg");
         path.push("embeddings");
@@ -286,6 +290,16 @@ pub fn get_or_init_model(
 
         Ok(arc_model)
     }
+}
+
+/// Eagerly download and cache an embedding model without returning the handle.
+///
+/// This triggers the same download as `get_or_init_model` but discards the
+/// result, making it suitable for cache-warming scenarios where the caller
+/// doesn't need to use the model immediately.
+#[cfg(feature = "embeddings")]
+pub fn warm_model(model: EmbeddingModel, cache_dir: Option<std::path::PathBuf>) -> crate::Result<()> {
+    get_or_init_model(model, cache_dir).map(|_| ())
 }
 
 /// Preset configurations for common RAG use cases.
@@ -448,7 +462,7 @@ pub fn generate_embeddings_for_chunks(
             })?
     };
 
-    for (chunk, mut embedding) in chunks.iter_mut().zip(embeddings_result.into_iter()) {
+    for (chunk, mut embedding) in chunks.iter_mut().zip(embeddings_result) {
         if config.normalize {
             let magnitude: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
             if magnitude > 0.0 {

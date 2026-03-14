@@ -145,9 +145,9 @@ mod wasm_compat {
     }
 }
 mod page_iterator;
-pub use page_iterator::PageIterator;
+pub use page_iterator::{BlockInfo, PageIterator, ParaInfo};
 mod result_iterator;
-pub use result_iterator::ResultIterator;
+pub use result_iterator::{FontAttributes, ResultIterator, WordData};
 mod choice_iterator;
 pub use choice_iterator::ChoiceIterator;
 mod monitor;
@@ -158,7 +158,11 @@ mod mutable_iterator;
 pub use mutable_iterator::MutableIterator;
 mod enums;
 pub use enums::{
-    TessOrientation, TessPageIteratorLevel, TessPageSegMode, TessPolyBlockType, TessTextlineOrder, TessWritingDirection,
+    TessOrientation, TessPageIteratorLevel, TessPageSegMode, TessParagraphJustification, TessPolyBlockType,
+    TessTextlineOrder, TessWritingDirection,
 };
 mod api;
-pub use api::TesseractAPI;
+pub use api::{BoundingBoxArray, TesseractAPI};
+pub mod leptonica;
+#[cfg(any(feature = "build-tesseract", feature = "build-tesseract-wasm"))]
+pub use leptonica::Pix;

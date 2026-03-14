@@ -318,14 +318,14 @@ Add to Maven `pom.xml`:
 <dependency>
     <groupId>dev.kreuzberg</groupId>
     <artifactId>kreuzberg</artifactId>
-    <version>4.4.5</version>
+    <version>4.4.6</version>
 </dependency>
 ```
 
 Or pin a version in `Cargo.toml`:
 
 ```gradle title="build.gradle"
-implementation 'dev.kreuzberg:kreuzberg:4.4.5'
+implementation 'dev.kreuzberg:kreuzberg:4.4.6'
 ```
 
 ### C / C++ <span class="version-badge unreleased">Unreleased</span>

@@ -9,9 +9,9 @@ pub(super) const FONT_SIZE_CHANGE_THRESHOLD: f32 = 1.5;
 /// Left indent change threshold (in points) to trigger a paragraph break.
 pub(super) const LEFT_INDENT_CHANGE_THRESHOLD: f32 = 10.0;
 /// Maximum word count for a paragraph to qualify as a heading.
-pub(super) const MAX_HEADING_WORD_COUNT: usize = 12;
+pub(super) const MAX_HEADING_WORD_COUNT: usize = 20;
 /// Maximum number of lines for a paragraph to be classified as a list item.
-pub(super) const MAX_LIST_ITEM_LINES: usize = 5;
+pub(super) const MAX_LIST_ITEM_LINES: usize = 8;
 /// Maximum distance multiplier relative to average inter-cluster gap for heading assignment.
 pub(super) const MAX_HEADING_DISTANCE_MULTIPLIER: f32 = 2.0;
 /// Minimum ratio of heading font size to body font size (heading must be this much larger).
@@ -30,6 +30,6 @@ pub(super) const MAX_BOLD_HEADING_WORD_COUNT: usize = 15;
 /// Fraction of the maximum right edge that a line must reach to be considered "full"
 /// (used for dehyphenation to avoid false joins on short/indented lines).
 pub(super) const FULL_LINE_FRACTION: f32 = 0.85;
-/// Minimum alphabetic character count for a word fragment to be eligible for
-/// dehyphenation joining (prevents false positives on short words like "a", "I").
-pub(super) const MIN_DEHYPHENATION_FRAGMENT_LEN: usize = 2;
+/// Y-tolerance for grouping layout regions into the same row (fraction of page height).
+/// Regions with vertical centers within this fraction are considered same-row and sorted left-to-right.
+pub(super) const REGION_SAME_ROW_FRACTION: f32 = 0.02;

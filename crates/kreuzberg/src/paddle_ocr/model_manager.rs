@@ -32,7 +32,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::error::KreuzbergError;
-use sha2::{Digest, Sha256};
+use crate::model_download;
 
 /// HuggingFace repository containing PaddleOCR ONNX models.
 const HF_REPO_ID: &str = "Kreuzberg/paddleocr-onnx-models";
@@ -182,6 +182,19 @@ pub struct ModelPaths {
     pub rec_model: PathBuf,
     /// Path to the character dictionary file.
     pub dict_file: PathBuf,
+}
+
+/// A single model file entry in the cache manifest.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ModelManifestEntry {
+    /// Relative path within the cache directory (e.g., "paddle-ocr/det/model.onnx").
+    pub relative_path: String,
+    /// SHA256 checksum of the model file.
+    pub sha256: String,
+    /// Expected file size in bytes.
+    pub size_bytes: u64,
+    /// HuggingFace source URL for downloading.
+    pub source_url: String,
 }
 
 /// Statistics about the PaddleOCR model cache.
@@ -358,44 +371,18 @@ impl ModelManager {
 
     /// Download a file from the HuggingFace Hub.
     fn hf_download(&self, remote_filename: &str) -> Result<PathBuf, KreuzbergError> {
-        tracing::info!(repo = HF_REPO_ID, filename = remote_filename, "Downloading via hf-hub");
-
-        let api = hf_hub::api::sync::ApiBuilder::new()
-            .with_progress(true)
-            .build()
-            .map_err(|e| KreuzbergError::Plugin {
-                message: format!("Failed to initialize HuggingFace Hub API: {e}"),
-                plugin_name: "paddle-ocr".to_string(),
-            })?;
-
-        let repo = api.model(HF_REPO_ID.to_string());
-        let cached_path = repo.get(remote_filename).map_err(|e| KreuzbergError::Plugin {
-            message: format!("Failed to download '{remote_filename}' from {HF_REPO_ID}: {e}"),
+        model_download::hf_download(HF_REPO_ID, remote_filename).map_err(|e| KreuzbergError::Plugin {
+            message: e,
             plugin_name: "paddle-ocr".to_string(),
-        })?;
-
-        Ok(cached_path)
+        })
     }
 
     /// Verify SHA256 checksum of a downloaded file.
     fn verify_checksum(path: &Path, expected: &str, label: &str) -> Result<(), KreuzbergError> {
-        if expected.is_empty() {
-            return Ok(());
-        }
-
-        let bytes = fs::read(path)?;
-        let mut hasher = Sha256::new();
-        hasher.update(&bytes);
-        let hash_hex = hex::encode(hasher.finalize());
-
-        if hash_hex != expected {
-            return Err(KreuzbergError::Validation {
-                message: format!("Checksum mismatch for {label}: expected {expected}, got {hash_hex}"),
-                source: None,
-            });
-        }
-        tracing::debug!(label, "Checksum verified");
-        Ok(())
+        model_download::verify_sha256(path, expected, label).map_err(|e| KreuzbergError::Validation {
+            message: e,
+            source: None,
+        })
     }
 
     /// Checks if shared models (det + cls) are cached locally.
@@ -451,6 +438,65 @@ impl ModelManager {
             model_count,
             cache_dir: self.cache_dir.clone(),
         })
+    }
+
+    /// Returns the manifest of all PaddleOCR model files with checksums and sizes.
+    ///
+    /// This includes shared models (det, cls) and all 11 recognition model families.
+    /// Paths are relative to the cache root (prefixed with "paddle-ocr/").
+    pub fn manifest() -> Vec<ModelManifestEntry> {
+        let mut entries = Vec::new();
+
+        for model in SHARED_MODELS {
+            entries.push(ModelManifestEntry {
+                relative_path: format!("paddle-ocr/{}/{}", model.model_type, model.local_filename),
+                sha256: model.sha256_checksum.to_string(),
+                size_bytes: model.size_bytes,
+                source_url: format!(
+                    "https://huggingface.co/{}/resolve/main/{}",
+                    HF_REPO_ID, model.remote_filename
+                ),
+            });
+        }
+
+        for rec in REC_MODELS {
+            entries.push(ModelManifestEntry {
+                relative_path: format!("paddle-ocr/rec/{}/model.onnx", rec.script_family),
+                sha256: rec.model_sha256.to_string(),
+                size_bytes: rec.model_size_bytes,
+                source_url: format!(
+                    "https://huggingface.co/{}/resolve/main/rec/{}/model.onnx",
+                    HF_REPO_ID, rec.script_family
+                ),
+            });
+            // Dict files don't have size_bytes tracked, use 0 as placeholder
+            entries.push(ModelManifestEntry {
+                relative_path: format!("paddle-ocr/rec/{}/dict.txt", rec.script_family),
+                sha256: rec.dict_sha256.to_string(),
+                size_bytes: 0,
+                source_url: format!(
+                    "https://huggingface.co/{}/resolve/main/rec/{}/dict.txt",
+                    HF_REPO_ID, rec.script_family
+                ),
+            });
+        }
+
+        entries
+    }
+
+    /// Ensures all models for all script families are downloaded and cached.
+    ///
+    /// Unlike `ensure_models_exist()` which only ensures English, this eagerly
+    /// downloads shared models plus all 11 recognition model families.
+    pub fn ensure_all_models(&self) -> Result<(), KreuzbergError> {
+        self.ensure_shared_models()?;
+
+        for rec in REC_MODELS {
+            self.ensure_rec_model(rec.script_family)?;
+        }
+
+        tracing::info!("All PaddleOCR models ready (all {} families)", REC_MODELS.len());
+        Ok(())
     }
 
     /// Recursively calculates the size of a directory in bytes.
@@ -753,5 +799,121 @@ mod tests {
         fs::write(&file_path, b"hello").unwrap();
 
         assert!(ModelManager::verify_checksum(&file_path, "", "test").is_ok());
+    }
+
+    #[test]
+    fn test_manifest_returns_all_models() {
+        let entries = ModelManager::manifest();
+
+        // 2 shared (det, cls) + 11 rec families * 2 (model + dict) = 24
+        assert_eq!(entries.len(), 2 + 11 * 2);
+
+        // Check shared models present
+        let paths: Vec<&str> = entries.iter().map(|e| e.relative_path.as_str()).collect();
+        assert!(paths.contains(&"paddle-ocr/det/model.onnx"));
+        assert!(paths.contains(&"paddle-ocr/cls/model.onnx"));
+
+        // Check all rec families present
+        for family in &[
+            "english",
+            "chinese",
+            "latin",
+            "korean",
+            "eslav",
+            "thai",
+            "greek",
+            "arabic",
+            "devanagari",
+            "tamil",
+            "telugu",
+        ] {
+            let model_path = format!("paddle-ocr/rec/{family}/model.onnx");
+            let dict_path = format!("paddle-ocr/rec/{family}/dict.txt");
+            assert!(paths.contains(&model_path.as_str()), "Missing model for {family}");
+            assert!(paths.contains(&dict_path.as_str()), "Missing dict for {family}");
+        }
+    }
+
+    #[test]
+    fn test_manifest_entries_have_valid_fields() {
+        let entries = ModelManager::manifest();
+
+        for entry in &entries {
+            assert!(
+                !entry.sha256.is_empty(),
+                "SHA256 should not be empty for {}",
+                entry.relative_path
+            );
+            assert!(
+                entry.source_url.starts_with("https://huggingface.co/"),
+                "Source URL should be a HuggingFace URL for {}",
+                entry.relative_path
+            );
+            assert!(
+                entry.relative_path.starts_with("paddle-ocr/"),
+                "Paths should be prefixed with paddle-ocr/"
+            );
+        }
+
+        // Shared models and rec models should have non-zero size
+        let shared_entries: Vec<_> = entries.iter().filter(|e| !e.relative_path.contains("/rec/")).collect();
+        for entry in &shared_entries {
+            assert!(
+                entry.size_bytes > 0,
+                "Shared model {} should have non-zero size",
+                entry.relative_path
+            );
+        }
+    }
+
+    #[test]
+    fn test_manifest_entry_serialization() {
+        let entry = ModelManifestEntry {
+            relative_path: "test/model.onnx".to_string(),
+            sha256: "abc123".to_string(),
+            size_bytes: 1024,
+            source_url: "https://example.com/model.onnx".to_string(),
+        };
+
+        let json = serde_json::to_string(&entry).unwrap();
+        assert!(json.contains("test/model.onnx"));
+        assert!(json.contains("abc123"));
+        assert!(json.contains("1024"));
+    }
+
+    #[test]
+    fn test_ensure_all_models_with_cache() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = ModelManager::new(temp_dir.path().to_path_buf());
+
+        // Pre-populate shared models
+        for model_type in &["det", "cls"] {
+            let dir = manager.model_path(model_type);
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(dir.join("model.onnx"), "fake").unwrap();
+        }
+
+        // Pre-populate all rec families
+        for family in &[
+            "english",
+            "chinese",
+            "latin",
+            "korean",
+            "eslav",
+            "thai",
+            "greek",
+            "arabic",
+            "devanagari",
+            "tamil",
+            "telugu",
+        ] {
+            let rec_dir = manager.rec_family_path(family);
+            fs::create_dir_all(&rec_dir).unwrap();
+            fs::write(rec_dir.join("model.onnx"), "fake").unwrap();
+            fs::write(rec_dir.join("dict.txt"), "#\na\n ").unwrap();
+        }
+
+        // Should succeed without downloading
+        assert!(manager.ensure_all_models().is_ok());
     }
 }

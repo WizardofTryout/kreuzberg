@@ -187,7 +187,7 @@ if ("kreuzberg" %in% copied_crates) {
     }
     if ("kreuzberg-pdfium-render" %in% copied_crates) {
       text <- gsub(
-        'pdfium-render = \\{ package = "kreuzberg-pdfium-render", version = "[^"]*"',
+        'pdfium-render = \\{ package = "kreuzberg-pdfium-render",(?:\\s*path = "[^"]*",)?(?:\\s*version = "[^"]*")',
         'pdfium-render = { package = "kreuzberg-pdfium-render", path = "../kreuzberg-pdfium-render"',
         text, perl = TRUE)
     }

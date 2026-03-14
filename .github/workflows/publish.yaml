@@ -85,7 +85,7 @@ jobs:
       release_c_ffi: ${{ steps.meta.outputs.release_c_ffi }}
     steps:
       - name: Checkout code (default)
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -129,14 +129,14 @@ jobs:
         run: scripts/publish/prepare-release-metadata.sh
 
       - name: Re-checkout at target ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ steps.meta.outputs.checkout_ref }}
           fetch-depth: 0
           submodules: recursive
 
       - name: Upload release metadata
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: release-metadata
           path: release-metadata.json
@@ -150,7 +150,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
 
@@ -166,119 +166,112 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_python == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check PyPI for existing version
         id: check
-        run: scripts/publish/check_pypi.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: pypi
+          package: kreuzberg
+          version: ${{ needs.prepare.outputs.version }}
 
   check-npm:
     name: Check if Node package exists on npm
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_node == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check npm for existing version
         id: check
-        run: scripts/publish/check_npm.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: npm
+          package: "@kreuzberg/node"
+          version: ${{ needs.prepare.outputs.version }}
 
   check-wasm:
     name: Check if WASM package exists on npm
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_wasm == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check npm for existing WASM package
         id: check
-        run: scripts/publish/check_wasm.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: npm
+          package: "@kreuzberg/wasm"
+          version: ${{ needs.prepare.outputs.version }}
 
   check-rubygems:
     name: Check if Ruby gem exists on RubyGems
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_ruby == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check RubyGems for existing version
         id: check
-        run: scripts/publish/check_rubygems.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: rubygems
+          package: kreuzberg
+          version: ${{ needs.prepare.outputs.version }}
 
   check-maven:
     name: Check if Java package exists on Maven Central
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_java == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check Maven Central for existing version
         id: check
-        run: scripts/publish/check_maven.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: maven
+          package: "dev.kreuzberg:kreuzberg"
+          version: ${{ needs.prepare.outputs.version }}
 
   check-nuget:
     name: Check if C# package exists on NuGet
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_csharp == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check NuGet for existing version
         id: check
-        run: scripts/publish/check_nuget.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: nuget
+          package: Kreuzberg
+          version: ${{ needs.prepare.outputs.version }}
 
   check-packagist:
     name: Check if PHP package exists on Packagist
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_php == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check Packagist for existing version
         id: check
-        run: scripts/publish/check_packagist.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: packagist
+          package: kreuzberg/kreuzberg
+          version: ${{ needs.prepare.outputs.version }}
 
   check-cli:
     name: Check if CLI assets already published
@@ -291,7 +284,7 @@ jobs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.tag }}
 
@@ -322,7 +315,7 @@ jobs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.tag }}
 
@@ -351,7 +344,7 @@ jobs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.tag }}
 
@@ -374,38 +367,52 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
-      kreuzberg_exists: ${{ steps.check.outputs.kreuzberg_exists }}
+      kreuzberg_exists: ${{ steps.check.outputs.exists }}
       tesseract_exists: ${{ steps.check.outputs.tesseract_exists }}
       paddle_exists: ${{ steps.check.outputs.paddle_exists }}
       cli_exists: ${{ steps.check.outputs.cli_exists }}
-      exists: ${{ steps.check.outputs.all_exist }}
+      exists: ${{ steps.derive.outputs.all_exist }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check crates.io for existing versions
         id: check
-        run: scripts/publish/check_cratesio.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: cratesio
+          package: kreuzberg
+          version: ${{ needs.prepare.outputs.version }}
+          extra-packages: |
+            tesseract_exists=kreuzberg-tesseract
+            paddle_exists=kreuzberg-paddle-ocr
+            cli_exists=kreuzberg-cli
+
+      - name: Derive all_exist
+        id: derive
+        run: |
+          if [[ "${{ steps.check.outputs.exists }}" == "true" && \
+                "${{ steps.check.outputs.tesseract_exists }}" == "true" && \
+                "${{ steps.check.outputs.paddle_exists }}" == "true" && \
+                "${{ steps.check.outputs.cli_exists }}" == "true" ]]; then
+            echo "all_exist=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "all_exist=false" >> "$GITHUB_OUTPUT"
+          fi
 
   check-hex:
     name: Check if Elixir package exists on Hex.pm
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_elixir == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check Hex.pm for existing version
         id: check
-        run: scripts/publish/check_hex.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: hex
+          package: kreuzberg
+          version: ${{ needs.prepare.outputs.version }}
 
   check-homebrew:
     name: Check if Homebrew formula already published
@@ -413,35 +420,17 @@ jobs:
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_homebrew == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Check Homebrew tap for formula
         id: check
-        timeout-minutes: 3
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          # Check if Formula/kreuzberg.rb exists and contains the current version
-          # Use timeout to prevent hanging on API issues
-          # Validate API response and handle base64 decoding errors gracefully
-          api_response=$(timeout 120s gh api repos/kreuzberg-dev/homebrew-tap/contents/Formula/kreuzberg.rb --jq '.content' 2>/dev/null || echo "")
-
-          if [[ -n "$api_response" ]] && [[ "$api_response" != "null" ]]; then
-            if echo "$api_response" | base64 -d 2>/dev/null | grep -q "version \"${VERSION}\""; then
-              echo "exists=true" >> "$GITHUB_OUTPUT"
-              echo "Homebrew formula already contains version ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "exists=false" >> "$GITHUB_OUTPUT"
-              echo "Homebrew formula does not contain version ${VERSION} or check failed" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Homebrew formula check failed (API error or file not found)" >> "$GITHUB_STEP_SUMMARY"
-          fi
+        uses: kreuzberg-dev/actions/check-registry@v1.0.0 # v1.0.0
+        with:
+          registry: homebrew
+          package: kreuzberg
+          version: ${{ needs.prepare.outputs.version }}
+          tap-repo: kreuzberg-dev/homebrew-tap
 
   python-wheels:
     name: Build Python wheels (${{ matrix.label }})
@@ -490,7 +479,7 @@ jobs:
     steps:
       - name: Maximize build disk space
         if: matrix.os == 'ubuntu-latest'
-        uses: easimon/maximize-build-space@v10
+        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c # v10
         with:
           root-reserve-mb: 2048
           temp-reserve-mb: 512
@@ -503,7 +492,7 @@ jobs:
           remove-docker-images: 'true'
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -515,7 +504,7 @@ jobs:
 
       - name: Setup QEMU
         if: matrix.os == 'ubuntu-latest' && matrix.needs_qemu
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
         with:
           platforms: all
 
@@ -549,7 +538,7 @@ jobs:
 
       - name: Setup Rust toolchain (native)
         if: runner.os != 'Linux'
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: python-wheels-${{ matrix.label }}
           target: ${{ matrix.rust_target }}
@@ -573,7 +562,7 @@ jobs:
 
       - name: Build Linux wheels
         if: runner.os == 'Linux'
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1.50.1
         with:
           command: build
           args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
@@ -607,7 +596,7 @@ jobs:
 
       - name: Build wheels (native)
         if: runner.os != 'Linux'
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1.50.1
         with:
           command: build
           args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
@@ -617,7 +606,7 @@ jobs:
 
       - name: Setup Python (macOS)
         if: matrix.label == 'macos-arm64'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.10'
 
@@ -637,7 +626,7 @@ jobs:
         run: ls -lh target/wheels
 
       - name: Setup Python for smoke test
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.10'
 
@@ -650,7 +639,7 @@ jobs:
         run: scripts/publish/ubuntu/docker-prune.sh
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ matrix.artifact }}
           path: target/wheels/*.whl
@@ -669,7 +658,7 @@ jobs:
         run: echo "=== Initial disk space ===" && df -h /
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -683,18 +672,18 @@ jobs:
         run: scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Setup Python environment
-        uses: ./.github/actions/setup-python-env
+        uses: kreuzberg-dev/actions/setup-python-env@v1.0.0 # v1.0.0
         with:
           python-version: "3.13"
           cache-prefix: python-sdist
 
       - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-python-sdist
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Build sdist
         env:
@@ -702,7 +691,7 @@ jobs:
         run: task python:build:sdist:publish
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: python-sdist
           path: dist/*.tar.gz
@@ -742,7 +731,7 @@ jobs:
             use_napi_cross: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -761,12 +750,12 @@ jobs:
         run: scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           package_json_file: package.json
 
       - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-node-${{ matrix.settings.target }}
           use-sccache: 'false'
@@ -780,7 +769,7 @@ jobs:
         run: cargo install cross --git https://github.com/cross-rs/cross --locked
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
           check-latest: true
@@ -849,14 +838,14 @@ jobs:
 
       - name: Upload TypeScript definitions
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: node-typescript-defs
           path: typescript-defs
           retention-days: 14
 
       - name: Upload Node artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: node-bindings-${{ matrix.settings.target }}
           path: node-bindings-${{ matrix.settings.target }}.tar.gz
@@ -888,7 +877,7 @@ jobs:
             use_cross: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -907,7 +896,7 @@ jobs:
         run: scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           target: ${{ matrix.target }}
           cache-key-prefix: publish-cli-${{ matrix.target }}
@@ -942,7 +931,7 @@ jobs:
 
       - name: Upload CLI artifact
         if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.tar.gz
@@ -950,7 +939,7 @@ jobs:
 
       - name: Upload CLI artifact (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.zip
@@ -978,7 +967,7 @@ jobs:
             target: aarch64-unknown-linux-musl
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1022,7 +1011,7 @@ jobs:
           rm -rf "$STAGE"
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.tar.gz
@@ -1046,7 +1035,7 @@ jobs:
             bottle_tag: arm64_sequoia
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1056,7 +1045,7 @@ jobs:
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
       - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-homebrew-${{ matrix.bottle_tag }}
 
@@ -1109,7 +1098,7 @@ jobs:
           echo "SHA256: ${sha256}"
 
       - name: Upload bottle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: homebrew-bottle-${{ matrix.bottle_tag }}
           path: kreuzberg-${{ steps.version.outputs.version }}.${{ matrix.bottle_tag }}.bottle.tar.gz
@@ -1130,7 +1119,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -1140,7 +1129,7 @@ jobs:
         run: scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download bottle artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: homebrew-bottle-*
           path: dist/homebrew
@@ -1176,7 +1165,7 @@ jobs:
       RB_SYS_CARGO_PROFILE: release
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1198,7 +1187,7 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Setup Tesseract cache
         id: tesseract-cache
@@ -1208,13 +1197,13 @@ jobs:
           enable-cache: "true"
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-ruby-${{ matrix.label }}
           use-sccache: true
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@4eb9f110bac952a8b68ecf92e3b5c7a987594ba6 # v1.292.0
         with:
           ruby-version: "3.3"
           bundler: none
@@ -1252,7 +1241,7 @@ jobs:
         run: scripts/ci/ruby/install-ruby-deps.sh packages/ruby
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Build kreuzberg-ffi
         run: task rust:ffi:build
@@ -1349,7 +1338,7 @@ jobs:
           done
 
       - name: Upload gem artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: rubygems-${{ matrix.label }}
           path: packages/ruby/pkg/*.gem
@@ -1386,7 +1375,7 @@ jobs:
             build_features: ""
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1409,7 +1398,7 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: ${{ matrix.settings.os == 'windows-latest' && 'publish-go-windows-gnu' || format('publish-go-{0}', matrix.settings.os) }}
           use-sccache: ${{ matrix.settings.os != 'windows-latest' }}
@@ -1444,7 +1433,7 @@ jobs:
 
       - name: Setup MSYS2 (Windows)
         if: matrix.settings.os == 'windows-latest'
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2.30.0
         with:
           msystem: UCRT64
           update: true
@@ -1462,7 +1451,7 @@ jobs:
         run: scripts/ci/go/setup-msys2-windows.ps1
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Build FFI library (Windows)
         if: matrix.settings.os == 'windows-latest'
@@ -1501,7 +1490,7 @@ jobs:
         run: scripts/ci/go/verify-ffi-artifact.sh "go-ffi-${{ matrix.settings.label }}.tar.gz"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: go-ffi-${{ matrix.settings.label }}
           path: go-ffi-${{ matrix.settings.label }}.tar.gz
@@ -1533,7 +1522,7 @@ jobs:
             rid: windows-x86_64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1547,7 +1536,7 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Setup Tesseract cache
         id: tesseract-cache
@@ -1557,7 +1546,7 @@ jobs:
           enable-cache: "true"
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-java-natives-${{ matrix.settings.label }}
           use-sccache: ${{ runner.os != 'Windows' }}
@@ -1584,7 +1573,7 @@ jobs:
           dest-dir: target/release
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Build FFI library
         shell: bash
@@ -1599,7 +1588,7 @@ jobs:
         run: scripts/ci/java/collect-native-artifacts.sh "${{ matrix.settings.rid }}" "java-natives/${{ matrix.settings.rid }}"
 
       - name: Upload native artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: java-natives-${{ matrix.settings.label }}
           path: java-natives/${{ matrix.settings.rid }}
@@ -1625,7 +1614,7 @@ jobs:
             rid: linux-musl-arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1654,7 +1643,7 @@ jobs:
           cp dist/libkreuzberg_ffi.so "java-natives/${{ matrix.rid }}/"
 
       - name: Upload native artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: java-natives-${{ matrix.rid }}
           path: java-natives/${{ matrix.rid }}
@@ -1675,7 +1664,7 @@ jobs:
         run: echo "=== Initial disk space ===" && df -h /
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1692,15 +1681,15 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-java
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         id: setup-java
         with:
           distribution: 'temurin'
@@ -1708,7 +1697,7 @@ jobs:
           cache: 'maven'
 
       - name: Setup Maven 3.9.11
-        uses: ./.github/actions/setup-maven-4
+        uses: kreuzberg-dev/actions/setup-maven@v1.0.0 # v1.0.0
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
@@ -1731,10 +1720,10 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Download Java native artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: java-natives-*
           path: artifacts/java-natives
@@ -1760,7 +1749,7 @@ jobs:
         run: task java:build:release
 
       - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: maven-packages
           path: packages/java/target/*.jar
@@ -1792,7 +1781,7 @@ jobs:
             platform: windows-x86_64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1810,7 +1799,7 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Setup Tesseract cache
         id: tesseract-cache
@@ -1820,7 +1809,7 @@ jobs:
           enable-cache: "true"
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-php-${{ matrix.settings.label }}
           use-sccache: ${{ runner.os != 'Windows' }}
@@ -1857,10 +1846,10 @@ jobs:
           dest-dir: target/release
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1 # 2.36.0
         with:
           php-version: '8.5'
           extensions: mbstring, xml
@@ -1877,7 +1866,7 @@ jobs:
         run: scripts/publish/php/build-pie-package.sh "${{ matrix.settings.platform }}" "dist/php"
 
       - name: Upload PHP PIE package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: php-pie-${{ matrix.settings.label }}
           path: dist/php/kreuzberg-*.tar.gz*
@@ -1896,7 +1885,7 @@ jobs:
         run: echo "=== Initial disk space ===" && df -h /
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1913,15 +1902,15 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-csharp
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: "10.0.x"
 
@@ -1929,10 +1918,10 @@ jobs:
         run: scripts/publish/csharp/ensure-dotnet.sh
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Download native assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: csharp-native-assets-*
           path: packages/csharp/Kreuzberg/runtimes
@@ -1961,7 +1950,7 @@ jobs:
         run: scripts/publish/csharp/verify-nuget-native-assets.sh
 
       - name: Upload NuGet artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: csharp-nuget
           path: packages/csharp/artifacts/csharp/*.nupkg
@@ -2010,7 +1999,7 @@ jobs:
             ffi_name: kreuzberg_ffi.dll
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -2024,10 +2013,10 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-csharp-native-${{ matrix.rid }}
 
@@ -2054,7 +2043,7 @@ jobs:
         run: rustup target add "${{ matrix.rust_target }}"
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Build FFI library
         shell: bash
@@ -2075,7 +2064,7 @@ jobs:
         run: scripts/publish/csharp/verify-native-assets-dir.sh
 
       - name: Upload native assets artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: csharp-native-assets-${{ matrix.rid }}
           path: runtimes/
@@ -2101,7 +2090,7 @@ jobs:
             rid: linux-musl-arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -2131,7 +2120,7 @@ jobs:
           ls -lah "runtimes/${{ matrix.rid }}/native/"
 
       - name: Upload native assets artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: csharp-native-assets-${{ matrix.rid }}
           path: runtimes/
@@ -2152,7 +2141,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -2162,7 +2151,7 @@ jobs:
         run: scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download CLI artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: cli-*
           path: dist/cli
@@ -2188,7 +2177,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -2198,7 +2187,7 @@ jobs:
         run: scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download Go FFI artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: go-ffi-*
           path: dist/go
@@ -2239,7 +2228,7 @@ jobs:
             build_features: ""
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -2264,7 +2253,7 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: ${{ matrix.settings.os == 'windows-latest' && 'publish-c-ffi-windows-gnu' || format('publish-c-ffi-{0}', matrix.settings.os) }}
           use-sccache: ${{ matrix.settings.os != 'windows-latest' }}
@@ -2299,7 +2288,7 @@ jobs:
 
       - name: Setup MSYS2 (Windows)
         if: matrix.settings.os == 'windows-latest'
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2.30.0
         with:
           msystem: UCRT64
           update: true
@@ -2323,7 +2312,7 @@ jobs:
         run: scripts/publish/c-ffi/package-c-ffi.sh "${{ matrix.settings.label }}" "${{ needs.prepare.outputs.version }}" dist
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: c-ffi-${{ matrix.settings.label }}
           path: dist/c-ffi-${{ matrix.settings.label }}.tar.gz
@@ -2344,7 +2333,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -2355,7 +2344,7 @@ jobs:
         run: scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download C FFI artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: c-ffi-*
           path: dist/c-ffi
@@ -2383,18 +2372,18 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-crates
 
       - name: Request OIDC token for crates.io
         id: oidc
-        uses: rust-lang/crates-io-auth-action@v1
+        uses: rust-lang/crates-io-auth-action@b7e9a28eded4986ec6b1fa40eeee8f8f165559ec # v1.0.3
 
       - name: Verify Cargo.toml version matches tag
         run: scripts/publish/verify-cargo-version.sh "${{ needs.prepare.outputs.version }}"
@@ -2485,7 +2474,7 @@ jobs:
             timeout: 180
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -2508,7 +2497,7 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           target: ${{ matrix.settings.target }}
           cache-key-prefix: ${{ matrix.settings.os == 'windows-latest' && 'publish-elixir-windows-gnu' || format('publish-elixir-{0}', matrix.settings.os) }}
@@ -2522,7 +2511,7 @@ jobs:
 
       - name: Setup MSYS2 (Windows)
         if: matrix.settings.os == 'windows-latest'
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2.30.0
         with:
           msystem: UCRT64
           update: true
@@ -2540,7 +2529,7 @@ jobs:
         run: scripts/ci/go/setup-msys2-windows.ps1
 
       - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Setup Tesseract cache
         id: tesseract-cache
@@ -2550,7 +2539,7 @@ jobs:
           enable-cache: "true"
 
       - name: Restore Cargo cache
-        uses: ./.github/actions/restore-cargo-cache
+        uses: kreuzberg-dev/actions/restore-cargo-cache@v1.0.0 # v1.0.0
         with:
           shared-key: ${{ matrix.settings.os == 'windows-latest' && 'publish-elixir-windows-gnu' || format('publish-elixir-{0}', matrix.settings.os) }}
           prefix: elixir
@@ -2668,7 +2657,7 @@ jobs:
           echo "Created: dist/elixir/${TARBALL}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: elixir-${{ matrix.settings.label }}
           path: dist/elixir/*.tar.gz
@@ -2697,7 +2686,7 @@ jobs:
             target: aarch64-unknown-linux-musl
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -2752,7 +2741,7 @@ jobs:
           echo "Created: dist/elixir/${TARBALL}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: elixir-${{ matrix.label }}
           path: dist/elixir/*.tar.gz
@@ -2773,7 +2762,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -2783,7 +2772,7 @@ jobs:
         run: scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download Elixir artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: elixir-*
           path: dist/elixir
@@ -2815,7 +2804,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.tag }}
           fetch-depth: 0
@@ -2828,7 +2817,7 @@ jobs:
           ./scripts/publish/generate_elixir_checksums.sh "${{ needs.prepare.outputs.version }}"
 
       - name: Setup Elixir
-        uses: erlef/setup-elixir@v1
+        uses: erlef/setup-elixir@9d5b75ddfda22fb979d2270283237aef8aa68d6b # v1.22.0
         with:
           elixir-version: "1.17"
           otp-version: "26"
@@ -2860,10 +2849,12 @@ jobs:
 
       - name: Publish to Hex.pm
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
-        working-directory: packages/elixir
+        uses: kreuzberg-dev/actions/publish-hex@v1.0.0 # v1.0.0
+        with:
+          package-dir: packages/elixir
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
         env:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
-        run: mix hex.publish --yes --replace
 
       - name: Hex.pm dry-run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
@@ -2891,31 +2882,23 @@ jobs:
       id-token: write
     steps:
       - name: Download wheel artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: python-wheels-*
           path: dist
           merge-multiple: true
 
       - name: Download sdist artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: python-sdist
           path: dist
 
-      - name: List artifacts
-        run: ls -R dist
-
       - name: Publish to PyPI
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: kreuzberg-dev/actions/publish-pypi@v1.0.0 # v1.0.0
         with:
           packages-dir: dist
-          skip-existing: true
-
-      - name: Dry run summary
-        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
-        run: (echo "Dry run requested; artifacts staged for PyPI:" && ls -1 dist) >> "$GITHUB_STEP_SUMMARY"
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
 
   publish-rubygems:
     name: Publish Ruby gems
@@ -2933,21 +2916,21 @@ jobs:
       id-token: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.tag }}
           fetch-depth: 0
           submodules: recursive
 
       - name: Download Ruby gem artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: rubygems-*
           path: dist
           merge-multiple: true
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@4eb9f110bac952a8b68ecf92e3b5c7a987594ba6 # v1.292.0
         with:
           ruby-version: '3.3'
           bundler: none
@@ -3005,22 +2988,18 @@ jobs:
 
       - name: Configure trusted publishing credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
-        uses: rubygems/configure-rubygems-credentials@v1.0.0
+        uses: rubygems/configure-rubygems-credentials@bc6dd217f8a4f919d6835fcfefd470ef821f5c44 # v1.0.0
 
       - name: Publish gems to RubyGems
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
-        env:
-          RUBYGEMS_VERSION: ${{ needs.prepare.outputs.version }}
-        run: scripts/publish/publish-gems-direct.sh dist
+        uses: kreuzberg-dev/actions/publish-rubygems@v1.0.0 # v1.0.0
+        with:
+          gems-dir: dist
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
 
       - name: RubyGems already published summary
         if: ${{ steps.recheck.outputs.exists == 'true' }}
         run: echo "Gem kreuzberg@${{ needs.prepare.outputs.version }} already published on RubyGems — skipped." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Dry run summary
-        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
-        working-directory: dist
-        run: (echo "Dry run requested; gem artifacts ready:" && ls -1 kreuzberg-*.gem) >> "$GITHUB_STEP_SUMMARY"
 
   publish-node:
     name: Publish Node packages
@@ -3038,30 +3017,30 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           package_json_file: package.json
 
       - name: Download Node artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: node-bindings-*
           path: node-artifacts
           merge-multiple: true
 
       - name: Download TypeScript definitions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: node-typescript-defs
           path: typescript-defs
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/
@@ -3095,19 +3074,31 @@ jobs:
 
       - name: Publish native binary packages
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
-        run: scripts/publish/publish-node-packages.sh crates/kreuzberg-node/npm "${{ needs.prepare.outputs.npm_tag }}"
-
-      - name: Wait for npm indexing
-        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
+        uses: kreuzberg-dev/actions/publish-npm@v1.0.0 # v1.0.0
+        with:
+          packages-dir: crates/kreuzberg-node/npm
+          npm-tag: ${{ needs.prepare.outputs.npm_tag }}
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: scripts/publish/wait-for-package.sh npm "@kreuzberg/node-linux-x64-gnu" "${{ needs.prepare.outputs.version }}" 25
+
+      - name: Wait for npm indexing (x64)
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
+        uses: kreuzberg-dev/actions/wait-for-package@v1.0.0 # v1.0.0
+        with:
+          registry: npm
+          package: "@kreuzberg/node-linux-x64-gnu"
+          version: ${{ needs.prepare.outputs.version }}
+          max-attempts: "25"
 
       - name: Wait for npm indexing (ARM64)
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: scripts/publish/wait-for-package.sh npm "@kreuzberg/node-linux-arm64-gnu" "${{ needs.prepare.outputs.version }}" 25
+        uses: kreuzberg-dev/actions/wait-for-package@v1.0.0 # v1.0.0
+        with:
+          registry: npm
+          package: "@kreuzberg/node-linux-arm64-gnu"
+          version: ${{ needs.prepare.outputs.version }}
+          max-attempts: "25"
 
       - name: Prepare main Node package metadata
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
@@ -3115,7 +3106,13 @@ jobs:
 
       - name: Publish main Node package
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.recheck.outputs.exists != 'true' }}
-        run: scripts/publish/publish-main-node-package.sh crates/kreuzberg-node "${{ needs.prepare.outputs.npm_tag }}"
+        uses: kreuzberg-dev/actions/publish-npm@v1.0.0 # v1.0.0
+        with:
+          package-dir: crates/kreuzberg-node
+          npm-tag: ${{ needs.prepare.outputs.npm_tag }}
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: npm already published summary
         if: ${{ steps.recheck.outputs.exists == 'true' }}
@@ -3137,20 +3134,20 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
           fetch-depth: 0
           submodules: recursive
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22.6.0
           registry-url: https://registry.npmjs.org/
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           package_json_file: package.json
           run_install: false
@@ -3159,10 +3156,10 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Install WASI SDK
-        uses: ./.github/actions/install-wasi-sdk
+        uses: kreuzberg-dev/actions/install-wasi-sdk@v1.0.0 # v1.0.0
 
       - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-wasm
           target: wasm32-unknown-unknown
@@ -3174,7 +3171,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Task
-        uses: ./.github/actions/install-task
+        uses: kreuzberg-dev/actions/install-task@v1.0.0 # v1.0.0
 
       - name: Build all WASM targets and TypeScript wrapper
         run: task wasm:build:all
@@ -3191,16 +3188,22 @@ jobs:
 
       - name: Publish to npm
         if: ${{ steps.npm_check.outputs.exists != 'true' }}
+        uses: kreuzberg-dev/actions/publish-npm@v1.0.0 # v1.0.0
+        with:
+          package-dir: crates/kreuzberg-wasm
+          npm-tag: ${{ needs.prepare.outputs.npm_tag }}
+          provenance: "true"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        working-directory: crates/kreuzberg-wasm
-        run: npm publish --access public --provenance --ignore-scripts --tag "${{ needs.prepare.outputs.npm_tag }}"
 
       - name: Wait for npm indexing
         if: ${{ steps.npm_check.outputs.exists != 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: scripts/publish/wait-for-package.sh npm "@kreuzberg/wasm" "${{ needs.prepare.outputs.version }}" 25
+        uses: kreuzberg-dev/actions/wait-for-package@v1.0.0 # v1.0.0
+        with:
+          registry: npm
+          package: "@kreuzberg/wasm"
+          version: ${{ needs.prepare.outputs.version }}
+          max-attempts: "25"
 
       - name: Publish summary
         env:
@@ -3225,7 +3228,7 @@ jobs:
       PDFIUM_VERSION: "7678"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -3242,11 +3245,11 @@ jobs:
 
       - name: Setup OpenSSL
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        uses: ./.github/actions/setup-openssl
+        uses: kreuzberg-dev/actions/setup-openssl@v1.0.0 # v1.0.0
 
       - name: Setup Rust
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        uses: ./.github/actions/setup-rust
+        uses: kreuzberg-dev/actions/setup-rust@v1.0.0 # v1.0.0
         with:
           cache-key-prefix: publish-maven
 
@@ -3261,7 +3264,7 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: temurin
           java-version: 25
@@ -3274,7 +3277,7 @@ jobs:
 
       - name: Setup Maven 3.9.11
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        uses: ./.github/actions/setup-maven-4
+        uses: kreuzberg-dev/actions/setup-maven@v1.0.0 # v1.0.0
 
       - name: Cache PDFium
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
@@ -3302,7 +3305,7 @@ jobs:
 
       - name: Download Java native artifacts
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: java-natives-*
           path: artifacts/java-natives
@@ -3331,21 +3334,20 @@ jobs:
 
       - name: Release Maven package
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        uses: kreuzberg-dev/actions/publish-maven@v1.0.0 # v1.0.0
+        with:
+          pom-file: packages/java/pom.xml
+          maven-profile: publish
+          extra-args: -DskipTests
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
-        # Note: GPG passphrase is provided via MAVEN_GPG_PASSPHRASE env var (configured in pom.xml via passphraseEnvName)
-        # The -Ppublish profile activates central-publishing-maven-plugin and skips maven-deploy-plugin
-        run: scripts/publish/maven/deploy-or-skip.sh --version "${{ needs.prepare.outputs.version }}" -- mvn -f packages/java/pom.xml --batch-mode --no-transfer-progress -Ppublish -DskipTests clean deploy
 
       - name: Maven already published summary
         if: ${{ steps.maven_check.outputs.exists == 'true' }}
         run: echo "Maven package version ${{ needs.prepare.outputs.version }} already published; skipping." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Dry run summary
-        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
-        run: echo "Dry run requested; Maven publish skipped." >> "$GITHUB_STEP_SUMMARY"
 
   publish-nuget:
     name: Publish NuGet package
@@ -3363,31 +3365,21 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Download NuGet artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: csharp-nuget
           path: dist
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Ensure dotnet is available
-        run: scripts/publish/csharp/ensure-dotnet.sh
-
       - name: Publish to NuGet
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        uses: kreuzberg-dev/actions/publish-nuget@v1.0.0 # v1.0.0
+        with:
+          packages-dir: dist
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
         env:
-          NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY }}
-        run: dotnet nuget push "dist/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "${{ secrets.NUGET_API_KEY }}" --skip-duplicate && echo "NuGet package published." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Dry run summary
-        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
-        run: (echo "Dry run requested; NuGet publish skipped." && ls -1 dist/*.nupkg) >> "$GITHUB_STEP_SUMMARY"
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
   publish-php:
     name: Publish PHP package and PIE packages
@@ -3405,13 +3397,13 @@ jobs:
       id-token: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.tag }}
           fetch-depth: 0
 
       - name: Download PHP PIE package artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: php-pie-*
           path: dist/php
@@ -3420,12 +3412,16 @@ jobs:
       - name: List PHP artifacts
         run: ls -lah dist/php/
 
-      - name: Verify Packagist auto-update
+      - name: Trigger Packagist update
+        uses: kreuzberg-dev/actions/publish-packagist@v1.0.0 # v1.0.0
+        with:
+          packagist-username: Goldziher
+          package-name: kreuzberg/kreuzberg
+          version: ${{ needs.prepare.outputs.version }}
+          repository-url: https://github.com/kreuzberg-dev/kreuzberg
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
         env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-          DRY_RUN: ${{ needs.prepare.outputs.dry_run }}
           PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
-        run: scripts/publish/php/publish-packagist.sh "${{ needs.prepare.outputs.version }}"
 
       - name: Ensure GitHub release exists
         env:
@@ -3481,30 +3477,16 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
 
-      - name: Extract release info
-        id: release
-        env:
-          TAG: ${{ needs.prepare.outputs.tag }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: scripts/publish/homebrew/extract-release-info.sh
-
       - name: Download bottle artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: homebrew-bottle-*
           path: dist/homebrew
           merge-multiple: true
-
-      - name: Extract bottle hashes
-        id: bottles
-        env:
-          TAG: ${{ needs.prepare.outputs.tag }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: scripts/publish/homebrew/extract-bottle-hashes.sh dist/homebrew
 
       - name: Re-check Homebrew tap before publish
         id: recheck
@@ -3532,11 +3514,15 @@ jobs:
 
       - name: Update Homebrew formula with bottles
         if: ${{ steps.recheck.outputs.exists != 'true' }}
-        env:
-          TAG: ${{ needs.prepare.outputs.tag }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-          DRY_RUN: 'false'
-        run: scripts/publish/homebrew/update-formula-with-bottles.sh dist/homebrew homebrew-tap
+        uses: kreuzberg-dev/actions/publish-homebrew@v1.0.0 # v1.0.0
+        with:
+          bottles-dir: dist/homebrew
+          formula-name: kreuzberg
+          tap-repo: kreuzberg-dev/homebrew-tap
+          tag: ${{ needs.prepare.outputs.tag }}
+          version: ${{ needs.prepare.outputs.version }}
+          github-repo: kreuzberg-dev/kreuzberg
+          dry-run: ${{ needs.prepare.outputs.dry_run }}
 
       - name: Homebrew already published summary
         if: ${{ steps.recheck.outputs.exists == 'true' }}
@@ -3578,7 +3564,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.prepare.outputs.tag }}
           fetch-depth: 0

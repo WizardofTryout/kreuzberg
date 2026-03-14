@@ -167,7 +167,13 @@ impl OcrRotation {
         }
 
         Ok(Self {
-            angle_degrees: (angle_index * 90) as f64,
+            angle_degrees: match angle_index {
+                0 => 0.0,
+                1 => 180.0,
+                2 => 90.0,
+                3 => 270.0,
+                _ => unreachable!(), // validated above
+            },
             confidence: Some((angle_score as f64).clamp(0.0, 1.0)),
         })
     }
@@ -376,7 +382,7 @@ mod tests {
     #[test]
     fn test_rotation_from_paddle() {
         let rot = OcrRotation::from_paddle(1, 0.92).expect("Valid angle_index");
-        assert_eq!(rot.angle_degrees, 90.0);
+        assert_eq!(rot.angle_degrees, 180.0);
         // Use approximate comparison due to f32 -> f64 precision
         assert!(rot.confidence.is_some());
         assert!((rot.confidence.unwrap() - 0.92).abs() < 0.001);

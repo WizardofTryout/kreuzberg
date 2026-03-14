@@ -118,32 +118,22 @@ pub fn extract_rtf_metadata(rtf_content: &str, extracted_text: &str) -> AHashMap
             let trimmed = remaining.trim();
 
             match keyword.as_str() {
-                "author" => {
-                    if !trimmed.is_empty() {
-                        let author = trimmed.to_string();
-                        metadata.insert(Cow::Borrowed("created_by"), Value::String(author.clone()));
-                        metadata.insert(Cow::Borrowed("authors"), Value::Array(vec![Value::String(author)]));
-                    }
+                "author" if !trimmed.is_empty() => {
+                    let author = trimmed.to_string();
+                    metadata.insert(Cow::Borrowed("created_by"), Value::String(author.clone()));
+                    metadata.insert(Cow::Borrowed("authors"), Value::Array(vec![Value::String(author)]));
                 }
-                "operator" => {
-                    if !trimmed.is_empty() {
-                        metadata.insert(Cow::Borrowed("modified_by"), Value::String(trimmed.to_string()));
-                    }
+                "operator" if !trimmed.is_empty() => {
+                    metadata.insert(Cow::Borrowed("modified_by"), Value::String(trimmed.to_string()));
                 }
-                "title" => {
-                    if !trimmed.is_empty() {
-                        metadata.insert(Cow::Borrowed("title"), Value::String(trimmed.to_string()));
-                    }
+                "title" if !trimmed.is_empty() => {
+                    metadata.insert(Cow::Borrowed("title"), Value::String(trimmed.to_string()));
                 }
-                "subject" => {
-                    if !trimmed.is_empty() {
-                        metadata.insert(Cow::Borrowed("subject"), Value::String(trimmed.to_string()));
-                    }
+                "subject" if !trimmed.is_empty() => {
+                    metadata.insert(Cow::Borrowed("subject"), Value::String(trimmed.to_string()));
                 }
-                "generator" => {
-                    if !trimmed.is_empty() {
-                        metadata.insert(Cow::Borrowed("generator"), Value::String(trimmed.to_string()));
-                    }
+                "generator" if !trimmed.is_empty() => {
+                    metadata.insert(Cow::Borrowed("generator"), Value::String(trimmed.to_string()));
                 }
                 "creatim" => {
                     if let Some(dt) = parse_rtf_datetime(trimmed) {

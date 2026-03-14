@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.5.0] - Unreleased
+
+### Added
+
+- **ONNX-based layout detection**: New `layout` config field enables document layout analysis using RT-DETR v2 (Docling Heron) with 17 document element classes. Supports `"fast"` and `"accurate"` presets. Models are auto-downloaded from HuggingFace on first use. Available across all language bindings (Python, Node, Ruby, Go, Java, C#, PHP, WASM).
+- **SLANet table structure recognition**: When layout detection is active, detected Table regions are processed by SLANet-plus for neural HTML structure recovery with cell bounding boxes — producing accurate markdown tables with colspan/rowspan support.
+- **Layout-enhanced heading detection**: The layout model's SectionHeader and Title regions guide heading detection in both structure tree and heuristic PDF extraction paths. High-confidence layout hints (≥0.7) can override font-size-based heading classification and demote false headings.
+- **Language-agnostic section pattern recognition**: Headings ending with a period are now allowed when they match structural patterns — section symbol (§), all-caps short text, or numbered sections (e.g., "3.2. Methods", "ARTICLE IV."). Improves heading detection for legal, academic, and multilingual documents.
+- **Multi-backend OCR pipeline**: New `OcrPipelineConfig` enables quality-based fallback across OCR backends (e.g., Tesseract → PaddleOCR). Each stage has configurable priority, language, and backend-specific settings. Default pipeline auto-constructed when `paddle-ocr` feature is enabled.
+- **OCR quality thresholds**: New `OcrQualityThresholds` config with 16 tunable parameters for OCR output quality assessment and fallback decisions.
+- **OCR auto-rotate**: New `OcrConfig.auto_rotate` flag (default: false) for automatic page rotation detection using Tesseract's orientation analysis. Handles 0/90/180/270 degree rotations.
+- **ChunkSizing configuration**: `sizing_type`, `sizing_model`, and `sizing_cache_dir` fields exposed in `ChunkingConfig` across all language bindings for control over token counting strategy.
+- **Chunk heading context**: New `HeadingContext` type in `ChunkMetadata` providing heading level and text for better chunk context awareness.
+- **CLI `cache warm` command**: Eagerly downloads all PaddleOCR and layout detection models for all supported languages. Supports optional `--all-embeddings` to download all 4 embedding presets, or `--embedding-model <preset>` for a specific one. Useful for pre-populating caches in containerized or offline deployments.
+- **CLI `cache manifest` command**: Outputs a JSON manifest of all expected model files with SHA256 checksums, sizes, and HuggingFace source URLs. Enables scripted cache verification and pre-population.
+- **`ModelManifestEntry` type**: New public type for model cache manifest entries with `relative_path`, `sha256`, `size_bytes`, and `source_url` fields.
+- **`ModelManager::manifest()` / `LayoutModelManager::manifest()`**: Static methods returning the full manifest of expected model files for each model manager.
+- **`ModelManager::ensure_all_models()` / `LayoutModelManager::ensure_all_models()`**: Eagerly download all models (all 11 PaddleOCR script families + layout models), unlike the lazy per-use defaults.
+
+### Fixed
+
+- **PDF structure tree heading trust**: Structure tree heading tags (H1–H6) are now trusted as author-intent metadata with only a word-count guard. Previously, font-size validation rejected valid headings when the font was close to body size.
+- **PDF structure tree extraction performance**: MCID text and style maps are now built in a single pass over page objects (was two passes). Uses the pre-loaded `FPDFText` page handle instead of calling `FPDFText_LoadPage` per text object, eliminating multi-second extraction times on complex pages.
+- **OCR layout: Picture regions no longer suppress text**: Layout-detected Picture regions (diagrams, figures) now preserve any embedded text as plain paragraphs instead of silently dropping it. Uses content-aware `is_substantive_text()` heuristic to distinguish real text from OCR artifacts.
+- **Non-transitive sort comparators**: Fixed multiple sort comparators across the codebase that used tolerance-based "same row" grouping (non-transitive). All spatial reading-order sorts now quantize coordinates into discrete row buckets, ensuring correct and stable ordering.
+- **Float comparison soundness**: Replaced all `partial_cmp().unwrap_or(Equal)` patterns with `total_cmp()` across layout, PDF hierarchy, cache, keyword extraction, and token reduction modules. Eliminates undefined ordering for NaN values.
+- **Page furniture over-stripping**: Added 30% bulk and 80-char per-paragraph guards to prevent aggressive furniture stripping from removing legitimate content.
+- **`KREUZBERG_CACHE_DIR` not respected by all caches**: Embeddings, OCR result cache, and document extraction cache now honor the `KREUZBERG_CACHE_DIR` environment variable, matching layout and PaddleOCR cache resolution.
+- **MSG PT_STRING8 encoding**: Outlook `.msg` files store ANSI string properties (PT_STRING8 / type `0x001E`) encoded with the Windows code page declared in `PR_MESSAGE_CODEPAGE` (0x3FFD) or `PR_INTERNET_CPID` (0x3FDE). The previous code decoded these bytes with `from_utf8_lossy`, replacing non-ASCII characters (e.g. `0xF6` → ö in CP1252) with U+FFFD replacement characters. The fix reads the declared code page and uses `encoding_rs` to decode PT_STRING8 streams correctly, with a windows-1252 fallback for files that omit the property.
+
+### Changed
+
+- **Layout pipeline no longer forces heuristic extraction**: When layout detection is enabled, structure tree extraction proceeds normally instead of being forced into the heuristic path. Proportional matching applies layout hints to structure tree paragraphs, preserving text quality.
+- **Global ONNX model caching**: Layout detection engine and SLANet table recognition model are now cached globally and reused across document extractions, avoiding expensive ONNX session recreation in batch processing scenarios.
+- **Docker model pre-download uses `cache warm`**: The `Dockerfile.full` now uses `kreuzberg cache warm` instead of manual curl-based download scripts, simplifying the build and ensuring consistency with the CLI's model management.
+
+---
+
+## [4.4.6]
+
+### Added
+
+- **dBASE (.dbf) format support**: Extract table data from dBASE files as markdown tables with field type support.
+- **Hangul Word Processor (.hwp/.hwpx) support**: Extract text content from HWP 5.0 documents (standard Korean document format).
+- **Office template/macro format variants**: Added support for `.docm`, `.dotx`, `.dotm`, `.dot` (Word), `.potx`, `.potm`, `.pot` (PowerPoint), `.xltx`, `.xlt` (Excel) formats.
+
+### Fixed
+
+- **DOCX image placeholders missing (#484)**: Extracting `.docx` files with `extract_images=True` no longer produced `![](image)` placeholders in the output. The default plain text output path was stripping image references. Image extraction now forces markdown output so placeholders are always included.
+
+### Changed
+
+- **Format count updated to 88+**: Documentation across all READMEs, docs, and package manifests updated to reflect expanded format support (previously 75+).
+
 ## [4.4.5]
 
 ### Fixed

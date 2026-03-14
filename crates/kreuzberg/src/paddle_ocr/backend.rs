@@ -229,6 +229,7 @@ impl PaddleOcrBackend {
         let ocr_elements: Result<Vec<OcrElement>> = text_blocks
             .iter()
             .map(|block| text_block_to_element(block, 1))
+            .filter_map(|result| result.transpose())
             .collect();
 
         let ocr_elements = ocr_elements?;

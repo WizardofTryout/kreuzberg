@@ -196,10 +196,8 @@ fn collect_children(reader: &mut Reader<&[u8]>, end_tag: &[u8]) -> Vec<MathNode>
                     }
                 }
             }
-            Ok(Event::End(ref e)) => {
-                if e.name().as_ref() == end_tag {
-                    break;
-                }
+            Ok(Event::End(ref e)) if e.name().as_ref() == end_tag => {
+                break;
             }
             Ok(Event::Eof) => break,
             _ => {}
@@ -406,10 +404,8 @@ fn collect_rad_pr(reader: &mut Reader<&[u8]>) -> bool {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(ref e) | Event::Empty(ref e)) => {
-                if e.name().as_ref() == b"m:degHide" {
-                    deg_hide = get_m_val(e).as_deref() != Some("0");
-                }
+            Ok(Event::Start(ref e) | Event::Empty(ref e)) if e.name().as_ref() == b"m:degHide" => {
+                deg_hide = get_m_val(e).as_deref() != Some("0");
             }
             Ok(Event::End(ref e)) if e.name().as_ref() == b"m:radPr" => break,
             Ok(Event::Eof) => break,
@@ -795,10 +791,8 @@ fn collect_matrix_row(reader: &mut Reader<&[u8]>) -> Vec<Vec<MathNode>> {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                if e.name().as_ref() == b"m:e" {
-                    cells.push(collect_children(reader, b"m:e"));
-                }
+            Ok(Event::Start(ref e)) if e.name().as_ref() == b"m:e" => {
+                cells.push(collect_children(reader, b"m:e"));
             }
             Ok(Event::End(ref e)) if e.name().as_ref() == b"m:mr" => break,
             Ok(Event::Eof) => break,
@@ -884,17 +878,13 @@ fn skip_to_end(reader: &mut Reader<&[u8]>, tag: &[u8]) {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                if e.name().as_ref() == tag {
-                    depth += 1;
-                }
+            Ok(Event::Start(ref e)) if e.name().as_ref() == tag => {
+                depth += 1;
             }
-            Ok(Event::End(ref e)) => {
-                if e.name().as_ref() == tag {
-                    depth -= 1;
-                    if depth == 0 {
-                        break;
-                    }
+            Ok(Event::End(ref e)) if e.name().as_ref() == tag => {
+                depth -= 1;
+                if depth == 0 {
+                    break;
                 }
             }
             Ok(Event::Eof) => break,
