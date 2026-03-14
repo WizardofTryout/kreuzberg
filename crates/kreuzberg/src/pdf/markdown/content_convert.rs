@@ -78,8 +78,13 @@ fn group_words_to_paragraphs(elements: &[ContentElement]) -> Vec<PdfParagraph> {
     let tolerance = median_height * LINE_Y_TOLERANCE_FRACTION;
 
     // --- Step 2: sort elements top-to-bottom (largest y_min first in PDF coords),
-    //             then left-to-right within the same row ---
-    let mut sorted_indices: Vec<usize> = (0..elements.len()).collect();
+    //             then left-to-right within the same row.
+    //             Elements without a bbox cannot be spatially placed, so we skip
+    //             them entirely; they would corrupt the running y-average used in
+    //             line grouping (they'd all land at y=0.0). ---
+    let mut sorted_indices: Vec<usize> = (0..elements.len())
+        .filter(|&i| elements[i].bbox.is_some())
+        .collect();
     sorted_indices.sort_by(|&a, &b| {
         let y_a = elements[a].bbox.map_or(0.0, |r| r.y_min);
         let y_b = elements[b].bbox.map_or(0.0, |r| r.y_min);
@@ -151,10 +156,73 @@ fn group_words_to_paragraphs(elements: &[ContentElement]) -> Vec<PdfParagraph> {
         })
         .collect();
 
-    let median_line_height = {
-        let mut sorted = line_heights.clone();
-        sorted.sort_by(|a, b| a.total_cmp(b));
-        sorted[sorted.len() / 2]
+    // --- Step 4b: compute median inter-line gap for paragraph break detection.
+    //
+    // The gap is the white space between the *bottom* of one line and the *top*
+    // of the next.  For normally-spaced text this is a small positive number
+    // (sometimes even slightly negative due to descenders).  A paragraph break
+    // shows as a noticeably larger gap.
+    //
+    // We use `median_gap * 2.0` as the threshold.  Using the median (not the
+    // mean) makes the threshold robust against large outlier gaps that would
+    // themselves be paragraph breaks.
+    //
+    // When there is only one line there are no gaps, so no paragraph break is
+    // possible anyway and the threshold value does not matter.
+    let paragraph_gap_threshold: f32 = if lines.len() >= 2 {
+        // Compute the bottom edge (y_min in PDF space) for each line.
+        let line_bottoms: Vec<f32> = lines
+            .iter()
+            .enumerate()
+            .map(|(i, line)| {
+                let bottom = line
+                    .iter()
+                    .filter_map(|&idx| elements[idx].bbox.map(|r| r.y_min))
+                    .fold(f32::MAX, f32::min);
+                if bottom == f32::MAX {
+                    // Fall back using the line's computed height.
+                    let top = line
+                        .iter()
+                        .filter_map(|&idx| elements[idx].bbox.map(|r| r.y_max))
+                        .fold(f32::MIN, f32::max);
+                    if top == f32::MIN { 0.0 } else { top - line_heights[i] }
+                } else {
+                    bottom
+                }
+            })
+            .collect();
+
+        let line_tops: Vec<f32> = lines
+            .iter()
+            .map(|line| {
+                line.iter()
+                    .filter_map(|&idx| elements[idx].bbox.map(|r| r.y_max))
+                    .fold(f32::MIN, f32::max)
+            })
+            .collect();
+
+        // Gaps between consecutive lines: prev_bottom - next_top (positive = white space).
+        let mut gaps: Vec<f32> = line_bottoms
+            .iter()
+            .zip(line_tops.iter().skip(1))
+            .map(|(&prev_bottom, &next_top)| prev_bottom - next_top)
+            .collect();
+
+        if gaps.is_empty() {
+            // Fallback: use the median line height as a rough proxy.
+            let mut sorted = line_heights.clone();
+            sorted.sort_by(|a, b| a.total_cmp(b));
+            sorted[sorted.len() / 2] * 1.5
+        } else {
+            gaps.sort_by(|a, b| a.total_cmp(b));
+            let median_gap = gaps[gaps.len() / 2];
+            // Use twice the median gap as the paragraph break threshold.
+            // Clamp to at least 1.0 to avoid spurious breaks when text is very
+            // tightly spaced (median_gap ≈ 0).
+            (median_gap * 2.0).max(1.0)
+        }
+    } else {
+        f32::MAX // Single line: no paragraph break possible.
     };
 
     // --- Step 5: group lines into paragraphs ---
@@ -182,7 +250,7 @@ fn group_words_to_paragraphs(elements: &[ContentElement]) -> Vec<PdfParagraph> {
         // there is vertical white space between them).
         if let Some(prev_bottom) = prev_line_bottom {
             let gap = prev_bottom - line_top;
-            if gap > median_line_height * 1.5 && !current_para_lines.is_empty() {
+            if gap > paragraph_gap_threshold && !current_para_lines.is_empty() {
                 if let Some(para) = build_paragraph_from_lines(&current_para_lines, elements) {
                     paragraphs.push(para);
                 }

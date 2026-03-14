@@ -6,11 +6,13 @@
 //!
 //! ## Pixel format
 //!
-//! Leptonica's 32 bpp format stores pixels as packed 32-bit words in
-//! big-endian (MSB-first) byte order: `R G B A` from the most-significant
-//! to the least-significant byte. On little-endian hosts the word looks like
-//! `A B G R` in memory, so `pixEndianByteSwap` must be called after writing
-//! raw host-byte-order words.
+//! Leptonica's 32 bpp format stores each pixel as a native 32-bit integer
+//! with the logical layout (MSB→LSB): `R G B A`, i.e.
+//! `(r << 24) | (g << 16) | (b << 8) | alpha`.  Leptonica accesses
+//! individual channels via bit-shift on the integer value, not via
+//! byte-addressed pointer arithmetic, so the packing is identical on both
+//! big- and little-endian hosts.  Do **not** call `pixEndianByteSwap` after
+//! writing pixels this way — doing so inverts the channel order.
 //!
 //! ## `pixDeskew` requires a binary (1 bpp) image
 //!
@@ -120,13 +122,6 @@ unsafe extern "C" {
     /// 8 bpp Pix, or null on failure.
     fn pixConvertRGBToGray(pixs: *mut c_void, rwt: f32, gwt: f32, bwt: f32) -> *mut c_void;
 
-    /// Swaps the byte order within each 32-bit word of the pixel data.
-    ///
-    /// Leptonica's pixel words are stored in big-endian (MSB-first) order on disk
-    /// and in its public API. On little-endian hosts you must call this function
-    /// after writing raw pixel data in host byte order so that Leptonica sees the
-    /// correct R/G/B/A layout. Returns 0 on success.
-    fn pixEndianByteSwap(pixs: *mut c_void) -> i32;
 }
 
 // ---------------------------------------------------------------------------
@@ -223,18 +218,24 @@ impl Pix {
 
         // Write RGB pixels into the Leptonica data buffer.
         //
-        // Leptonica 32 bpp format: each pixel occupies one 32-bit word with the
-        // layout (MSB→LSB) R G B A. Because we are writing in host byte order we
-        // pack as `(r << 24) | (g << 16) | (b << 8) | 0xFF` and then call
-        // `pixEndianByteSwap` on little-endian hosts to convert to Leptonica's
-        // expected big-endian word layout.
+        // Leptonica's 32 bpp pixel format stores each pixel as a native
+        // 32-bit integer word with the logical layout (MSB→LSB): R G B A,
+        // i.e. `(r << 24) | (g << 16) | (b << 8) | alpha`.  This is the
+        // same bit pattern regardless of host endianness — Leptonica treats
+        // the data as an array of 32-bit integers and accesses individual
+        // bytes via bit-shift, not via byte-addressed pointer arithmetic.
+        //
+        // Therefore we pack directly as `(r << 24) | (g << 16) | (b << 8) | 0xFF`
+        // and write the resulting u32 without any byte-swapping.  Calling
+        // `pixEndianByteSwap` would invert the channel order, producing
+        // A B G R instead of R G B A.
         for row in 0..(height as usize) {
             for col in 0..(width as usize) {
                 let src = (row * width as usize + col) * 3;
                 let r = data[src] as u32;
                 let g = data[src + 1] as u32;
                 let b = data[src + 2] as u32;
-                // Pack as RGBA in host (little-endian) integer order.
+                // Pack channels as (MSB) R G B A (LSB) in the 32-bit integer.
                 let word: u32 = (r << 24) | (g << 16) | (b << 8) | 0xFF;
                 // SAFETY: data_ptr is a valid writable pointer into the Leptonica
                 // pixel buffer. The offset `row * wpl + col` is within bounds because:
@@ -244,16 +245,6 @@ impl Pix {
                     *data_ptr.add(row * wpl + col) = word;
                 }
             }
-        }
-
-        // On little-endian hosts swap bytes in each 32-bit word so that
-        // Leptonica reads the correct RGBA byte order.
-        #[cfg(target_endian = "little")]
-        {
-            // SAFETY: pix_ptr is a valid non-null Pix we own exclusively.
-            // pixEndianByteSwap modifies the pixel data in-place and returns
-            // 0 on success. A non-zero return is non-fatal; we accept it.
-            unsafe { pixEndianByteSwap(pix_ptr) };
         }
 
         // Set a sensible default DPI for OCR processing.
@@ -525,8 +516,19 @@ impl Pix {
 
     /// Returns the raw Leptonica `PIX *` pointer.
     ///
-    /// Intended for passing this image to `TesseractAPI::set_image_2`. The
-    /// caller must not free the pointer; `Pix::drop` remains responsible.
+    /// Intended for passing this image to `TesseractAPI::set_image_2`.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the `Pix` outlives any use of the returned
+    /// pointer.  `TessBaseAPISetImage2` **borrows** the pointer — it does not
+    /// take ownership — so the `Pix` must remain alive until after
+    /// `TessBaseAPIRecognize` (or any other Tesseract call that consumes the
+    /// image data) has completed.  Dropping the `Pix` while Tesseract holds
+    /// the pointer will result in a use-after-free.
+    ///
+    /// The caller must **not** free the returned pointer; `Pix::drop` is
+    /// solely responsible for deallocation via `pixDestroy`.
     pub fn as_ptr(&self) -> *mut c_void {
         self.ptr
     }

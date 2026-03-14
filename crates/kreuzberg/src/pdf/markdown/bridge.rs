@@ -212,6 +212,7 @@ struct CharInfo {
     has_map_error: bool,
     is_symbolic: bool,
     /// True if the character is a hyphen as determined by pdfium's `is_hyphen()` API.
+    #[allow(dead_code)]
     is_hyphen: bool,
 }
 
