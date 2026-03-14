@@ -167,15 +167,56 @@ pub(crate) fn from_ocr_elements(
                 crate::types::OcrElementLevel::Block | crate::types::OcrElementLevel::Page => ElementLevel::Block,
             };
 
+            // Read rich metadata from Tesseract iterator extraction (if available).
+            let meta = &e.backend_metadata;
+            let is_bold = meta
+                .get("is_bold")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let is_italic = meta
+                .get("is_italic")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let is_monospace = meta
+                .get("is_monospace")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let font_size = meta
+                .get("pointsize")
+                .and_then(|v| v.as_f64())
+                .filter(|&s| s > 0.0)
+                .map(|s| s as f32);
+
+            // Map block type to semantic role.
+            let mut semantic_role = meta
+                .get("block_type")
+                .and_then(|v| v.as_str())
+                .and_then(|bt| match bt {
+                    "PT_HEADING_TEXT" => Some(SemanticRole::Heading { level: 1 }),
+                    "PT_TABLE" => Some(SemanticRole::TableCell),
+                    "PT_CAPTION_TEXT" => Some(SemanticRole::Caption),
+                    "PT_EQUATION" | "PT_INLINE_EQUATION" => Some(SemanticRole::Formula),
+                    _ => None,
+                });
+
+            // Override with list item if paragraph info says so.
+            if meta
+                .get("is_list_item")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+            {
+                semantic_role = Some(SemanticRole::ListItem);
+            }
+
             ContentElement {
                 text: e.text.clone(),
                 bbox,
-                font_size: None,
-                is_bold: false,
-                is_italic: false,
-                is_monospace: false,
+                font_size,
+                is_bold,
+                is_italic,
+                is_monospace,
                 confidence: Some(e.confidence.recognition as f32),
-                semantic_role: None,
+                semantic_role,
                 level,
                 list_label: None,
             }
