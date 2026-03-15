@@ -215,7 +215,9 @@ impl PaddleOcrBackend {
     /// Returns `Ok(Some(rotated_bytes))` if rotation was applied,
     /// `Ok(None)` if no rotation needed (0° or low confidence).
     fn detect_and_rotate(&self, image_bytes: &[u8]) -> Result<Option<Vec<u8>>> {
-        const MIN_CONFIDENCE: f32 = 0.5;
+        // PP-LCNet doc_ori outputs ~45% confidence for correct class in a 4-class problem
+        // (uniform baseline is 25%). A threshold of 0.35 provides good discrimination.
+        const MIN_CONFIDENCE: f32 = 0.35;
 
         let detector = self.doc_ori_detector.get_or_try_init(|| {
             Ok::<_, crate::KreuzbergError>(super::doc_orientation::DocOrientationDetector::new(ModelManager::new(
@@ -242,11 +244,12 @@ impl PaddleOcrBackend {
             return Ok(None);
         }
 
-        // Rotate the image
+        // Rotate the image back to upright (opposite direction of detected orientation).
+        // If the model says the image is at 90° CW, rotate 270° CW to correct it.
         let rotated = match result.degrees {
-            90 => image::imageops::rotate90(&img),
+            90 => image::imageops::rotate270(&img),
             180 => image::imageops::rotate180(&img),
-            270 => image::imageops::rotate270(&img),
+            270 => image::imageops::rotate90(&img),
             _ => return Ok(None),
         };
 

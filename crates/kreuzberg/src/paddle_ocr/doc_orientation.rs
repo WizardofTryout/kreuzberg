@@ -170,18 +170,26 @@ fn preprocess(image: &RgbImage) -> RgbImage {
     image::imageops::crop_imm(&resized, x_offset, y_offset, crop_w, crop_h).to_image()
 }
 
-/// Normalize image to [1, 3, H, W] tensor with ImageNet mean/std.
+/// Normalize image to [1, 3, H, W] tensor with ImageNet mean/std in BGR order.
+/// PP-LCNet expects BGR input: channel 0=Blue, 1=Green, 2=Red.
 fn normalize(image: &RgbImage) -> ndarray::Array4<f32> {
     let (w, h) = (image.width() as usize, image.height() as usize);
     let mut tensor = ndarray::Array4::<f32>::zeros((1, 3, h, w));
 
+    // ImageNet mean/std for BGR order (swap R and B)
+    const BGR_MEAN: [f32; 3] = [0.406 * 255.0, 0.456 * 255.0, 0.485 * 255.0];
+    const BGR_NORM: [f32; 3] = [1.0 / (0.225 * 255.0), 1.0 / (0.224 * 255.0), 1.0 / (0.229 * 255.0)];
+
     for y in 0..h {
         for x in 0..w {
             let pixel = image.get_pixel(x as u32, y as u32);
-            for ch in 0..3 {
-                let value = pixel[ch] as f32;
-                tensor[[0, ch, y, x]] = (value - MEAN[ch]) * NORM[ch];
-            }
+            let r = pixel[0] as f32;
+            let g = pixel[1] as f32;
+            let b = pixel[2] as f32;
+            // BGR order: channel 0 = Blue, channel 1 = Green, channel 2 = Red
+            tensor[[0, 0, y, x]] = (b - BGR_MEAN[0]) * BGR_NORM[0];
+            tensor[[0, 1, y, x]] = (g - BGR_MEAN[1]) * BGR_NORM[1];
+            tensor[[0, 2, y, x]] = (r - BGR_MEAN[2]) * BGR_NORM[2];
         }
     }
 

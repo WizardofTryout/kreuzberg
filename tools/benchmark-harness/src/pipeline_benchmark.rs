@@ -442,7 +442,15 @@ async fn extract_and_score(
 /// Run the pipeline benchmark.
 pub async fn run_pipeline_benchmark(config: &PipelineBenchmarkConfig) -> Result<Vec<PipelineDocResult>> {
     let filter = CorpusFilter {
-        file_types: Some(vec!["pdf".to_string()]),
+        file_types: Some(vec![
+            "pdf".to_string(),
+            "png".to_string(),
+            "jpg".to_string(),
+            "jpeg".to_string(),
+            "tiff".to_string(),
+            "bmp".to_string(),
+            "webp".to_string(),
+        ]),
         require_ground_truth: true,
         name_patterns: config.doc_filter.clone(),
         ..Default::default()
