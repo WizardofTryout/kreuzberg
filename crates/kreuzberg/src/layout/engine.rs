@@ -30,17 +30,14 @@ use crate::layout::types::DetectionResult;
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LayoutPreset {
-    /// Fast detection. Currently uses RT-DETR v2 (Docling Heron).
-    #[default]
-    Fast,
     /// Accurate detection using RT-DETR v2 (Docling Heron, 17 classes, NMS-free).
+    #[default]
     Accurate,
 }
 
 impl fmt::Display for LayoutPreset {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LayoutPreset::Fast => write!(f, "fast"),
             LayoutPreset::Accurate => write!(f, "accurate"),
         }
     }
@@ -51,9 +48,9 @@ impl FromStr for LayoutPreset {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "fast" | "yolo" => Ok(LayoutPreset::Fast),
-            "accurate" | "rtdetr" | "rt-detr" | "heron" => Ok(LayoutPreset::Accurate),
-            _ => Err(format!("Invalid layout preset: '{s}'. Valid presets: fast, accurate")),
+            // Accept "fast" as alias for backwards compatibility — both map to RT-DETR.
+            "fast" | "accurate" | "rtdetr" | "rt-detr" | "heron" => Ok(LayoutPreset::Accurate),
+            _ => Err(format!("Invalid layout preset: '{s}'. Valid presets: accurate")),
         }
     }
 }
@@ -106,7 +103,7 @@ impl LayoutEngineConfig {
         let backend = match preset {
             // Both presets currently use RT-DETR (Docling Heron).
             // A dedicated fast model may be added in future releases.
-            LayoutPreset::Fast | LayoutPreset::Accurate => ModelBackend::RtDetr,
+            LayoutPreset::Accurate => ModelBackend::RtDetr,
         };
         Self {
             backend,

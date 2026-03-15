@@ -118,7 +118,7 @@ fn build_extraction_config(pipeline: Pipeline) -> kreuzberg::ExtractionConfig {
         Pipeline::Baseline => base,
         Pipeline::Layout => kreuzberg::ExtractionConfig {
             layout: Some(LayoutDetectionConfig {
-                preset: "fast".to_string(),
+                preset: "accurate".to_string(),
                 ..Default::default()
             }),
             ..base
@@ -140,7 +140,7 @@ fn build_extraction_config(pipeline: Pipeline) -> kreuzberg::ExtractionConfig {
                 ..Default::default()
             }),
             layout: Some(LayoutDetectionConfig {
-                preset: "fast".to_string(),
+                preset: "accurate".to_string(),
                 ..Default::default()
             }),
             ..base
@@ -162,7 +162,7 @@ fn build_extraction_config(pipeline: Pipeline) -> kreuzberg::ExtractionConfig {
                 ..Default::default()
             }),
             layout: Some(LayoutDetectionConfig {
-                preset: "fast".to_string(),
+                preset: "accurate".to_string(),
                 ..Default::default()
             }),
             ..base
@@ -177,26 +177,22 @@ async fn run_pipeline(
     doc: &CorpusDocument,
     gt_text: &str,
     gt_markdown: Option<&str>,
+    fixtures_dir: &std::path::Path,
 ) -> PipelineResult {
     let (content, time_ms) = match pipeline {
         Pipeline::Docling => {
-            // Docling: read vendored output + cached timing if available
-            let fixtures_dir = doc.document_path.parent().and_then(|p| p.parent());
-
-            let (md, time) = if let Some(base) = fixtures_dir {
-                let md_name = doc.document_path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                let md_path = base.join("vendored/docling/md").join(format!("{}.md", md_name));
-                let timing_path = base.join("vendored/docling/timing").join(format!("{}.ms", md_name));
-                let md = std::fs::read_to_string(&md_path).unwrap_or_default();
-                let cached_ms = std::fs::read_to_string(&timing_path)
-                    .ok()
-                    .and_then(|s| s.trim().parse::<f64>().ok())
-                    .unwrap_or(f64::NAN);
-                (md, cached_ms)
-            } else {
-                (String::new(), f64::NAN)
-            };
-            (md, time)
+            // Docling: read vendored output + cached timing.
+            // Vendored data lives at tools/benchmark-harness/vendored/docling/
+            // (sibling of fixtures_dir).
+            let vendored_dir = fixtures_dir.parent().unwrap_or(fixtures_dir).join("vendored/docling");
+            let md_path = vendored_dir.join("md").join(format!("{}.md", doc.name));
+            let timing_path = vendored_dir.join("timing").join(format!("{}.ms", doc.name));
+            let md = std::fs::read_to_string(&md_path).unwrap_or_default();
+            let cached_ms = std::fs::read_to_string(&timing_path)
+                .ok()
+                .and_then(|s| s.trim().parse::<f64>().ok())
+                .unwrap_or(f64::NAN);
+            (md, cached_ms)
         }
         _ => {
             let t = Instant::now();
@@ -286,7 +282,7 @@ pub async fn run_comparison(config: &ComparisonConfig) -> Result<Vec<DocResult>>
         let mut pipeline_results = Vec::new();
 
         for &pipeline in &config.pipelines {
-            let result = run_pipeline(pipeline, doc, &gt_text, gt_markdown.as_deref()).await;
+            let result = run_pipeline(pipeline, doc, &gt_text, gt_markdown.as_deref(), &config.fixtures_dir).await;
 
             if config.dump_outputs {
                 let dump_dir = std::path::PathBuf::from("/tmp/kreuzberg_compare");

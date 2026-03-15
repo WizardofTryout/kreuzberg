@@ -599,19 +599,24 @@ pub fn render_document_as_markdown_with_tables(
             None
         };
 
-        for &page_idx in &heuristic_pages {
-            // Skip heuristic table extraction for pages where the structure tree
-            // already succeeded. The structure tree path handles all content for
-            // these pages; adding a heuristically-extracted table would duplicate
-            // content and produce garbled markdown (especially for RTL documents
-            // where column detection is unreliable).
-            if struct_tree_results.get(page_idx).is_some_and(|r| r.is_some()) {
-                continue;
-            }
-
+        // Run table extraction on ALL pages with Table hints, including
+        // structure-tree pages. The structure tree flattens tables into
+        // paragraphs — layout-detected tables with SLANet structure
+        // recognition produce proper markdown tables.
+        for page_idx in 0..page_count as usize {
             let Some(hints) = hints_pages.get(page_idx) else {
                 continue;
             };
+            // Log detected layout classes per page for diagnostics.
+            {
+                let mut class_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+                for h in hints {
+                    *class_counts.entry(format!("{:?}", h.class)).or_insert(0) += 1;
+                }
+                let mut summary: Vec<String> = class_counts.iter().map(|(k, v)| format!("{}:{}", k, v)).collect();
+                summary.sort();
+                tracing::debug!(page = page_idx, classes = summary.join(", "), "layout hints for page");
+            }
             if !hints.iter().any(|h| h.class == super::types::LayoutHintClass::Table) {
                 continue;
             }

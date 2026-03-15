@@ -8,7 +8,7 @@ languages:
     package_manager:
       - pip
     package_name: kreuzberg
-    badge_url: https://img.shields.io/pypi/v/kreuzberg?label=Python
+    badge_url: https://img.shields.io/pypi/v/kreuzberg?label=Python&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. Native Python bindings with async/await support, multiple OCR backends (Tesseract, EasyOCR, PaddleOCR), and extensible plugin system.
@@ -41,7 +41,7 @@ languages:
       - pnpm
       - yarn
     package_name: "@kreuzberg/node"
-    badge_url: https://img.shields.io/npm/v/@kreuzberg/node?label=TypeScript
+    badge_url: https://img.shields.io/npm/v/@kreuzberg/node?label=TypeScript&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. Native NAPI-RS bindings for Node.js with superior performance, async/await support, and TypeScript type definitions.
@@ -78,7 +78,7 @@ languages:
     package_manager:
       - go get
     package_name: github.com/kreuzberg-dev/kreuzberg/packages/go/v4
-    badge_url: https://img.shields.io/github/v/tag/kreuzberg-dev/kreuzberg?label=Go
+    badge_url: https://img.shields.io/github/v/tag/kreuzberg-dev/kreuzberg?label=Go&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. Go bindings with context-aware async support, idiomatic Go API, and CGO-based native performance.
@@ -106,7 +106,7 @@ languages:
       - maven
       - gradle
     package_name: dev.kreuzberg:kreuzberg
-    badge_url: https://img.shields.io/maven-central/v/dev.kreuzberg/kreuzberg?label=Java
+    badge_url: https://img.shields.io/maven-central/v/dev.kreuzberg/kreuzberg?label=Java&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. Java bindings with type-safe API, Foreign Function & Memory API integration, and native performance.
@@ -134,7 +134,7 @@ languages:
     package_manager:
       - composer
     package_name: kreuzberg/kreuzberg
-    badge_url: https://img.shields.io/badge/Packagist-kreuzberg-blue
+    badge_url: https://img.shields.io/packagist/v/kreuzberg/kreuzberg?label=PHP&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. PHP bindings with modern PHP 8.2+ support and type-safe API.
@@ -161,7 +161,7 @@ languages:
       - rubygems
       - bundler
     package_name: kreuzberg
-    badge_url: https://img.shields.io/gem/v/kreuzberg?label=Ruby
+    badge_url: https://img.shields.io/gem/v/kreuzberg?label=Ruby&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. Ruby bindings with idiomatic Ruby API and native performance.
@@ -188,7 +188,7 @@ languages:
     package_manager:
       - nuget
     package_name: Kreuzberg
-    badge_url: https://img.shields.io/nuget/v/Kreuzberg?label=C%23
+    badge_url: https://img.shields.io/nuget/v/Kreuzberg?label=C%23&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. .NET bindings with full type safety, async/await support, and .NET 10.0+ compatibility.
@@ -215,7 +215,7 @@ languages:
     package_manager:
       - mix
     package_name: kreuzberg
-    badge_url: https://img.shields.io/badge/Hex-kreuzberg-purple
+    badge_url: https://img.shields.io/hexpm/v/kreuzberg?label=Elixir&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. Elixir bindings with native BEAM concurrency, OTP integration, and idiomatic Elixir API.
@@ -247,7 +247,7 @@ languages:
       - pnpm
       - yarn
     package_name: "@kreuzberg/wasm"
-    badge_url: https://img.shields.io/npm/v/@kreuzberg/wasm?label=WASM
+    badge_url: https://img.shields.io/npm/v/@kreuzberg/wasm?label=WASM&color=007ec6
     docs_url: https://kreuzberg.dev/
     description: |
       Extract text, tables, images, and metadata from 88+ file formats including PDF, Office documents, and images. WebAssembly bindings for browsers, Deno, and Cloudflare Workers with portable deployment and multi-threading support.

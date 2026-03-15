@@ -123,7 +123,7 @@ fn build_config(pipeline: Pipeline) -> kreuzberg::ExtractionConfig {
         Pipeline::Baseline => base,
         Pipeline::Layout => kreuzberg::ExtractionConfig {
             layout: Some(LayoutDetectionConfig {
-                preset: "fast".to_string(),
+                preset: "accurate".to_string(),
                 ..Default::default()
             }),
             // Include OCR config for automatic fallback on image-only/scanned PDFs.
@@ -152,7 +152,7 @@ fn build_config(pipeline: Pipeline) -> kreuzberg::ExtractionConfig {
                 ..Default::default()
             }),
             layout: Some(LayoutDetectionConfig {
-                preset: "fast".to_string(),
+                preset: "accurate".to_string(),
                 ..Default::default()
             }),
             ..base
@@ -174,7 +174,7 @@ fn build_config(pipeline: Pipeline) -> kreuzberg::ExtractionConfig {
                 ..Default::default()
             }),
             layout: Some(LayoutDetectionConfig {
-                preset: "fast".to_string(),
+                preset: "accurate".to_string(),
                 ..Default::default()
             }),
             ..base
@@ -189,12 +189,9 @@ const DOC_TIMEOUT_SECS: u64 = 60;
 /// Read docling vendored markdown + cached timing for a single document.
 /// Returns (content, time_ms) where time_ms is NaN if no cached timing exists.
 fn read_docling_cached(doc_name: &str, fixtures_dir: &Path) -> (String, f64) {
-    let vendored_md_path = fixtures_dir
-        .join("vendored/docling/md")
-        .join(format!("{}.md", doc_name));
-    let timing_path = fixtures_dir
-        .join("vendored/docling/timing")
-        .join(format!("{}.ms", doc_name));
+    let vendored_dir = fixtures_dir.parent().unwrap_or(fixtures_dir).join("vendored/docling");
+    let vendored_md_path = vendored_dir.join("md").join(format!("{}.md", doc_name));
+    let timing_path = vendored_dir.join("timing").join(format!("{}.ms", doc_name));
 
     let md = std::fs::read_to_string(&vendored_md_path).unwrap_or_default();
     let cached_ms = std::fs::read_to_string(&timing_path)
@@ -260,14 +257,13 @@ print(json.dumps({"results": results}))
 /// This loads docling models once and processes all uncached PDFs.
 pub fn run_docling_batch(docs: &[CorpusDocument], fixtures_dir: &Path) {
     let python = "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3";
+    let vendored_dir = fixtures_dir.parent().unwrap_or(fixtures_dir).join("vendored/docling");
 
     // Find docs that need docling extraction (no cached timing)
     let uncached: Vec<_> = docs
         .iter()
         .filter(|doc| {
-            let timing_path = fixtures_dir
-                .join("vendored/docling/timing")
-                .join(format!("{}.ms", doc.name));
+            let timing_path = vendored_dir.join("timing").join(format!("{}.ms", doc.name));
             !timing_path.exists()
         })
         .collect();
@@ -288,8 +284,8 @@ pub fn run_docling_batch(docs: &[CorpusDocument], fixtures_dir: &Path) {
             "name": doc.name,
             "path": doc.document_path.to_str().unwrap(),
         })).collect::<Vec<_>>(),
-        "output_dir": fixtures_dir.join("vendored/docling/md").to_str().unwrap(),
-        "timing_dir": fixtures_dir.join("vendored/docling/timing").to_str().unwrap(),
+        "output_dir": vendored_dir.join("md").to_str().unwrap(),
+        "timing_dir": vendored_dir.join("timing").to_str().unwrap(),
     });
 
     let mut child = match std::process::Command::new(python)

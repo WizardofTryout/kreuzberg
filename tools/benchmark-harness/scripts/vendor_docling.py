@@ -3,7 +3,7 @@
 Usage:
     python vendor_docling.py <fixtures_dir>
 
-Outputs to: <fixtures_dir>/vendored/docling/md/{name}.md
+Outputs to: <fixtures_dir>/../vendored/docling/md/{name}.md
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def main() -> None:
         sys.exit(1)
 
     fixtures_dir = Path(sys.argv[1]).resolve()
-    output_dir = fixtures_dir / "vendored" / "docling" / "md"
+    output_dir = fixtures_dir.parent / "vendored" / "docling" / "md"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     pdfs = find_pdf_fixtures(fixtures_dir)

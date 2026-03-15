@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 /// is enabled for PDF extraction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LayoutDetectionConfig {
-    /// Preset for model selection: `"fast"` (YOLO) or `"accurate"` (RT-DETR).
+    /// Preset for model selection. Currently only `"accurate"` (RT-DETR) is supported.
     #[serde(default = "default_preset")]
     pub preset: String,
 
@@ -33,7 +33,7 @@ impl Default for LayoutDetectionConfig {
 }
 
 fn default_preset() -> String {
-    "fast".to_string()
+    "accurate".to_string()
 }
 
 fn default_true() -> bool {

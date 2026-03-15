@@ -48,9 +48,9 @@ pub fn config_from_extraction(layout_config: &LayoutDetectionConfig) -> LayoutEn
     let preset: LayoutPreset = layout_config.preset.parse().unwrap_or_else(|_| {
         tracing::warn!(
             preset = %layout_config.preset,
-            "unrecognized layout preset, falling back to 'fast'"
+            "unrecognized layout preset, falling back to 'accurate'"
         );
-        LayoutPreset::Fast
+        LayoutPreset::Accurate
     });
 
     let mut engine_config = LayoutEngineConfig::from_preset(preset);
