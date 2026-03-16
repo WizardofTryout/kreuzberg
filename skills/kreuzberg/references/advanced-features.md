@@ -272,30 +272,31 @@ Use `FileExtractionConfig` to override extraction settings for individual files 
 
     ```python
     from kreuzberg import (
-        batch_extract_files_with_configs_sync,
+        batch_extract_files_sync,
         ExtractionConfig, FileExtractionConfig, OcrConfig,
     )
 
     config = ExtractionConfig(output_format="markdown")
-    items = [
-        ("report.pdf", None),  # use batch defaults
-        ("scan.tiff", FileExtractionConfig(
+    paths = ["report.pdf", "scan.tiff"]
+    file_configs = [
+        None,  # use batch defaults
+        FileExtractionConfig(
             force_ocr=True,
             ocr=OcrConfig(backend="tesseract", language="deu"),
-        )),
+        ),
     ]
-    results = batch_extract_files_with_configs_sync(items, config)
+    results = batch_extract_files_sync(paths, config, file_configs=file_configs)
     ```
 
 === "TypeScript"
 
     ```typescript
-    import { batchExtractFilesWithConfigsSync } from '@kreuzberg/node';
+    import { batchExtractFilesSync } from '@kreuzberg/node';
 
-    const results = batchExtractFilesWithConfigsSync(
+    const results = batchExtractFilesSync(
       ['report.pdf', 'scan.tiff'],
-      [null, { forceOcr: true, ocr: { backend: 'tesseract', language: 'deu' } }],
       { outputFormat: 'markdown' },
+      [null, { forceOcr: true, ocr: { backend: 'tesseract', language: 'deu' } }],
     );
     ```
 

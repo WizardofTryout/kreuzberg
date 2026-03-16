@@ -8,7 +8,7 @@ use crate::core::config::extraction::FileExtractionConfig;
 use crate::types::ExtractionResult;
 use crate::{KreuzbergError, Result};
 use std::future::Future;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -100,119 +100,51 @@ fn resolve_config(base: &ExtractionConfig, file_config: &Option<FileExtractionCo
 /// configured via `ExtractionConfig::max_concurrent_extractions` or defaults
 /// to `(num_cpus * 1.5).ceil()`.
 ///
-/// # Arguments
-///
-/// * `paths` - Vector of file paths to extract
-/// * `config` - Extraction configuration
-///
-/// # Returns
-///
-/// A vector of `ExtractionResult` in the same order as the input paths.
-///
-/// # Errors
-///
-/// Individual file errors are captured in the result metadata. System errors
-/// (IO, RuntimeError equivalents) will bubble up and fail the entire batch.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use kreuzberg::core::extractor::batch_extract_file;
-/// use kreuzberg::core::config::ExtractionConfig;
-///
-/// # async fn example() -> kreuzberg::Result<()> {
-/// let config = ExtractionConfig::default();
-/// let paths = vec!["doc1.pdf", "doc2.pdf"];
-/// let results = batch_extract_file(paths, &config).await?;
-/// println!("Processed {} files", results.len());
-/// # Ok(())
-/// # }
-/// ```
-#[cfg(feature = "tokio-runtime")]
-#[cfg_attr(feature = "otel", tracing::instrument(
-    skip(config, paths),
-    fields(
-        extraction.batch_size = paths.len(),
-    )
-))]
-pub async fn batch_extract_file(
-    paths: Vec<impl AsRef<Path>>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>> {
-    let items: Vec<(PathBuf, Option<FileExtractionConfig>)> =
-        paths.into_iter().map(|p| (p.as_ref().to_path_buf(), None)).collect();
-    batch_extract_file_with_configs(items, config).await
-}
-
-/// Extract content from multiple byte arrays concurrently.
-///
-/// This function processes multiple byte arrays in parallel, automatically managing
-/// concurrency to prevent resource exhaustion. The concurrency limit can be
-/// configured via `ExtractionConfig::max_concurrent_extractions` or defaults
-/// to `(num_cpus * 1.5).ceil()`.
-///
-/// # Arguments
-///
-/// * `contents` - Vector of (bytes, mime_type) tuples
-/// * `config` - Extraction configuration
-///
-/// # Returns
-///
-/// A vector of `ExtractionResult` in the same order as the input.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use kreuzberg::core::extractor::batch_extract_bytes;
-/// use kreuzberg::core::config::ExtractionConfig;
-///
-/// # async fn example() -> kreuzberg::Result<()> {
-/// let config = ExtractionConfig::default();
-/// let contents = vec![
-///     (b"content 1".to_vec(), "text/plain".to_string()),
-///     (b"content 2".to_vec(), "text/plain".to_string()),
-/// ];
-/// let results = batch_extract_bytes(contents, &config).await?;
-/// println!("Processed {} items", results.len());
-/// # Ok(())
-/// # }
-/// ```
-#[cfg(feature = "tokio-runtime")]
-#[cfg_attr(feature = "otel", tracing::instrument(
-    skip(config, contents),
-    fields(
-        extraction.batch_size = contents.len(),
-    )
-))]
-pub async fn batch_extract_bytes(
-    contents: Vec<(Vec<u8>, String)>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>> {
-    let items: Vec<(Vec<u8>, String, Option<FileExtractionConfig>)> =
-        contents.into_iter().map(|(bytes, mime)| (bytes, mime, None)).collect();
-    batch_extract_bytes_with_configs(items, config).await
-}
-
-/// Extract content from multiple files concurrently with per-file configuration overrides.
-///
 /// Each file can optionally specify a [`FileExtractionConfig`] that overrides specific
-/// fields from the batch-level `config`. Fields set to `None` in the file config use
-/// the batch default. Batch-level settings like `max_concurrent_extractions` and
-/// `use_cache` are always taken from the batch-level `config`.
+/// fields from the batch-level `config`. Pass `None` for a file to use the batch defaults.
+/// Batch-level settings like `max_concurrent_extractions` and `use_cache` are always
+/// taken from the batch-level `config`.
 ///
 /// # Arguments
 ///
-/// * `items` - Vector of `(path, optional_file_config)` tuples
+/// * `items` - Vector of `(path, optional_file_config)` tuples. Pass `None` as the
+///   config to use the batch-level defaults for that file.
 /// * `config` - Batch-level extraction configuration (provides defaults and batch settings)
 ///
 /// # Returns
 ///
 /// A vector of `ExtractionResult` in the same order as the input items.
 ///
-/// # Example
+/// # Errors
+///
+/// Individual file errors are captured in the result metadata. System errors
+/// (IO, RuntimeError equivalents) will bubble up and fail the entire batch.
+///
+/// # Examples
+///
+/// Simple usage with no per-file overrides:
 ///
 /// ```rust,no_run
-/// use kreuzberg::core::extractor::batch_extract_file_with_configs;
+/// use kreuzberg::core::extractor::batch_extract_file;
+/// use kreuzberg::core::config::ExtractionConfig;
+/// use std::path::PathBuf;
+///
+/// # async fn example() -> kreuzberg::Result<()> {
+/// let config = ExtractionConfig::default();
+/// let items: Vec<(PathBuf, Option<kreuzberg::FileExtractionConfig>)> = vec![
+///     ("doc1.pdf".into(), None),
+///     ("doc2.pdf".into(), None),
+/// ];
+/// let results = batch_extract_file(items, &config).await?;
+/// println!("Processed {} files", results.len());
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Per-file configuration overrides:
+///
+/// ```rust,no_run
+/// use kreuzberg::core::extractor::batch_extract_file;
 /// use kreuzberg::core::config::ExtractionConfig;
 /// use kreuzberg::FileExtractionConfig;
 /// use std::path::PathBuf;
@@ -223,7 +155,7 @@ pub async fn batch_extract_bytes(
 ///     ("scan.pdf".into(), Some(FileExtractionConfig { force_ocr: Some(true), ..Default::default() })),
 ///     ("notes.txt".into(), None),
 /// ];
-/// let results = batch_extract_file_with_configs(items, &config).await?;
+/// let results = batch_extract_file(items, &config).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -234,7 +166,7 @@ pub async fn batch_extract_bytes(
         extraction.batch_size = items.len(),
     )
 ))]
-pub async fn batch_extract_file_with_configs(
+pub async fn batch_extract_file(
     items: Vec<(PathBuf, Option<FileExtractionConfig>)>,
     config: &ExtractionConfig,
 ) -> Result<Vec<ExtractionResult>> {
@@ -259,10 +191,16 @@ pub async fn batch_extract_file_with_configs(
     .await
 }
 
-/// Extract content from multiple byte arrays concurrently with per-file configuration overrides.
+/// Extract content from multiple byte arrays concurrently.
+///
+/// This function processes multiple byte arrays in parallel, automatically managing
+/// concurrency to prevent resource exhaustion. The concurrency limit can be
+/// configured via `ExtractionConfig::max_concurrent_extractions` or defaults
+/// to `(num_cpus * 1.5).ceil()`.
 ///
 /// Each item can optionally specify a [`FileExtractionConfig`] that overrides specific
-/// fields from the batch-level `config`.
+/// fields from the batch-level `config`. Pass `None` as the config to use
+/// the batch-level defaults for that item.
 ///
 /// # Arguments
 ///
@@ -273,10 +211,30 @@ pub async fn batch_extract_file_with_configs(
 ///
 /// A vector of `ExtractionResult` in the same order as the input items.
 ///
-/// # Example
+/// # Examples
+///
+/// Simple usage with no per-item overrides:
 ///
 /// ```rust,no_run
-/// use kreuzberg::core::extractor::batch_extract_bytes_with_configs;
+/// use kreuzberg::core::extractor::batch_extract_bytes;
+/// use kreuzberg::core::config::ExtractionConfig;
+///
+/// # async fn example() -> kreuzberg::Result<()> {
+/// let config = ExtractionConfig::default();
+/// let items = vec![
+///     (b"content 1".to_vec(), "text/plain".to_string(), None),
+///     (b"content 2".to_vec(), "text/plain".to_string(), None),
+/// ];
+/// let results = batch_extract_bytes(items, &config).await?;
+/// println!("Processed {} items", results.len());
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Per-item configuration overrides:
+///
+/// ```rust,no_run
+/// use kreuzberg::core::extractor::batch_extract_bytes;
 /// use kreuzberg::core::config::ExtractionConfig;
 /// use kreuzberg::FileExtractionConfig;
 ///
@@ -287,7 +245,7 @@ pub async fn batch_extract_file_with_configs(
 ///     (b"<html>test</html>".to_vec(), "text/html".to_string(),
 ///      Some(FileExtractionConfig { force_ocr: Some(true), ..Default::default() })),
 /// ];
-/// let results = batch_extract_bytes_with_configs(items, &config).await?;
+/// let results = batch_extract_bytes(items, &config).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -298,7 +256,7 @@ pub async fn batch_extract_file_with_configs(
         extraction.batch_size = items.len(),
     )
 ))]
-pub async fn batch_extract_bytes_with_configs(
+pub async fn batch_extract_bytes(
     items: Vec<(Vec<u8>, String, Option<FileExtractionConfig>)>,
     config: &ExtractionConfig,
 ) -> Result<Vec<ExtractionResult>> {

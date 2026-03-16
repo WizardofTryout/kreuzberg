@@ -493,7 +493,7 @@ class FileExtractionConfig:
     """Per-file extraction configuration overrides for batch processing.
 
     All fields are optional — None means "use the batch-level default."
-    Used with batch_extract_files_with_configs and batch_extract_bytes_with_configs
+    Used with batch_extract_files and batch_extract_bytes via the file_configs parameter
     to allow heterogeneous extraction settings within a single batch.
     """
 
@@ -1981,11 +1981,13 @@ def extract_bytes_sync(
 def batch_extract_files_sync(
     paths: list[str | Path | bytes],
     config: ExtractionConfig = ...,
+    file_configs: list[FileExtractionConfig | None] | None = None,
 ) -> list[ExtractionResult]: ...
 def batch_extract_bytes_sync(
     data_list: list[bytes | bytearray],
     mime_types: list[str],
     config: ExtractionConfig = ...,
+    file_configs: list[FileExtractionConfig | None] | None = None,
 ) -> list[ExtractionResult]: ...
 @overload
 async def extract_file(
@@ -2007,27 +2009,13 @@ def extract_bytes(
 def batch_extract_files(
     paths: list[str | Path | bytes],
     config: ExtractionConfig = ...,
+    file_configs: list[FileExtractionConfig | None] | None = None,
 ) -> Awaitable[list[ExtractionResult]]: ...
 def batch_extract_bytes(
     data_list: list[bytes | bytearray],
     mime_types: list[str],
     config: ExtractionConfig = ...,
-) -> Awaitable[list[ExtractionResult]]: ...
-def batch_extract_files_with_configs_sync(
-    items: list[tuple[str | Path | bytes, FileExtractionConfig | None]],
-    config: ExtractionConfig = ...,
-) -> list[ExtractionResult]: ...
-def batch_extract_bytes_with_configs_sync(
-    items: list[tuple[bytes | bytearray, str, FileExtractionConfig | None]],
-    config: ExtractionConfig = ...,
-) -> list[ExtractionResult]: ...
-def batch_extract_files_with_configs(
-    items: list[tuple[str | Path | bytes, FileExtractionConfig | None]],
-    config: ExtractionConfig = ...,
-) -> Awaitable[list[ExtractionResult]]: ...
-def batch_extract_bytes_with_configs(
-    items: list[tuple[bytes | bytearray, str, FileExtractionConfig | None]],
-    config: ExtractionConfig = ...,
+    file_configs: list[FileExtractionConfig | None] | None = None,
 ) -> Awaitable[list[ExtractionResult]]: ...
 def register_ocr_backend(backend: OcrBackendProtocol) -> None: ...
 def register_post_processor(processor: PostProcessorProtocol) -> None: ...

@@ -233,7 +233,11 @@ impl BatchProcessor {
     ) -> Result<Vec<ExtractionResult>> {
         use crate::core::extractor::batch_extract_file;
 
-        batch_extract_file(paths, extraction_config).await
+        let items: Vec<(
+            std::path::PathBuf,
+            Option<crate::core::config::extraction::FileExtractionConfig>,
+        )> = paths.into_iter().map(|p| (p.as_ref().to_path_buf(), None)).collect();
+        batch_extract_file(items, extraction_config).await
     }
 
     /// Process multiple byte arrays with optimized pooling.
@@ -261,12 +265,16 @@ impl BatchProcessor {
     ) -> Result<Vec<ExtractionResult>> {
         use crate::core::extractor::batch_extract_bytes;
 
-        let owned_contents: Vec<(Vec<u8>, String)> = contents
+        let items: Vec<(
+            Vec<u8>,
+            String,
+            Option<crate::core::config::extraction::FileExtractionConfig>,
+        )> = contents
             .into_iter()
-            .map(|(bytes, mime)| (bytes.to_vec(), mime.to_string()))
+            .map(|(bytes, mime)| (bytes.to_vec(), mime.to_string(), None))
             .collect();
 
-        batch_extract_bytes(owned_contents, extraction_config).await
+        batch_extract_bytes(items, extraction_config).await
     }
 
     /// Get the number of pooled string buffers currently available.

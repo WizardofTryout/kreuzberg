@@ -204,7 +204,10 @@ pub async fn extract_handler(
         return Ok(Json(vec![result]));
     }
 
-    let files_data: Vec<(Vec<u8>, String)> = files.into_iter().map(|(data, mime, _name)| (data, mime)).collect();
+    let files_data: Vec<(Vec<u8>, String, Option<crate::FileExtractionConfig>)> = files
+        .into_iter()
+        .map(|(data, mime, _name)| (data, mime, None))
+        .collect();
 
     let results = batch_extract_bytes(files_data, final_config).await?;
     Ok(Json(results))

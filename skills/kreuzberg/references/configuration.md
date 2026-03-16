@@ -280,7 +280,7 @@ enabled = true
 
 ## FileExtractionConfig (Per-File Overrides)
 
-Used with `batch_extract_file_with_configs` / `batch_extract_bytes_with_configs` to override settings per file in a batch. All fields optional — `None` = use batch default.
+Passed as an optional parameter to `batch_extract_file` / `batch_extract_bytes` (and their sync variants) to override settings per file in a batch. All fields optional — `None` = use batch default. The separate `_with_configs` functions were removed in v4.5.0.
 
 **Overridable fields:** `enable_quality_processing`, `ocr`, `force_ocr`, `chunking`, `images`, `pdf_options`, `token_reduction`, `language_detection`, `pages`, `keywords`, `postprocessor`, `html_options`, `result_format`, `output_format`, `include_document_structure`, `layout`.
 

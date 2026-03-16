@@ -112,14 +112,6 @@ pub use core::extractor::{batch_extract_bytes_sync, extract_bytes_sync};
 #[cfg(feature = "tokio-runtime")]
 pub use core::extractor::{batch_extract_file_sync, extract_file_sync};
 
-#[cfg(feature = "tokio-runtime")]
-pub use core::extractor::{batch_extract_bytes_with_configs, batch_extract_file_with_configs};
-
-pub use core::extractor::batch_extract_bytes_with_configs_sync;
-
-#[cfg(feature = "tokio-runtime")]
-pub use core::extractor::batch_extract_file_with_configs_sync;
-
 pub use core::config::{
     AccelerationConfig, ChunkSizing, ChunkerType, ChunkingConfig, EmbeddingConfig, EmbeddingModelType,
     ExecutionProviderType, ExtractionConfig, FileExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig,

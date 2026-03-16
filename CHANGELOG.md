@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.5.0] - Unreleased
 
+### Breaking
+
+- **Batch API unification**: All `_with_configs` batch functions have been removed across all language bindings. Per-file `FileExtractionConfig` overrides are now an optional parameter on the unified batch functions (`batch_extract_file`, `batch_extract_file_sync`, `batch_extract_bytes`, `batch_extract_bytes_sync`). This applies to Rust, Python, TypeScript/Node, Go, Java, C#, PHP, Ruby, Elixir, R, WASM, and C FFI.
+
+  **Migration:**
+
+  ```python
+  # Before (v4.4.x)
+  from kreuzberg import batch_extract_files_with_configs_sync
+  results = batch_extract_files_with_configs_sync(items, config)
+
+  # After (v4.5.0)
+  from kreuzberg import batch_extract_files_sync
+  results = batch_extract_files_sync(paths, config, file_configs=file_configs)
+  ```
+
+  ```rust
+  // Before (v4.4.x)
+  let results = batch_extract_file_with_configs(items, &config).await?;
+
+  // After (v4.5.0)
+  let results = batch_extract_file(paths, &config, Some(&file_configs)).await?;
+  ```
+
 ### Added
 
 - **Experimental: pdf_oxide text extraction backend** (`pdf-oxide` feature): Pure Rust PDF text extraction using [pdf_oxide](https://crates.io/crates/pdf_oxide). Parses PDF content streams directly with adaptive TJ-offset thresholds, providing an alternative to pdfium for text extraction. Opt-in only, not included in `full` feature set.
@@ -49,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`ModelManager::ensure_all_models()` / `LayoutModelManager::ensure_all_models()`**: Eagerly download all models (all 11 PaddleOCR script families + layout models), unlike the lazy per-use defaults.
 - **`AccelerationConfig` for explicit GPU/execution provider control**: New config type enabling fine-grained control over ONNX execution providers (CPU, CoreML, CUDA, TensorRT). Allows users to pin specific acceleration backends for layout detection and table recognition.
 - **Acceleration config support across all 10 language bindings**: `AccelerationConfig` fully typed and tested across Python, TypeScript, Ruby, Go, Java, PHP, C#, Elixir, Node, and C FFI.
-- **Per-file extraction configuration (`FileExtractionConfig`)**: New type enabling per-file configuration overrides in batch operations. Each file in a batch can specify its own OCR, chunking, output format, and other extraction settings while sharing batch-level defaults (concurrency, caching, acceleration). Available as `batch_extract_file_with_configs` / `batch_extract_bytes_with_configs` (async + sync variants) across all language bindings: Rust, Python, TypeScript/Node, Go, Java, C#, PHP, Ruby, Elixir, R, WASM, and C FFI. CLI supports `--file-configs` flag for batch commands. MCP tool supports `file_configs` parameter.
+- **Per-file extraction configuration (`FileExtractionConfig`)**: New type enabling per-file configuration overrides in batch operations. Each file in a batch can specify its own OCR, chunking, output format, and other extraction settings while sharing batch-level defaults (concurrency, caching, acceleration). Per-file configs are now an optional parameter on the unified `batch_extract_file` / `batch_extract_bytes` functions (async + sync variants) across all language bindings: Rust, Python, TypeScript/Node, Go, Java, C#, PHP, Ruby, Elixir, R, WASM, and C FFI. CLI supports `--file-configs` flag for batch commands. MCP tool supports `file_configs` parameter.
 - **Embedding benchmark subcommand in benchmark harness**: New `embed-benchmark` CLI command for performance profiling of the embedding pipeline (`tools/benchmark-harness/src/embed_benchmark.rs`).
 - **E2E test fixture for acceleration config**: Comprehensive test coverage for `AccelerationConfig` serialization and cross-language binding parity.
 - **PaddleOCR v2 model tier system**: New `model_tier` field in `PaddleOcrConfig` allows choosing between `"server"` (default, high accuracy ~88MB detection) and `"mobile"` (lightweight ~4.5MB detection, faster inference). Available across all language bindings.
@@ -74,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **PaddleOCR v2 models**: All PaddleOCR models updated to v2 generation. Detection uses PP-OCRv5 server/mobile, classification uses PP-LCNet, recognition uses unified multilingual models for CJK/English. V1 models remain on HuggingFace for older kreuzberg versions.
 - **CLI `cache warm` downloads v2 models**: The warm command now downloads both server and mobile detection models, the new PP-LCNet classifiers, document orientation model, all v2 unified recognition models, and all per-script recognition models.
-- **Per-file extraction configuration (`FileExtractionConfig`)**: New type enabling per-file configuration overrides in batch operations. Each file in a batch can specify its own OCR, chunking, output format, and other extraction settings while sharing batch-level defaults (concurrency, caching, acceleration). Available as `batch_extract_file_with_configs` / `batch_extract_bytes_with_configs` (async + sync variants) across all language bindings: Rust, Python, TypeScript/Node, Go, Java, C#, PHP, Ruby, Elixir, R, WASM, and C FFI. CLI supports `--file-configs` flag for batch commands. MCP tool supports `file_configs` parameter.
+- **Batch API unification**: All `_with_configs` batch functions removed; per-file `FileExtractionConfig` is now an optional parameter on the unified `batch_extract_file` / `batch_extract_bytes` functions across all language bindings.
 - **PaddleOCR v2 model tier system**: New `model_tier` field in `PaddleOcrConfig` allows choosing between `"server"` (default, high accuracy ~88MB detection) and `"mobile"` (lightweight ~4.5MB detection, faster inference). Available across all language bindings.
 - **PP-LCNet classification models**: Replaced legacy PPOCRv2 angle classifier (585KB) with PP-LCNet_x1_0_textline_ori (6.7MB) for improved text line orientation detection. Added PP-LCNet_x1_0_doc_ori for page-level document orientation detection with PaddleOCR backend `auto_rotate`.
 - **Unified multilingual recognition models**: PP-OCRv5 unified server (84MB, 18K+ chars) and mobile (16.5MB) recognition models replace per-script English and Chinese models. Covers CJK, English, Latin, and symbol recognition in a single model. Per-script models retained for 9 other script families (Korean, Arabic, Thai, Greek, Devanagari, Tamil, Telugu, Latin, East Slavic).

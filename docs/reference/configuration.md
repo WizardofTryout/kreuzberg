@@ -343,7 +343,7 @@ Output format for extraction content. Controls how extracted text is formatted i
 
 Per-file extraction configuration overrides for batch operations. All fields are optional — `None` means "use the batch-level default from `ExtractionConfig`."
 
-When used with `batch_extract_file_with_configs` or `batch_extract_bytes_with_configs`, each file in the batch can specify its own overrides that are merged with the shared batch-level `ExtractionConfig`.
+When passed as an optional parameter to `batch_extract_file` / `batch_extract_bytes` (or their sync variants), each file in the batch can specify its own overrides that are merged with the shared batch-level `ExtractionConfig`.
 
 ### Overridable Fields
 
@@ -385,7 +385,7 @@ For each file in a batch, the effective configuration is computed by overlaying 
 
     ```rust title="per_file_config.rs"
     use kreuzberg::{
-        batch_extract_file_with_configs, ExtractionConfig, FileExtractionConfig, OcrConfig,
+        batch_extract_file, ExtractionConfig, FileExtractionConfig, OcrConfig,
     };
     use std::path::PathBuf;
 
@@ -393,11 +393,14 @@ For each file in a batch, the effective configuration is computed by overlaying 
     async fn main() -> kreuzberg::Result<()> {
         let batch_config = ExtractionConfig::default();
 
-        let items = vec![
-            // Use batch defaults for this PDF
-            (PathBuf::from("report.pdf"), None),
-            // Force OCR for this scanned document
-            (PathBuf::from("scanned.pdf"), Some(FileExtractionConfig {
+        let paths = vec![
+            PathBuf::from("report.pdf"),
+            PathBuf::from("scanned.pdf"),
+        ];
+
+        let file_configs = vec![
+            None, // Use batch defaults for this PDF
+            Some(FileExtractionConfig { // Force OCR for this scanned document
                 force_ocr: Some(true),
                 ocr: Some(OcrConfig {
                     backend: "tesseract".to_string(),
@@ -405,10 +408,10 @@ For each file in a batch, the effective configuration is computed by overlaying 
                     ..Default::default()
                 }),
                 ..Default::default()
-            })),
+            }),
         ];
 
-        let results = batch_extract_file_with_configs(items, &batch_config).await?;
+        let results = batch_extract_file(paths, &batch_config, Some(&file_configs)).await?;
         Ok(())
     }
     ```
@@ -417,7 +420,7 @@ For each file in a batch, the effective configuration is computed by overlaying 
 
     ```python title="per_file_config.py"
     from kreuzberg import (
-        batch_extract_files_with_configs_sync,
+        batch_extract_files_sync,
         ExtractionConfig,
         FileExtractionConfig,
         OcrConfig,
@@ -425,24 +428,26 @@ For each file in a batch, the effective configuration is computed by overlaying 
 
     config = ExtractionConfig()
 
-    items = [
-        ("report.pdf", None),  # use batch defaults
-        ("scanned.pdf", FileExtractionConfig(
+    paths = ["report.pdf", "scanned.pdf"]
+    file_configs = [
+        None,  # use batch defaults
+        FileExtractionConfig(
             force_ocr=True,
             ocr=OcrConfig(backend="tesseract", language="deu"),
-        )),
+        ),
     ]
 
-    results = batch_extract_files_with_configs_sync(items, config)
+    results = batch_extract_files_sync(paths, config, file_configs=file_configs)
     ```
 
 === "TypeScript"
 
     ```typescript title="per_file_config.ts"
-    import { batchExtractFilesWithConfigsSync } from '@kreuzberg/node';
+    import { batchExtractFilesSync } from '@kreuzberg/node';
 
-    const results = batchExtractFilesWithConfigsSync(
+    const results = batchExtractFilesSync(
       ['report.pdf', 'scanned.pdf'],
+      undefined, // use default config
       [
         null,  // use batch defaults
         {      // per-file overrides

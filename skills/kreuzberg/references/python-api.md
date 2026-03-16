@@ -180,51 +180,23 @@ def batch_extract_bytes_sync(
 
 Extract content from multiple byte arrays in parallel (synchronous).
 
-### Per-File Config Batch Functions
+### Per-File Config in Batch Functions
+
+As of v4.5.0, per-file configuration overrides are passed as an optional `file_configs` parameter on the unified batch functions:
 
 ```python
-def batch_extract_files_with_configs_sync(
-    items: list[tuple[str | Path, FileExtractionConfig | None]],
+def batch_extract_files_sync(
+    paths: list[str | Path],
     config: ExtractionConfig | None = None,
     *,
+    file_configs: list[FileExtractionConfig | None] | None = None,
     easyocr_kwargs: dict[str, Any] | None = None,
 ) -> list[ExtractionResult]
 ```
 
-Extract multiple files with per-file configuration overrides (synchronous). Each item is a `(path, per_file_config)` tuple. `None` config uses batch defaults.
+The `file_configs` list must have the same length as `paths`. Each element is either a `FileExtractionConfig` override or `None` to use batch defaults. The same parameter is available on `batch_extract_files`, `batch_extract_bytes_sync`, and `batch_extract_bytes`.
 
-```python
-async def batch_extract_files_with_configs(
-    items: list[tuple[str | Path, FileExtractionConfig | None]],
-    config: ExtractionConfig | None = None,
-    *,
-    easyocr_kwargs: dict[str, Any] | None = None,
-) -> list[ExtractionResult]
-```
-
-Async variant.
-
-```python
-def batch_extract_bytes_with_configs_sync(
-    items: list[tuple[bytes | bytearray, str, FileExtractionConfig | None]],
-    config: ExtractionConfig | None = None,
-    *,
-    easyocr_kwargs: dict[str, Any] | None = None,
-) -> list[ExtractionResult]
-```
-
-Extract multiple byte arrays with per-file overrides (synchronous). Each item is `(data, mime_type, per_file_config)`.
-
-```python
-async def batch_extract_bytes_with_configs(
-    items: list[tuple[bytes | bytearray, str, FileExtractionConfig | None]],
-    config: ExtractionConfig | None = None,
-    *,
-    easyocr_kwargs: dict[str, Any] | None = None,
-) -> list[ExtractionResult]
-```
-
-Async variant.
+> **Note:** The separate `batch_extract_files_with_configs_sync` / `batch_extract_files_with_configs` / `batch_extract_bytes_with_configs_sync` / `batch_extract_bytes_with_configs` functions have been removed in v4.5.0.
 
 ## Configuration Classes
 

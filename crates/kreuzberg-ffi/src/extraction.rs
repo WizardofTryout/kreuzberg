@@ -334,230 +334,7 @@ pub unsafe extern "C" fn kreuzberg_extract_bytes_sync_with_config(
     })
 }
 
-/// Batch extract text and metadata from multiple files (synchronous).
-///
-/// # Safety
-///
-/// - `file_paths` must be a valid pointer to an array of null-terminated C strings
-/// - `count` must be the number of file paths in the array
-/// - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
-/// - The returned pointer must be freed with `kreuzberg_free_batch_result`
-/// - Returns NULL on error (check `kreuzberg_last_error` for details)
-///
-/// # Critical Memory Management
-///
-/// This function has special memory management requirements due to the need to allocate
-/// an array of result pointers:
-///
-/// 1. Results are collected in a Vec<*mut CExtractionResult>
-/// 2. The vec is converted to a boxed slice (changes allocation metadata)
-/// 3. The boxed slice pointer is cast to *mut *mut CExtractionResult
-/// 4. This pointer is stored in CBatchResult
-/// 5. Deallocation must reverse this process using slice_from_raw_parts
-///
-/// The Go segfault issue was caused by incorrect deallocation in the memory module.
-/// This allocation pattern must be perfectly mirrored in the free function.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
-    file_paths: *const *const c_char,
-    count: usize,
-    config_json: *const c_char,
-) -> *mut CBatchResult {
-    ffi_panic_guard!("kreuzberg_batch_extract_files_sync", {
-        clear_last_error();
-
-        if file_paths.is_null() {
-            set_last_error("file_paths cannot be NULL".to_string());
-            return ptr::null_mut();
-        }
-
-        let config = if config_json.is_null() {
-            ExtractionConfig::default()
-        } else {
-            let config_str = match unsafe { CStr::from_ptr(config_json) }.to_str() {
-                Ok(s) => s,
-                Err(e) => {
-                    set_last_error(format!("Invalid UTF-8 in config JSON: {}", e));
-                    return ptr::null_mut();
-                }
-            };
-
-            match parse_extraction_config_from_json(config_str) {
-                Ok(cfg) => cfg,
-                Err(e) => {
-                    set_last_error(e);
-                    return ptr::null_mut();
-                }
-            }
-        };
-
-        let mut paths: Vec<std::path::PathBuf> = Vec::with_capacity(count);
-        for i in 0..count {
-            let path_ptr = unsafe { *file_paths.add(i) };
-            if path_ptr.is_null() {
-                set_last_error(format!("File path at index {} is NULL", i));
-                return ptr::null_mut();
-            }
-
-            let path_str = match unsafe { CStr::from_ptr(path_ptr) }.to_str() {
-                Ok(s) => s,
-                Err(e) => {
-                    set_last_error(format!("Invalid UTF-8 in file path at index {}: {}", i, e));
-                    return ptr::null_mut();
-                }
-            };
-
-            paths.push(std::path::PathBuf::from(path_str));
-        }
-
-        let path_refs: Vec<&std::path::Path> = paths.iter().map(|p| p.as_path()).collect();
-        match kreuzberg::batch_extract_file_sync(path_refs, &config) {
-            Ok(results) => {
-                let mut c_results = Vec::with_capacity(results.len());
-                for result in results {
-                    match to_c_extraction_result(result) {
-                        Ok(ptr) => c_results.push(ptr),
-                        Err(e) => {
-                            for c_res in c_results {
-                                unsafe { kreuzberg_free_result(c_res) };
-                            }
-                            set_last_error(e);
-                            return ptr::null_mut();
-                        }
-                    }
-                }
-
-                let actual_count = c_results.len();
-                let results_array = c_results.into_boxed_slice();
-                let results_ptr = Box::into_raw(results_array) as *mut *mut CExtractionResult;
-
-                Box::into_raw(Box::new(CBatchResult {
-                    results: results_ptr,
-                    count: actual_count,
-                    success: true,
-                    _padding2: [0u8; 7],
-                }))
-            }
-            Err(e) => {
-                set_last_error(e.to_string());
-                ptr::null_mut()
-            }
-        }
-    })
-}
-
-/// Batch extract text and metadata from multiple byte arrays (synchronous).
-///
-/// # Safety
-///
-/// - `items` must be a valid pointer to an array of CBytesWithMime structures
-/// - `count` must be the number of items in the array
-/// - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
-/// - The returned pointer must be freed with `kreuzberg_free_batch_result`
-/// - Returns NULL on error (check `kreuzberg_last_error` for details)
-///
-/// # Critical Memory Management
-///
-/// This function shares the same critical memory management pattern as
-/// `kreuzberg_batch_extract_files_sync`. See that function's documentation
-/// for details on the Box/Vec/slice allocation pattern.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
-    items: *const CBytesWithMime,
-    count: usize,
-    config_json: *const c_char,
-) -> *mut CBatchResult {
-    ffi_panic_guard!("kreuzberg_batch_extract_bytes_sync", {
-        clear_last_error();
-
-        if items.is_null() {
-            set_last_error("items cannot be NULL".to_string());
-            return ptr::null_mut();
-        }
-
-        let config = if config_json.is_null() {
-            ExtractionConfig::default()
-        } else {
-            let config_str = match unsafe { CStr::from_ptr(config_json) }.to_str() {
-                Ok(s) => s,
-                Err(e) => {
-                    set_last_error(format!("Invalid UTF-8 in config JSON: {}", e));
-                    return ptr::null_mut();
-                }
-            };
-
-            match parse_extraction_config_from_json(config_str) {
-                Ok(cfg) => cfg,
-                Err(e) => {
-                    set_last_error(e);
-                    return ptr::null_mut();
-                }
-            }
-        };
-
-        let mut contents: Vec<(Vec<u8>, String)> = Vec::with_capacity(count);
-        for i in 0..count {
-            let item = unsafe { &*items.add(i) };
-
-            if item.data.is_null() {
-                set_last_error(format!("Data at index {} is NULL", i));
-                return ptr::null_mut();
-            }
-
-            if item.mime_type.is_null() {
-                set_last_error(format!("MIME type at index {} is NULL", i));
-                return ptr::null_mut();
-            }
-
-            let bytes = unsafe { std::slice::from_raw_parts(item.data, item.data_len) };
-
-            let mime_str = match unsafe { CStr::from_ptr(item.mime_type) }.to_str() {
-                Ok(s) => s,
-                Err(e) => {
-                    set_last_error(format!("Invalid UTF-8 in MIME type at index {}: {}", i, e));
-                    return ptr::null_mut();
-                }
-            };
-
-            contents.push((bytes.to_vec(), mime_str.to_string()));
-        }
-
-        match kreuzberg::batch_extract_bytes_sync(contents, &config) {
-            Ok(results) => {
-                let mut c_results = Vec::with_capacity(results.len());
-                for result in results {
-                    match to_c_extraction_result(result) {
-                        Ok(ptr) => c_results.push(ptr),
-                        Err(e) => {
-                            for c_res in c_results {
-                                unsafe { kreuzberg_free_result(c_res) };
-                            }
-                            set_last_error(e);
-                            return ptr::null_mut();
-                        }
-                    }
-                }
-
-                let actual_count = c_results.len();
-                let results_array = c_results.into_boxed_slice();
-                let results_ptr = Box::into_raw(results_array) as *mut *mut CExtractionResult;
-
-                Box::into_raw(Box::new(CBatchResult {
-                    results: results_ptr,
-                    count: actual_count,
-                    success: true,
-                    _padding2: [0u8; 7],
-                }))
-            }
-            Err(e) => {
-                set_last_error(e.to_string());
-                ptr::null_mut()
-            }
-        }
-    })
-}
-
-/// Batch extract text and metadata from multiple files with per-file config overrides (synchronous).
+/// Batch extract text and metadata from multiple files with optional per-file config overrides (synchronous).
 ///
 /// # Safety
 ///
@@ -575,13 +352,13 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
 /// `kreuzberg_batch_extract_files_sync`. See that function's documentation
 /// for details on the Box/Vec/slice allocation pattern.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_batch_extract_files_with_configs_sync(
+pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
     file_paths: *const *const c_char,
     file_config_jsons: *const *const c_char,
     count: usize,
     config_json: *const c_char,
 ) -> *mut CBatchResult {
-    ffi_panic_guard!("kreuzberg_batch_extract_files_with_configs_sync", {
+    ffi_panic_guard!("kreuzberg_batch_extract_files_sync", {
         clear_last_error();
 
         if file_paths.is_null() {
@@ -642,7 +419,7 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_files_with_configs_sync(
             items.push((std::path::PathBuf::from(path_str), file_config));
         }
 
-        match kreuzberg::batch_extract_file_with_configs_sync(items, &config) {
+        match kreuzberg::batch_extract_file_sync(items, &config) {
             Ok(results) => {
                 let mut c_results = Vec::with_capacity(results.len());
                 for result in results {
@@ -695,13 +472,13 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_files_with_configs_sync(
 /// `kreuzberg_batch_extract_files_sync`. See that function's documentation
 /// for details on the Box/Vec/slice allocation pattern.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_with_configs_sync(
+pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
     items: *const CBytesWithMime,
     file_config_jsons: *const *const c_char,
     count: usize,
     config_json: *const c_char,
 ) -> *mut CBatchResult {
-    ffi_panic_guard!("kreuzberg_batch_extract_bytes_with_configs_sync", {
+    ffi_panic_guard!("kreuzberg_batch_extract_bytes_sync", {
         clear_last_error();
 
         if items.is_null() {
@@ -770,7 +547,7 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_with_configs_sync(
             contents.push((bytes.to_vec(), mime_str.to_string(), file_config));
         }
 
-        match kreuzberg::batch_extract_bytes_with_configs_sync(contents, &config) {
+        match kreuzberg::batch_extract_bytes_sync(contents, &config) {
             Ok(results) => {
                 let mut c_results = Vec::with_capacity(results.len());
                 for result in results {

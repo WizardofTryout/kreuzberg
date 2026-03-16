@@ -63,8 +63,8 @@ use commands::mcp_command;
 #[cfg(feature = "api")]
 use commands::serve_command;
 use commands::{
-    apply_extraction_overrides, batch_command, batch_command_with_configs, clear_command, extract_command, load_config,
-    manifest_command, stats_command, warm_command,
+    apply_extraction_overrides, batch_command, clear_command, extract_command, load_config, manifest_command,
+    stats_command, warm_command,
 };
 use kreuzberg::{OutputFormat as ContentOutputFormat, detect_mime_type};
 use serde_json::json;
@@ -699,20 +699,21 @@ fn main() -> Result<()> {
                 pdf_opts.passwords = Some(pdf_password);
             }
 
-            if let Some(file_configs_path) = file_configs {
+            let file_configs_map = if let Some(file_configs_path) = file_configs {
                 let file_configs_json = std::fs::read_to_string(&file_configs_path)
                     .with_context(|| format!("Failed to read file configs from '{}'", file_configs_path.display()))?;
-                let file_configs_map: std::collections::HashMap<String, serde_json::Value> =
+                let map: std::collections::HashMap<String, serde_json::Value> =
                     serde_json::from_str(&file_configs_json).with_context(|| {
                         format!(
                             "Failed to parse file configs JSON from '{}'",
                             file_configs_path.display()
                         )
                     })?;
-                batch_command_with_configs(paths, file_configs_map, config, format)?;
+                Some(map)
             } else {
-                batch_command(paths, config, format)?;
-            }
+                None
+            };
+            batch_command(paths, file_configs_map, config, format)?;
         }
 
         Commands::Detect { path, format } => {

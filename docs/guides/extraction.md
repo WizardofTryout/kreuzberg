@@ -405,7 +405,7 @@ This is useful when a batch contains a mix of document types — for example, sc
 
     ```python title="mixed_batch.py"
     from kreuzberg import (
-        batch_extract_files_with_configs_sync,
+        batch_extract_files_sync,
         ExtractionConfig,
         FileExtractionConfig,
         OcrConfig,
@@ -414,33 +414,34 @@ This is useful when a batch contains a mix of document types — for example, sc
     # Shared batch config: markdown output, caching enabled
     config = ExtractionConfig(output_format="markdown")
 
-    items = [
-        ("report.pdf", None),  # text-based PDF, use defaults
-        ("scan.tiff", FileExtractionConfig(
+    paths = ["report.pdf", "scan.tiff", "notes.html"]
+    file_configs = [
+        None,  # text-based PDF, use defaults
+        FileExtractionConfig(
             force_ocr=True,
             ocr=OcrConfig(backend="tesseract", language="deu"),
-        )),
-        ("notes.html", FileExtractionConfig(
+        ),
+        FileExtractionConfig(
             output_format="plain",  # override output format for HTML
-        )),
+        ),
     ]
 
-    results = batch_extract_files_with_configs_sync(items, config)
+    results = batch_extract_files_sync(paths, config, file_configs=file_configs)
     ```
 
 === "TypeScript"
 
     ```typescript title="mixed_batch.ts"
-    import { batchExtractFilesWithConfigsSync } from '@kreuzberg/node';
+    import { batchExtractFilesSync } from '@kreuzberg/node';
 
-    const results = batchExtractFilesWithConfigsSync(
+    const results = batchExtractFilesSync(
       ['report.pdf', 'scan.tiff', 'notes.html'],
+      { outputFormat: 'markdown' },
       [
         null,
         { forceOcr: true, ocr: { backend: 'tesseract', language: 'deu' } },
         { outputFormat: 'plain' },
       ],
-      { outputFormat: 'markdown' },
     );
     ```
 
@@ -448,7 +449,7 @@ This is useful when a batch contains a mix of document types — for example, sc
 
     ```rust title="mixed_batch.rs"
     use kreuzberg::{
-        batch_extract_file_with_configs, ExtractionConfig, FileExtractionConfig,
+        batch_extract_file, ExtractionConfig, FileExtractionConfig,
         OcrConfig, OutputFormat,
     };
     use std::path::PathBuf;
@@ -458,9 +459,15 @@ This is useful when a batch contains a mix of document types — for example, sc
         ..Default::default()
     };
 
-    let items = vec![
-        (PathBuf::from("report.pdf"), None),
-        (PathBuf::from("scan.tiff"), Some(FileExtractionConfig {
+    let paths = vec![
+        PathBuf::from("report.pdf"),
+        PathBuf::from("scan.tiff"),
+        PathBuf::from("notes.html"),
+    ];
+
+    let file_configs = vec![
+        None,
+        Some(FileExtractionConfig {
             force_ocr: Some(true),
             ocr: Some(OcrConfig {
                 backend: "tesseract".to_string(),
@@ -468,14 +475,14 @@ This is useful when a batch contains a mix of document types — for example, sc
                 ..Default::default()
             }),
             ..Default::default()
-        })),
-        (PathBuf::from("notes.html"), Some(FileExtractionConfig {
+        }),
+        Some(FileExtractionConfig {
             output_format: Some(OutputFormat::Plain),
             ..Default::default()
-        })),
+        }),
     ];
 
-    let results = batch_extract_file_with_configs(items, &config).await?;
+    let results = batch_extract_file(paths, &config, Some(&file_configs)).await?;
     ```
 
 Fields set to `None` in `FileExtractionConfig` inherit the batch default. Batch-level concerns like `max_concurrent_extractions`, `use_cache`, and `security_limits` cannot be overridden per file. See the [Configuration Reference](../reference/configuration.md#fileextractionconfig) for the full list of overridable fields.

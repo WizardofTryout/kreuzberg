@@ -2464,7 +2464,7 @@ type ExtractionConfig struct {
 
 ### FileExtractionConfig <span class="version-badge">v4.5.0</span>
 
-Per-file extraction configuration overrides for batch operations. All fields are optional — `None`/`null`/`undefined` means "use the batch-level default from `ExtractionConfig`." Used with `batch_extract_file_with_configs` and `batch_extract_bytes_with_configs`.
+Per-file extraction configuration overrides for batch operations. All fields are optional — `None`/`null`/`undefined` means "use the batch-level default from `ExtractionConfig`." Passed as an optional parameter to the unified `batch_extract_file` / `batch_extract_bytes` functions (and their sync variants).
 
 Batch-level fields (`max_concurrent_extractions`, `use_cache`, `acceleration`, `security_limits`) are excluded and cannot be overridden per file.
 

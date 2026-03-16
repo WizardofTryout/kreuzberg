@@ -295,9 +295,10 @@ impl FrameworkAdapter for NativeAdapter {
 
         let start = Instant::now();
 
-        let paths: Vec<PathBuf> = file_paths.iter().map(|p| p.to_path_buf()).collect();
+        let items: Vec<(PathBuf, Option<kreuzberg::FileExtractionConfig>)> =
+            file_paths.iter().map(|p| (p.to_path_buf(), None)).collect();
 
-        let timed_result = tokio::time::timeout(timeout, batch_extract_file(paths.clone(), &config)).await;
+        let timed_result = tokio::time::timeout(timeout, batch_extract_file(items.clone(), &config)).await;
         let timed_out = timed_result.is_err();
         let batch_result = match timed_result {
             Ok(inner) => inner.map_err(|e| Error::Benchmark(format!("Batch extraction failed: {}", e))),

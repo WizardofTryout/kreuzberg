@@ -1543,59 +1543,7 @@ struct CExtractionResult *kreuzberg_extract_bytes_sync_with_config(const uint8_t
                                                                    const char *config_json);
 
 /**
- * Batch extract text and metadata from multiple files (synchronous).
- *
- * # Safety
- *
- * - `file_paths` must be a valid pointer to an array of null-terminated C strings
- * - `count` must be the number of file paths in the array
- * - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
- * - The returned pointer must be freed with `kreuzberg_free_batch_result`
- * - Returns NULL on error (check `kreuzberg_last_error` for details)
- *
- * # Critical Memory Management
- *
- * This function has special memory management requirements due to the need to allocate
- * an array of result pointers:
- *
- * 1. Results are collected in a Vec<*mut CExtractionResult>
- * 2. The vec is converted to a boxed slice (changes allocation metadata)
- * 3. The boxed slice pointer is cast to *mut *mut CExtractionResult
- * 4. This pointer is stored in CBatchResult
- * 5. Deallocation must reverse this process using slice_from_raw_parts
- *
- * The Go segfault issue was caused by incorrect deallocation in the memory module.
- * This allocation pattern must be perfectly mirrored in the free function.
- */
-KREUZBERG_EXPORT
-struct CBatchResult *kreuzberg_batch_extract_files_sync(const char *const *file_paths,
-                                                        uintptr_t count,
-                                                        const char *config_json);
-
-/**
- * Batch extract text and metadata from multiple byte arrays (synchronous).
- *
- * # Safety
- *
- * - `items` must be a valid pointer to an array of CBytesWithMime structures
- * - `count` must be the number of items in the array
- * - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
- * - The returned pointer must be freed with `kreuzberg_free_batch_result`
- * - Returns NULL on error (check `kreuzberg_last_error` for details)
- *
- * # Critical Memory Management
- *
- * This function shares the same critical memory management pattern as
- * `kreuzberg_batch_extract_files_sync`. See that function's documentation
- * for details on the Box/Vec/slice allocation pattern.
- */
-KREUZBERG_EXPORT
-struct CBatchResult *kreuzberg_batch_extract_bytes_sync(const struct CBytesWithMime *items,
-                                                        uintptr_t count,
-                                                        const char *config_json);
-
-/**
- * Batch extract text and metadata from multiple files with per-file config overrides (synchronous).
+ * Batch extract text and metadata from multiple files with optional per-file config overrides (synchronous).
  *
  * # Safety
  *
@@ -1614,10 +1562,10 @@ struct CBatchResult *kreuzberg_batch_extract_bytes_sync(const struct CBytesWithM
  * for details on the Box/Vec/slice allocation pattern.
  */
 KREUZBERG_EXPORT
-struct CBatchResult *kreuzberg_batch_extract_files_with_configs_sync(const char *const *file_paths,
-                                                                     const char *const *file_config_jsons,
-                                                                     uintptr_t count,
-                                                                     const char *config_json);
+struct CBatchResult *kreuzberg_batch_extract_files_sync(const char *const *file_paths,
+                                                        const char *const *file_config_jsons,
+                                                        uintptr_t count,
+                                                        const char *config_json);
 
 /**
  * Batch extract text and metadata from multiple byte arrays with per-file config overrides (synchronous).
@@ -1639,10 +1587,10 @@ struct CBatchResult *kreuzberg_batch_extract_files_with_configs_sync(const char 
  * for details on the Box/Vec/slice allocation pattern.
  */
 KREUZBERG_EXPORT
-struct CBatchResult *kreuzberg_batch_extract_bytes_with_configs_sync(const struct CBytesWithMime *items,
-                                                                     const char *const *file_config_jsons,
-                                                                     uintptr_t count,
-                                                                     const char *config_json);
+struct CBatchResult *kreuzberg_batch_extract_bytes_sync(const struct CBytesWithMime *items,
+                                                        const char *const *file_config_jsons,
+                                                        uintptr_t count,
+                                                        const char *config_json);
 
 /**
  * Parse HeadingStyle from string to discriminant.

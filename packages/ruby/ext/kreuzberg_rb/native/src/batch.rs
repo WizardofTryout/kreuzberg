@@ -11,6 +11,10 @@ use std::path::PathBuf;
 use magnus::{Error, RArray, RHash, RString, Ruby, Value, scan_args::scan_args, TryConvert};
 
 /// Batch extract content from multiple files (synchronous)
+///
+/// Accepts `paths` as an RArray of strings.
+/// Optional keyword arg `file_configs`: RArray of config hashes (or nil per element),
+/// must match paths length. When absent, all items get `None` config.
 pub fn batch_extract_files_sync(args: &[Value]) -> Result<RArray, Error> {
     let ruby = Ruby::get().expect("Ruby not initialized");
     let args = scan_args::<(RArray,), (), (), (), RHash, ()>(args)?;
@@ -21,7 +25,9 @@ pub fn batch_extract_files_sync(args: &[Value]) -> Result<RArray, Error> {
 
     let paths: Vec<String> = paths_array.to_vec::<String>()?;
 
-    let results = kreuzberg::batch_extract_file_sync(paths, &config).map_err(kreuzberg_error)?;
+    let items = build_file_items(&ruby, &paths, opts)?;
+
+    let results = kreuzberg::batch_extract_file_sync(items, &config).map_err(kreuzberg_error)?;
 
     let results_array = ruby.ary_new();
     for result in results {
@@ -42,11 +48,13 @@ pub fn batch_extract_files(args: &[Value]) -> Result<RArray, Error> {
 
     let paths: Vec<String> = paths_array.to_vec::<String>()?;
 
+    let items = build_file_items(&ruby, &paths, opts)?;
+
     let runtime = tokio::runtime::Runtime::new()
         .map_err(|e| runtime_error(format!("Failed to create Tokio runtime: {}", e)))?;
 
     let results = runtime
-        .block_on(async { kreuzberg::batch_extract_file(paths, &config).await })
+        .block_on(async { kreuzberg::batch_extract_file(items, &config).await })
         .map_err(kreuzberg_error)?;
 
     let results_array = ruby.ary_new();
@@ -58,6 +66,9 @@ pub fn batch_extract_files(args: &[Value]) -> Result<RArray, Error> {
 }
 
 /// Batch extract content from multiple byte arrays (synchronous)
+///
+/// Accepts `bytes_array` and `mime_types` as required positional args.
+/// Optional keyword arg `file_configs`: RArray of config hashes (or nil per element).
 pub fn batch_extract_bytes_sync(args: &[Value]) -> Result<RArray, Error> {
     let ruby = Ruby::get().expect("Ruby not initialized");
     let args = scan_args::<(RArray, RArray), (), (), (), RHash, ()>(args)?;
@@ -80,13 +91,9 @@ pub fn batch_extract_bytes_sync(args: &[Value]) -> Result<RArray, Error> {
         )));
     }
 
-    let contents: Vec<(Vec<u8>, String)> = bytes_vec
-        .iter()
-        .zip(mime_types.iter())
-        .map(|(bytes, mime): (&RString, &String)| (unsafe { bytes.as_slice() }.to_vec(), mime.clone()))
-        .collect();
+    let items = build_bytes_items(&ruby, &bytes_vec, &mime_types, opts)?;
 
-    let results = kreuzberg::batch_extract_bytes_sync(contents, &config).map_err(kreuzberg_error)?;
+    let results = kreuzberg::batch_extract_bytes_sync(items, &config).map_err(kreuzberg_error)?;
 
     let results_array = ruby.ary_new();
     for result in results {
@@ -119,17 +126,13 @@ pub fn batch_extract_bytes(args: &[Value]) -> Result<RArray, Error> {
         )));
     }
 
-    let contents: Vec<(Vec<u8>, String)> = bytes_vec
-        .iter()
-        .zip(mime_types.iter())
-        .map(|(bytes, mime): (&RString, &String)| (unsafe { bytes.as_slice() }.to_vec(), mime.clone()))
-        .collect();
+    let items = build_bytes_items(&ruby, &bytes_vec, &mime_types, opts)?;
 
     let runtime = tokio::runtime::Runtime::new()
         .map_err(|e| runtime_error(format!("Failed to create Tokio runtime: {}", e)))?;
 
     let results = runtime
-        .block_on(async { kreuzberg::batch_extract_bytes(contents, &config).await })
+        .block_on(async { kreuzberg::batch_extract_bytes(items, &config).await })
         .map_err(kreuzberg_error)?;
 
     let results_array = ruby.ary_new();
@@ -140,158 +143,97 @@ pub fn batch_extract_bytes(args: &[Value]) -> Result<RArray, Error> {
     Ok(results_array)
 }
 
-/// Batch extract content from multiple files with per-file configs (synchronous)
+/// Build file items from paths and optional file_configs keyword arg.
 ///
-/// Accepts items as RArray of [path, config_hash_or_nil] arrays.
-pub fn batch_extract_files_with_configs_sync(args: &[Value]) -> Result<RArray, Error> {
-    let ruby = Ruby::get().expect("Ruby not initialized");
-    let args = scan_args::<(RArray,), (), (), (), RHash, ()>(args)?;
-    let (items_array,) = args.required;
-    let opts = Some(args.keywords);
+/// If `file_configs` keyword is present in opts, zip with paths.
+/// Otherwise, all items get `None` config.
+fn build_file_items(
+    _ruby: &Ruby,
+    paths: &[String],
+    opts: Option<RHash>,
+) -> Result<Vec<(PathBuf, Option<kreuzberg::FileExtractionConfig>)>, Error> {
+    let file_configs_array: Option<RArray> = opts
+        .and_then(|kw| kw.get(magnus::Symbol::new("file_configs")))
+        .and_then(|v: Value| {
+            if v.is_nil() {
+                None
+            } else {
+                RArray::try_convert(v).ok()
+            }
+        });
 
-    let config = parse_extraction_config(&ruby, opts)?;
-
-    let mut items: Vec<(PathBuf, Option<kreuzberg::FileExtractionConfig>)> =
-        Vec::with_capacity(items_array.len());
-    for item in items_array.into_iter() {
-        let pair = RArray::try_convert(item)?;
-        if pair.len() != 2 {
-            return Err(runtime_error(
-                "Each item must be a [path, file_config_or_nil] array",
-            ));
+    match file_configs_array {
+        Some(fc_array) => {
+            if fc_array.len() != paths.len() {
+                return Err(runtime_error(format!(
+                    "file_configs must have the same length as paths: {} vs {}",
+                    fc_array.len(),
+                    paths.len()
+                )));
+            }
+            let mut items = Vec::with_capacity(paths.len());
+            for (i, path) in paths.iter().enumerate() {
+                let fc_val = fc_array.entry::<Value>(i as isize)?;
+                let file_config = parse_file_extraction_config(fc_val)?;
+                items.push((PathBuf::from(path), file_config));
+            }
+            Ok(items)
         }
-        let path = String::try_convert(pair.entry::<Value>(0)?)?;
-        let file_config_val = pair.entry::<Value>(1)?;
-        let file_config = parse_file_extraction_config(file_config_val)?;
-        items.push((PathBuf::from(path), file_config));
+        None => Ok(paths
+            .iter()
+            .map(|p| (PathBuf::from(p), None))
+            .collect()),
     }
-
-    let results =
-        kreuzberg::batch_extract_file_with_configs_sync(items, &config).map_err(kreuzberg_error)?;
-
-    let results_array = ruby.ary_new();
-    for result in results {
-        results_array.push(extraction_result_to_ruby(&ruby, result)?)?;
-    }
-
-    Ok(results_array)
 }
 
-/// Batch extract content from multiple files with per-file configs (asynchronous)
-pub fn batch_extract_files_with_configs(args: &[Value]) -> Result<RArray, Error> {
-    let ruby = Ruby::get().expect("Ruby not initialized");
-    let args = scan_args::<(RArray,), (), (), (), RHash, ()>(args)?;
-    let (items_array,) = args.required;
-    let opts = Some(args.keywords);
+/// Build bytes items from byte arrays, mime types, and optional file_configs keyword arg.
+fn build_bytes_items(
+    _ruby: &Ruby,
+    bytes_vec: &[RString],
+    mime_types: &[String],
+    opts: Option<RHash>,
+) -> Result<Vec<(Vec<u8>, String, Option<kreuzberg::FileExtractionConfig>)>, Error> {
+    let file_configs_array: Option<RArray> = opts
+        .and_then(|kw| kw.get(magnus::Symbol::new("file_configs")))
+        .and_then(|v: Value| {
+            if v.is_nil() {
+                None
+            } else {
+                RArray::try_convert(v).ok()
+            }
+        });
 
-    let config = parse_extraction_config(&ruby, opts)?;
-
-    let mut items: Vec<(PathBuf, Option<kreuzberg::FileExtractionConfig>)> =
-        Vec::with_capacity(items_array.len());
-    for item in items_array.into_iter() {
-        let pair = RArray::try_convert(item)?;
-        if pair.len() != 2 {
-            return Err(runtime_error(
-                "Each item must be a [path, file_config_or_nil] array",
-            ));
+    match file_configs_array {
+        Some(fc_array) => {
+            if fc_array.len() != bytes_vec.len() {
+                return Err(runtime_error(format!(
+                    "file_configs must have the same length as bytes_array: {} vs {}",
+                    fc_array.len(),
+                    bytes_vec.len()
+                )));
+            }
+            let mut items = Vec::with_capacity(bytes_vec.len());
+            for (i, (bytes, mime)) in bytes_vec.iter().zip(mime_types.iter()).enumerate() {
+                let fc_val = fc_array.entry::<Value>(i as isize)?;
+                let file_config = parse_file_extraction_config(fc_val)?;
+                items.push((
+                    unsafe { bytes.as_slice() }.to_vec(),
+                    mime.clone(),
+                    file_config,
+                ));
+            }
+            Ok(items)
         }
-        let path = String::try_convert(pair.entry::<Value>(0)?)?;
-        let file_config_val = pair.entry::<Value>(1)?;
-        let file_config = parse_file_extraction_config(file_config_val)?;
-        items.push((PathBuf::from(path), file_config));
+        None => Ok(bytes_vec
+            .iter()
+            .zip(mime_types.iter())
+            .map(|(bytes, mime)| {
+                (
+                    unsafe { bytes.as_slice() }.to_vec(),
+                    mime.clone(),
+                    None,
+                )
+            })
+            .collect()),
     }
-
-    let runtime = tokio::runtime::Runtime::new()
-        .map_err(|e| runtime_error(format!("Failed to create Tokio runtime: {}", e)))?;
-
-    let results = runtime
-        .block_on(async { kreuzberg::batch_extract_file_with_configs(items, &config).await })
-        .map_err(kreuzberg_error)?;
-
-    let results_array = ruby.ary_new();
-    for result in results {
-        results_array.push(extraction_result_to_ruby(&ruby, result)?)?;
-    }
-
-    Ok(results_array)
-}
-
-/// Batch extract content from multiple byte arrays with per-file configs (synchronous)
-///
-/// Accepts items as RArray of [bytes, mime_type, config_hash_or_nil] arrays.
-pub fn batch_extract_bytes_with_configs_sync(args: &[Value]) -> Result<RArray, Error> {
-    let ruby = Ruby::get().expect("Ruby not initialized");
-    let args = scan_args::<(RArray,), (), (), (), RHash, ()>(args)?;
-    let (items_array,) = args.required;
-    let opts = Some(args.keywords);
-
-    let config = parse_extraction_config(&ruby, opts)?;
-
-    let mut items: Vec<(Vec<u8>, String, Option<kreuzberg::FileExtractionConfig>)> =
-        Vec::with_capacity(items_array.len());
-    for item in items_array.into_iter() {
-        let triple = RArray::try_convert(item)?;
-        if triple.len() != 3 {
-            return Err(runtime_error(
-                "Each item must be a [bytes, mime_type, file_config_or_nil] array",
-            ));
-        }
-        let bytes_val = RString::try_convert(triple.entry::<Value>(0)?)?;
-        let bytes = unsafe { bytes_val.as_slice() }.to_vec();
-        let mime_type = String::try_convert(triple.entry::<Value>(1)?)?;
-        let file_config_val = triple.entry::<Value>(2)?;
-        let file_config = parse_file_extraction_config(file_config_val)?;
-        items.push((bytes, mime_type, file_config));
-    }
-
-    let results =
-        kreuzberg::batch_extract_bytes_with_configs_sync(items, &config).map_err(kreuzberg_error)?;
-
-    let results_array = ruby.ary_new();
-    for result in results {
-        results_array.push(extraction_result_to_ruby(&ruby, result)?)?;
-    }
-
-    Ok(results_array)
-}
-
-/// Batch extract content from multiple byte arrays with per-file configs (asynchronous)
-pub fn batch_extract_bytes_with_configs(args: &[Value]) -> Result<RArray, Error> {
-    let ruby = Ruby::get().expect("Ruby not initialized");
-    let args = scan_args::<(RArray,), (), (), (), RHash, ()>(args)?;
-    let (items_array,) = args.required;
-    let opts = Some(args.keywords);
-
-    let config = parse_extraction_config(&ruby, opts)?;
-
-    let mut items: Vec<(Vec<u8>, String, Option<kreuzberg::FileExtractionConfig>)> =
-        Vec::with_capacity(items_array.len());
-    for item in items_array.into_iter() {
-        let triple = RArray::try_convert(item)?;
-        if triple.len() != 3 {
-            return Err(runtime_error(
-                "Each item must be a [bytes, mime_type, file_config_or_nil] array",
-            ));
-        }
-        let bytes_val = RString::try_convert(triple.entry::<Value>(0)?)?;
-        let bytes = unsafe { bytes_val.as_slice() }.to_vec();
-        let mime_type = String::try_convert(triple.entry::<Value>(1)?)?;
-        let file_config_val = triple.entry::<Value>(2)?;
-        let file_config = parse_file_extraction_config(file_config_val)?;
-        items.push((bytes, mime_type, file_config));
-    }
-
-    let runtime = tokio::runtime::Runtime::new()
-        .map_err(|e| runtime_error(format!("Failed to create Tokio runtime: {}", e)))?;
-
-    let results = runtime
-        .block_on(async { kreuzberg::batch_extract_bytes_with_configs(items, &config).await })
-        .map_err(kreuzberg_error)?;
-
-    let results_array = ruby.ary_new();
-    for result in results {
-        results_array.push(extraction_result_to_ruby(&ruby, result)?)?;
-    }
-
-    Ok(results_array)
 }

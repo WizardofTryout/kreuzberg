@@ -116,8 +116,8 @@ pub fn get_embedding_preset(name: String) -> Option<JsValue> {
     js_sys::Reflect::set(&obj, &"overlap".into(), &preset.overlap.into()).ok()?;
     js_sys::Reflect::set(&obj, &"dimensions".into(), &preset.dimensions.into()).ok()?;
 
-    let model_name = format!("{:?}", preset.model);
-    js_sys::Reflect::set(&obj, &"modelName".into(), &model_name.into()).ok()?;
+    js_sys::Reflect::set(&obj, &"modelRepo".into(), &preset.model_repo.into()).ok()?;
+    js_sys::Reflect::set(&obj, &"modelFile".into(), &preset.model_file.into()).ok()?;
 
     js_sys::Reflect::set(&obj, &"description".into(), &preset.description.into()).ok()?;
 

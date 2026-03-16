@@ -2016,7 +2016,7 @@ impl HierarchyConfig {
 /// Per-file extraction configuration overrides for batch processing.
 ///
 /// All fields are optional — `None` means "use the batch-level default."
-/// Used with `batch_extract_files_with_configs` and `batch_extract_bytes_with_configs`
+/// Used with `batch_extract_files` and `batch_extract_bytes` via the `file_configs` parameter
 /// to allow heterogeneous extraction settings within a single batch.
 ///
 /// Example:

@@ -38,11 +38,7 @@ pub use result::{
 
 pub use extraction::{extract_bytes, extract_bytes_sync, extract_file, extract_file_sync};
 
-pub use batch::{
-    batch_extract_bytes, batch_extract_bytes_sync, batch_extract_bytes_with_configs,
-    batch_extract_bytes_with_configs_sync, batch_extract_files, batch_extract_files_sync,
-    batch_extract_files_with_configs, batch_extract_files_with_configs_sync,
-};
+pub use batch::{batch_extract_bytes, batch_extract_bytes_sync, batch_extract_files, batch_extract_files_sync};
 
 pub use validation::{
     config_get_field_internal, config_merge_internal, config_validate_and_normalize, get_extensions_for_mime,

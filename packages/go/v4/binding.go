@@ -17,10 +17,8 @@ CExtractionResult *kreuzberg_extract_file_sync(const char *path);
 CExtractionResult *kreuzberg_extract_file_sync_with_config(const char *path, const char *config_json);
 CExtractionResult *kreuzberg_extract_bytes_sync(const uint8_t *data, uintptr_t data_len, const char *mime_type);
 CExtractionResult *kreuzberg_extract_bytes_sync_with_config(const uint8_t *data, uintptr_t data_len, const char *mime_type, const char *config_json);
-CBatchResult *kreuzberg_batch_extract_files_sync(const char * const *paths, uintptr_t count, const char *config_json);
-CBatchResult *kreuzberg_batch_extract_bytes_sync(const CBytesWithMime *items, uintptr_t count, const char *config_json);
-CBatchResult *kreuzberg_batch_extract_files_with_configs_sync(const char * const *file_paths, const char * const *file_config_jsons, uintptr_t count, const char *config_json);
-CBatchResult *kreuzberg_batch_extract_bytes_with_configs_sync(const CBytesWithMime *items, const char * const *file_config_jsons, uintptr_t count, const char *config_json);
+CBatchResult *kreuzberg_batch_extract_files_sync(const char * const *file_paths, const char * const *file_config_jsons, uintptr_t count, const char *config_json);
+CBatchResult *kreuzberg_batch_extract_bytes_sync(const CBytesWithMime *items, const char * const *file_config_jsons, uintptr_t count, const char *config_json);
 char *kreuzberg_detect_mime_type_from_bytes(const uint8_t *data, uintptr_t data_len);
 char *kreuzberg_detect_mime_type_from_path(const char *path);
 char *kreuzberg_get_extensions_for_mime(const char *mime_type);
@@ -211,7 +209,7 @@ func BatchExtractFilesSync(paths []string, config *ExtractionConfig) ([]*Extract
 	ffiMutex.Lock()
 	defer ffiMutex.Unlock()
 
-	batch := C.kreuzberg_batch_extract_files_sync((**C.char)(unsafe.Pointer(&cStrings[0])), C.uintptr_t(len(paths)), cfgPtr)
+	batch := C.kreuzberg_batch_extract_files_sync((**C.char)(unsafe.Pointer(&cStrings[0])), nil, C.uintptr_t(len(paths)), cfgPtr)
 	if batch == nil {
 		return nil, lastError()
 	}
@@ -276,7 +274,7 @@ func BatchExtractBytesSync(items []BytesWithMime, config *ExtractionConfig) ([]*
 	ffiMutex.Lock()
 	defer ffiMutex.Unlock()
 
-	batch := C.kreuzberg_batch_extract_bytes_sync((*C.CBytesWithMime)(unsafe.Pointer(&cItems[0])), C.uintptr_t(len(items)), cfgPtr)
+	batch := C.kreuzberg_batch_extract_bytes_sync((*C.CBytesWithMime)(unsafe.Pointer(&cItems[0])), nil, C.uintptr_t(len(items)), cfgPtr)
 	if batch == nil {
 		return nil, lastError()
 	}
@@ -343,7 +341,7 @@ func BatchExtractFilesWithConfigs(items []FileItem, config *ExtractionConfig) ([
 	ffiMutex.Lock()
 	defer ffiMutex.Unlock()
 
-	batch := C.kreuzberg_batch_extract_files_with_configs_sync(
+	batch := C.kreuzberg_batch_extract_files_sync(
 		(**C.char)(unsafe.Pointer(&cPaths[0])),
 		(**C.char)(unsafe.Pointer(&cFileConfigs[0])),
 		C.uintptr_t(len(items)),
@@ -431,7 +429,7 @@ func BatchExtractBytesWithConfigs(items []BytesItem, config *ExtractionConfig) (
 	ffiMutex.Lock()
 	defer ffiMutex.Unlock()
 
-	batch := C.kreuzberg_batch_extract_bytes_with_configs_sync(
+	batch := C.kreuzberg_batch_extract_bytes_sync(
 		(*C.CBytesWithMime)(unsafe.Pointer(&cItems[0])),
 		(**C.char)(unsafe.Pointer(&cFileConfigs[0])),
 		C.uintptr_t(len(items)),

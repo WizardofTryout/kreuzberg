@@ -11,9 +11,9 @@ import java.util.Map;
  * <p>
  * All fields are nullable — null means "use the batch-level default." This type
  * is used with
- * {@link dev.kreuzberg.Kreuzberg#batchExtractFilesWithConfigs(java.util.List, ExtractionConfig)}
+ * {@link dev.kreuzberg.Kreuzberg#batchExtractFiles(java.util.List, ExtractionConfig, java.util.List)}
  * and
- * {@link dev.kreuzberg.Kreuzberg#batchExtractBytesWithConfigs(java.util.List, ExtractionConfig)}
+ * {@link dev.kreuzberg.Kreuzberg#batchExtractBytes(java.util.List, ExtractionConfig, java.util.List)}
  * to allow heterogeneous extraction settings within a single batch.
  *
  * <p>

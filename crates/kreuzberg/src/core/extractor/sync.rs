@@ -15,9 +15,7 @@ use std::path::{Path, PathBuf};
 use once_cell::sync::Lazy;
 
 #[cfg(feature = "tokio-runtime")]
-use super::batch::{
-    batch_extract_bytes, batch_extract_bytes_with_configs, batch_extract_file, batch_extract_file_with_configs,
-};
+use super::batch::{batch_extract_bytes, batch_extract_file};
 #[cfg(feature = "tokio-runtime")]
 use super::bytes::extract_bytes;
 #[cfg(feature = "tokio-runtime")]
@@ -118,73 +116,13 @@ pub fn extract_bytes_sync(content: &[u8], mime_type: &str, config: &ExtractionCo
 
 /// Synchronous wrapper for `batch_extract_file`.
 ///
-/// Uses the global Tokio runtime for 100x+ performance improvement over creating
-/// a new runtime per call.
-///
-/// This function is only available with the `tokio-runtime` feature. For WASM targets,
-/// use a truly synchronous extraction approach instead.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use kreuzberg::core::extractor::batch_extract_file_sync;
-/// use kreuzberg::core::config::ExtractionConfig;
-///
-/// let config = ExtractionConfig::default();
-/// let paths = vec!["doc1.pdf", "doc2.pdf"];
-/// let results = batch_extract_file_sync(paths, &config)?;
-/// println!("Processed {} files", results.len());
-/// # Ok::<(), kreuzberg::KreuzbergError>(())
-/// ```
-#[cfg(feature = "tokio-runtime")]
-pub fn batch_extract_file_sync(
-    paths: Vec<impl AsRef<Path>>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>> {
-    GLOBAL_RUNTIME.block_on(batch_extract_file(paths, config))
-}
-
-/// Synchronous wrapper for `batch_extract_bytes`.
-///
-/// Uses the global Tokio runtime for 100x+ performance improvement over creating
-/// a new runtime per call.
-///
-/// With the `tokio-runtime` feature, this blocks the current thread using the global
-/// Tokio runtime. Without it (WASM), this calls a truly synchronous implementation
-/// that iterates through items and calls `extract_bytes_sync()`.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use kreuzberg::core::extractor::batch_extract_bytes_sync;
-/// use kreuzberg::core::config::ExtractionConfig;
-///
-/// let config = ExtractionConfig::default();
-/// let contents = vec![
-///     (b"content 1".to_vec(), "text/plain".to_string()),
-///     (b"content 2".to_vec(), "text/plain".to_string()),
-/// ];
-/// let results = batch_extract_bytes_sync(contents, &config)?;
-/// println!("Processed {} items", results.len());
-/// # Ok::<(), kreuzberg::KreuzbergError>(())
-/// ```
-#[cfg(feature = "tokio-runtime")]
-pub fn batch_extract_bytes_sync(
-    contents: Vec<(Vec<u8>, String)>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>> {
-    GLOBAL_RUNTIME.block_on(batch_extract_bytes(contents, config))
-}
-
-/// Synchronous wrapper for `batch_extract_file_with_configs`.
-///
 /// Uses the global Tokio runtime for optimal performance.
 /// Only available with `tokio-runtime` (WASM has no filesystem).
 ///
 /// # Example
 ///
 /// ```rust,no_run
-/// use kreuzberg::core::extractor::batch_extract_file_with_configs_sync;
+/// use kreuzberg::core::extractor::batch_extract_file_sync;
 /// use kreuzberg::core::config::ExtractionConfig;
 /// use kreuzberg::FileExtractionConfig;
 /// use std::path::PathBuf;
@@ -194,27 +132,28 @@ pub fn batch_extract_bytes_sync(
 ///     ("doc1.pdf".into(), Some(FileExtractionConfig { force_ocr: Some(true), ..Default::default() })),
 ///     ("doc2.pdf".into(), None),
 /// ];
-/// let results = batch_extract_file_with_configs_sync(items, &config)?;
+/// let results = batch_extract_file_sync(items, &config)?;
 /// # Ok::<(), kreuzberg::KreuzbergError>(())
 /// ```
 #[cfg(feature = "tokio-runtime")]
-pub fn batch_extract_file_with_configs_sync(
+pub fn batch_extract_file_sync(
     items: Vec<(PathBuf, Option<FileExtractionConfig>)>,
     config: &ExtractionConfig,
 ) -> Result<Vec<ExtractionResult>> {
-    GLOBAL_RUNTIME.block_on(batch_extract_file_with_configs(items, config))
+    GLOBAL_RUNTIME.block_on(batch_extract_file(items, config))
 }
 
-/// Synchronous wrapper for `batch_extract_bytes_with_configs`.
+/// Synchronous wrapper for `batch_extract_bytes`.
 ///
 /// Uses the global Tokio runtime for optimal performance.
 /// With the `tokio-runtime` feature, this blocks the current thread using the global
-/// Tokio runtime. Without it (WASM), this calls a truly synchronous implementation.
+/// Tokio runtime. Without it (WASM), this calls a truly synchronous implementation
+/// that iterates through items and calls `extract_bytes_sync()`.
 ///
 /// # Example
 ///
 /// ```rust,no_run
-/// use kreuzberg::core::extractor::batch_extract_bytes_with_configs_sync;
+/// use kreuzberg::core::extractor::batch_extract_bytes_sync;
 /// use kreuzberg::core::config::ExtractionConfig;
 /// use kreuzberg::FileExtractionConfig;
 ///
@@ -224,22 +163,22 @@ pub fn batch_extract_file_with_configs_sync(
 ///     (b"other".to_vec(), "text/plain".to_string(),
 ///      Some(FileExtractionConfig { force_ocr: Some(true), ..Default::default() })),
 /// ];
-/// let results = batch_extract_bytes_with_configs_sync(items, &config)?;
+/// let results = batch_extract_bytes_sync(items, &config)?;
 /// # Ok::<(), kreuzberg::KreuzbergError>(())
 /// ```
 #[cfg(feature = "tokio-runtime")]
-pub fn batch_extract_bytes_with_configs_sync(
+pub fn batch_extract_bytes_sync(
     items: Vec<(Vec<u8>, String, Option<FileExtractionConfig>)>,
     config: &ExtractionConfig,
 ) -> Result<Vec<ExtractionResult>> {
-    GLOBAL_RUNTIME.block_on(batch_extract_bytes_with_configs(items, config))
+    GLOBAL_RUNTIME.block_on(batch_extract_bytes(items, config))
 }
 
-/// Synchronous wrapper for `batch_extract_bytes_with_configs` (WASM-compatible version).
+/// Synchronous wrapper for `batch_extract_bytes` (WASM-compatible version).
 ///
 /// Iterates through items sequentially, applying per-file config overrides.
 #[cfg(not(feature = "tokio-runtime"))]
-pub fn batch_extract_bytes_with_configs_sync(
+pub fn batch_extract_bytes_sync(
     items: Vec<(Vec<u8>, String, Option<FileExtractionConfig>)>,
     config: &ExtractionConfig,
 ) -> Result<Vec<ExtractionResult>> {
@@ -250,22 +189,6 @@ pub fn batch_extract_bytes_with_configs_sync(
             None => config.clone(),
         };
         let result = extract_bytes_sync(&content, &mime_type, &resolved);
-        results.push(result.unwrap_or_else(|e| error_extraction_result(&e, None)));
-    }
-    Ok(results)
-}
-
-/// Synchronous wrapper for `batch_extract_bytes` (WASM-compatible version).
-///
-/// Iterates through items sequentially.
-#[cfg(not(feature = "tokio-runtime"))]
-pub fn batch_extract_bytes_sync(
-    contents: Vec<(Vec<u8>, String)>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>> {
-    let mut results = Vec::with_capacity(contents.len());
-    for (content, mime_type) in contents {
-        let result = extract_bytes_sync(&content, &mime_type, config);
         results.push(result.unwrap_or_else(|e| error_extraction_result(&e, None)));
     }
     Ok(results)

@@ -465,50 +465,6 @@ Same as [`Kreuzberg::batchExtractBytes()`](#kreuzbergbatchextractbytes).
 
 ---
 
-### batch_extract_files_with_configs() <span class="version-badge">v4.5.0</span>
-
-Extract content from multiple files with per-file configuration overrides (procedural API).
-
-**Signature:**
-
-```php title="PHP"
-function batch_extract_files_with_configs(
-    array $items,
-    ?ExtractionConfig $config = null
-): array
-```
-
-**Parameters:**
-
-- `$items` (array): Array of `[string $path, ?FileExtractionConfig $fileConfig]` tuples. `null` config uses batch defaults.
-- `$config` (?ExtractionConfig): Batch-level extraction configuration
-
-**Returns:**
-
-- `array<ExtractionResult>`: Array of extraction results
-
----
-
-### batch_extract_bytes_with_configs() <span class="version-badge">v4.5.0</span>
-
-Extract content from multiple byte arrays with per-file configuration overrides (procedural API).
-
-**Signature:**
-
-```php title="PHP"
-function batch_extract_bytes_with_configs(
-    array $items,
-    ?ExtractionConfig $config = null
-): array
-```
-
-**Parameters:**
-
-- `$items` (array): Array of `[string $data, string $mimeType, ?FileExtractionConfig $fileConfig]` tuples
-- `$config` (?ExtractionConfig): Batch-level extraction configuration
-
----
-
 ### FileExtractionConfig <span class="version-badge">v4.5.0</span>
 
 Per-file extraction configuration overrides for batch operations. All properties are nullable — `null` means "use the batch-level default."

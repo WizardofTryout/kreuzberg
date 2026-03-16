@@ -1193,13 +1193,15 @@ module Kreuzberg
 
   def self.batch_extract_files_sync: (
     paths: Array[String | Pathname],
-    ?config: config_input?
+    ?config: config_input?,
+    ?file_configs: Array[file_config_input]?
   ) -> Array[Result]
 
   def self.batch_extract_bytes_sync: (
     data_array: Array[String],
     mime_types: Array[String],
-    ?config: config_input?
+    ?config: config_input?,
+    ?file_configs: Array[file_config_input]?
   ) -> Array[Result]
 
   def self.extract_file: (
@@ -1216,33 +1218,15 @@ module Kreuzberg
 
   def self.batch_extract_files: (
     paths: Array[String | Pathname],
-    ?config: config_input?
+    ?config: config_input?,
+    ?file_configs: Array[file_config_input]?
   ) -> Array[Result]
 
   def self.batch_extract_bytes: (
     data_array: Array[String],
     mime_types: Array[String],
-    ?config: config_input?
-  ) -> Array[Result]
-
-  def self.batch_extract_files_with_configs_sync: (
-    items: Array[[String | Pathname, file_config_input]],
-    ?config: config_input?
-  ) -> Array[Result]
-
-  def self.batch_extract_bytes_with_configs_sync: (
-    items: Array[[String, String, file_config_input]],
-    ?config: config_input?
-  ) -> Array[Result]
-
-  def self.batch_extract_files_with_configs: (
-    items: Array[[String | Pathname, file_config_input]],
-    ?config: config_input?
-  ) -> Array[Result]
-
-  def self.batch_extract_bytes_with_configs: (
-    items: Array[[String, String, file_config_input]],
-    ?config: config_input?
+    ?config: config_input?,
+    ?file_configs: Array[file_config_input]?
   ) -> Array[Result]
 
   # Cache API

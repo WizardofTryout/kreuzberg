@@ -1475,6 +1475,7 @@ struct CExtractionResult *kreuzberg_extract_bytes_sync_with_config(const uint8_t
  * This allocation pattern must be perfectly mirrored in the free function.
  */
 struct CBatchResult *kreuzberg_batch_extract_files_sync(const char *const *file_paths,
+                                                        const char *const *file_config_jsons,
                                                         uintptr_t count,
                                                         const char *config_json);
 
@@ -1484,6 +1485,7 @@ struct CBatchResult *kreuzberg_batch_extract_files_sync(const char *const *file_
  * # Safety
  *
  * - `items` must be a valid pointer to an array of CBytesWithMime structures
+ * - `file_config_jsons` is an optional array of nullable C strings for per-file config overrides (NULL = no per-file configs)
  * - `count` must be the number of items in the array
  * - `config_json` must be a valid null-terminated C string containing JSON, or NULL for default config
  * - The returned pointer must be freed with `kreuzberg_free_batch_result`
@@ -1496,30 +1498,9 @@ struct CBatchResult *kreuzberg_batch_extract_files_sync(const char *const *file_
  * for details on the Box/Vec/slice allocation pattern.
  */
 struct CBatchResult *kreuzberg_batch_extract_bytes_sync(const struct CBytesWithMime *items,
+                                                        const char *const *file_config_jsons,
                                                         uintptr_t count,
                                                         const char *config_json);
-
-/**
- * Batch extract files with per-file configuration overrides.
- *
- * file_config_jsons is an array of nullable C strings (NULL = use default,
- * non-NULL = JSON for FileExtractionConfig).
- */
-struct CBatchResult *kreuzberg_batch_extract_files_with_configs_sync(const char *const *file_paths,
-                                                                     const char *const *file_config_jsons,
-                                                                     uintptr_t count,
-                                                                     const char *config_json);
-
-/**
- * Batch extract bytes with per-file configuration overrides.
- *
- * file_config_jsons is an array of nullable C strings (NULL = use default,
- * non-NULL = JSON for FileExtractionConfig).
- */
-struct CBatchResult *kreuzberg_batch_extract_bytes_with_configs_sync(const struct CBytesWithMime *items,
-                                                                     const char *const *file_config_jsons,
-                                                                     uintptr_t count,
-                                                                     const char *config_json);
 
 /**
  * Parse HeadingStyle from string to discriminant.

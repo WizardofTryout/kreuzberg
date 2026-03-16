@@ -329,7 +329,7 @@ public static class KreuzbergClient
     /// }
     /// </code>
     /// </example>
-    public static IReadOnlyList<ExtractionResult> BatchExtractFilesSync(IReadOnlyList<string> paths, ExtractionConfig? config = null)
+    public static IReadOnlyList<ExtractionResult> BatchExtractFilesSync(IReadOnlyList<string> paths, ExtractionConfig? config = null, IReadOnlyList<FileExtractionConfig?>? fileConfigs = null)
     {
         if (paths == null)
         {
@@ -339,8 +339,13 @@ public static class KreuzbergClient
         {
             return Array.Empty<ExtractionResult>();
         }
+        if (fileConfigs != null && fileConfigs.Count != paths.Count)
+        {
+            throw new KreuzbergValidationException($"fileConfigs count ({fileConfigs.Count}) must match paths count ({paths.Count})");
+        }
 
         var pathPtrs = System.Buffers.ArrayPool<IntPtr>.Shared.Rent(paths.Count);
+        var fileConfigPtrs = fileConfigs != null ? new IntPtr[paths.Count] : null;
         try
         {
             for (var i = 0; i < paths.Count; i++)
@@ -352,14 +357,42 @@ public static class KreuzbergClient
                 pathPtrs[i] = InteropUtilities.AllocUtf8(paths[i]);
             }
 
+            if (fileConfigs != null)
+            {
+                for (var i = 0; i < fileConfigs.Count; i++)
+                {
+                    if (fileConfigs[i] != null)
+                    {
+                        var json = JsonSerializer.Serialize(fileConfigs[i], Serialization.ConfigOptions);
+                        fileConfigPtrs![i] = InteropUtilities.AllocUtf8(json);
+                    }
+                    // else fileConfigPtrs[i] remains IntPtr.Zero (NULL)
+                }
+            }
+
             var configPtr = SerializeConfig(config);
 
             try
             {
-                var handle = GCHandlePool.Rent(pathPtrs);
+                var pathHandle = GCHandlePool.Rent(pathPtrs);
+                GCHandle configArrayHandle = default;
+                var hasConfigArrayHandle = false;
+                var fileConfigsNativePtr = IntPtr.Zero;
+
+                if (fileConfigPtrs != null)
+                {
+                    configArrayHandle = GCHandlePool.Rent(fileConfigPtrs);
+                    hasConfigArrayHandle = true;
+                    fileConfigsNativePtr = configArrayHandle.AddrOfPinnedObject();
+                }
+
                 try
                 {
-                    var resultPtr = NativeMethods.BatchExtractFilesSync(handle.AddrOfPinnedObject(), (UIntPtr)paths.Count, configPtr);
+                    var resultPtr = NativeMethods.BatchExtractFilesSync(
+                        pathHandle.AddrOfPinnedObject(),
+                        fileConfigsNativePtr,
+                        (UIntPtr)paths.Count,
+                        configPtr);
                     if (resultPtr == IntPtr.Zero)
                     {
                         ThrowLastError();
@@ -368,7 +401,11 @@ public static class KreuzbergClient
                 }
                 finally
                 {
-                    GCHandlePool.Return(handle);
+                    GCHandlePool.Return(pathHandle);
+                    if (hasConfigArrayHandle)
+                    {
+                        GCHandlePool.Return(configArrayHandle);
+                    }
                 }
             }
             finally
@@ -376,6 +413,13 @@ public static class KreuzbergClient
                 for (var i = 0; i < paths.Count; i++)
                 {
                     InteropUtilities.FreeUtf8(pathPtrs[i]);
+                }
+                if (fileConfigPtrs != null)
+                {
+                    foreach (var ptr in fileConfigPtrs)
+                    {
+                        if (ptr != IntPtr.Zero) InteropUtilities.FreeUtf8(ptr);
+                    }
                 }
                 InteropUtilities.FreeUtf8(configPtr);
             }
@@ -405,7 +449,7 @@ public static class KreuzbergClient
     /// var results = KreuzbergClient.BatchExtractBytesSync(items);
     /// </code>
     /// </example>
-    public static IReadOnlyList<ExtractionResult> BatchExtractBytesSync(IReadOnlyList<BytesWithMime> items, ExtractionConfig? config = null)
+    public static IReadOnlyList<ExtractionResult> BatchExtractBytesSync(IReadOnlyList<BytesWithMime> items, ExtractionConfig? config = null, IReadOnlyList<FileExtractionConfig?>? fileConfigs = null)
     {
         if (items == null)
         {
@@ -415,10 +459,15 @@ public static class KreuzbergClient
         {
             return Array.Empty<ExtractionResult>();
         }
+        if (fileConfigs != null && fileConfigs.Count != items.Count)
+        {
+            throw new KreuzbergValidationException($"fileConfigs count ({fileConfigs.Count}) must match items count ({items.Count})");
+        }
 
         var cItems = System.Buffers.ArrayPool<NativeMethods.CBytesWithMime>.Shared.Rent(items.Count);
         var mimePtrs = System.Buffers.ArrayPool<IntPtr>.Shared.Rent(items.Count);
         var pinnedBuffers = System.Buffers.ArrayPool<GCHandle>.Shared.Rent(items.Count);
+        var fileConfigPtrs = fileConfigs != null ? new IntPtr[items.Count] : null;
 
         try
         {
@@ -454,11 +503,38 @@ public static class KreuzbergClient
                     };
                 }
 
+                if (fileConfigs != null)
+                {
+                    for (var i = 0; i < fileConfigs.Count; i++)
+                    {
+                        if (fileConfigs[i] != null)
+                        {
+                            var json = JsonSerializer.Serialize(fileConfigs[i], Serialization.ConfigOptions);
+                            fileConfigPtrs![i] = InteropUtilities.AllocUtf8(json);
+                        }
+                    }
+                }
+
                 var itemsHandle = GCHandlePool.Rent(cItems);
+                GCHandle configArrayHandle = default;
+                var hasConfigArrayHandle = false;
+                var fileConfigsNativePtr = IntPtr.Zero;
+
+                if (fileConfigPtrs != null)
+                {
+                    configArrayHandle = GCHandlePool.Rent(fileConfigPtrs);
+                    hasConfigArrayHandle = true;
+                    fileConfigsNativePtr = configArrayHandle.AddrOfPinnedObject();
+                }
+
                 var configPtr = SerializeConfig(config);
                 try
                 {
-                    var resultPtr = NativeMethods.BatchExtractBytesSync(itemsHandle.AddrOfPinnedObject(), (UIntPtr)items.Count, configPtr);
+                    var resultPtr = NativeMethods.BatchExtractBytesSync(
+                        itemsHandle.AddrOfPinnedObject(),
+                        fileConfigsNativePtr,
+                        (UIntPtr)items.Count,
+                        configPtr);
                     if (resultPtr == IntPtr.Zero)
                     {
                         ThrowLastError();
@@ -468,6 +544,10 @@ public static class KreuzbergClient
                 finally
                 {
                     GCHandlePool.Return(itemsHandle);
+                    if (hasConfigArrayHandle)
+                    {
+                        GCHandlePool.Return(configArrayHandle);
+                    }
                     InteropUtilities.FreeUtf8(configPtr);
                 }
             }
@@ -481,6 +561,14 @@ public static class KreuzbergClient
                 for (var i = 0; i < mimePtrCount; i++)
                 {
                     InteropUtilities.FreeUtf8(mimePtrs[i]);
+                }
+
+                if (fileConfigPtrs != null)
+                {
+                    foreach (var ptr in fileConfigPtrs)
+                    {
+                        if (ptr != IntPtr.Zero) InteropUtilities.FreeUtf8(ptr);
+                    }
                 }
             }
         }
@@ -539,221 +627,6 @@ public static class KreuzbergClient
     public static Task<ExtractionResult> ExtractBytesAsync(byte[] data, string mimeType, ExtractionConfig? config = null, CancellationToken cancellationToken = default)
     {
         return Task.Run(() => ExtractBytesSync(data, mimeType, config), cancellationToken);
-    }
-
-    /// <summary>
-    /// Extracts multiple files with per-file configuration overrides.
-    /// Each item pairs a file path with an optional FileExtractionConfig that overrides the batch-level config.
-    /// </summary>
-    /// <param name="items">List of FileItemWithConfig instances. Must not be null.</param>
-    /// <param name="config">Optional batch-level extraction configuration.</param>
-    /// <returns>List of ExtractionResult objects, one per input file, in same order.</returns>
-    public static IReadOnlyList<ExtractionResult> BatchExtractFilesWithConfigsSync(IReadOnlyList<FileItemWithConfig> items, ExtractionConfig? config = null)
-    {
-        if (items == null)
-        {
-            throw new ArgumentNullException(nameof(items));
-        }
-
-        if (items.Count == 0)
-        {
-            return Array.Empty<ExtractionResult>();
-        }
-
-        var pathPtrs = new IntPtr[items.Count];
-        var fileConfigPtrs = new IntPtr[items.Count];
-
-        try
-        {
-            for (var i = 0; i < items.Count; i++)
-            {
-                if (string.IsNullOrWhiteSpace(items[i].Path))
-                {
-                    throw new KreuzbergValidationException($"path at index {i} is empty");
-                }
-                pathPtrs[i] = InteropUtilities.AllocUtf8(items[i].Path);
-
-                if (items[i].Config != null)
-                {
-                    var json = JsonSerializer.Serialize(items[i].Config, Serialization.ConfigOptions);
-                    fileConfigPtrs[i] = InteropUtilities.AllocUtf8(json);
-                }
-                // else fileConfigPtrs[i] remains IntPtr.Zero (NULL)
-            }
-
-            var configPtr = SerializeConfig(config);
-
-            try
-            {
-                var pathHandle = GCHandlePool.Rent(pathPtrs);
-                var configHandle = GCHandlePool.Rent(fileConfigPtrs);
-                try
-                {
-                    var resultPtr = NativeMethods.BatchExtractFilesWithConfigsSync(
-                        pathHandle.AddrOfPinnedObject(),
-                        configHandle.AddrOfPinnedObject(),
-                        (UIntPtr)items.Count,
-                        configPtr);
-                    if (resultPtr == IntPtr.Zero)
-                    {
-                        ThrowLastError();
-                    }
-                    return ConvertBatchResult(resultPtr);
-                }
-                finally
-                {
-                    GCHandlePool.Return(pathHandle);
-                    GCHandlePool.Return(configHandle);
-                    InteropUtilities.FreeUtf8(configPtr);
-                }
-            }
-            catch (KreuzbergException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new KreuzbergException($"Batch extraction with configs failed: {ex.Message}", ex);
-            }
-        }
-        finally
-        {
-            foreach (var ptr in pathPtrs)
-            {
-                if (ptr != IntPtr.Zero) InteropUtilities.FreeUtf8(ptr);
-            }
-            foreach (var ptr in fileConfigPtrs)
-            {
-                if (ptr != IntPtr.Zero) InteropUtilities.FreeUtf8(ptr);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Extracts multiple in-memory documents with per-file configuration overrides.
-    /// Each item pairs document data and MIME type with an optional FileExtractionConfig.
-    /// </summary>
-    /// <param name="items">List of BytesItemWithConfig instances. Must not be null.</param>
-    /// <param name="config">Optional batch-level extraction configuration.</param>
-    /// <returns>List of ExtractionResult objects, one per input document, in same order.</returns>
-    public static IReadOnlyList<ExtractionResult> BatchExtractBytesWithConfigsSync(IReadOnlyList<BytesItemWithConfig> items, ExtractionConfig? config = null)
-    {
-        if (items == null)
-        {
-            throw new ArgumentNullException(nameof(items));
-        }
-
-        if (items.Count == 0)
-        {
-            return Array.Empty<ExtractionResult>();
-        }
-
-        var cItems = System.Buffers.ArrayPool<NativeMethods.CBytesWithMime>.Shared.Rent(items.Count);
-        var mimePtrs = System.Buffers.ArrayPool<IntPtr>.Shared.Rent(items.Count);
-        var pinnedBuffers = System.Buffers.ArrayPool<GCHandle>.Shared.Rent(items.Count);
-        var fileConfigPtrs = new IntPtr[items.Count];
-        var pinnedBufferCount = 0;
-        var mimePtrCount = 0;
-
-        try
-        {
-            try
-            {
-                for (var i = 0; i < items.Count; i++)
-                {
-                    var item = items[i];
-                    if (item.Data == null || item.Data.Length == 0)
-                    {
-                        throw new KreuzbergValidationException($"data at index {i} is empty");
-                    }
-                    if (string.IsNullOrWhiteSpace(item.MimeType))
-                    {
-                        throw new KreuzbergValidationException($"mimeType at index {i} is empty");
-                    }
-
-                    var bufferHandle = GCHandlePool.Rent(item.Data);
-                    pinnedBuffers[pinnedBufferCount++] = bufferHandle;
-
-                    var mimePtr = InteropUtilities.AllocUtf8Cached(item.MimeType, useCache: true);
-                    mimePtrs[mimePtrCount++] = mimePtr;
-
-                    cItems[i] = new NativeMethods.CBytesWithMime
-                    {
-                        Data = bufferHandle.AddrOfPinnedObject(),
-                        DataLen = (UIntPtr)item.Data.Length,
-                        MimeType = mimePtr,
-                    };
-
-                    if (item.Config != null)
-                    {
-                        var json = JsonSerializer.Serialize(item.Config, Serialization.ConfigOptions);
-                        fileConfigPtrs[i] = InteropUtilities.AllocUtf8(json);
-                    }
-                }
-
-                var itemsHandle = GCHandlePool.Rent(cItems);
-                var configHandle = GCHandlePool.Rent(fileConfigPtrs);
-                var configPtr = SerializeConfig(config);
-                try
-                {
-                    var resultPtr = NativeMethods.BatchExtractBytesWithConfigsSync(
-                        itemsHandle.AddrOfPinnedObject(),
-                        configHandle.AddrOfPinnedObject(),
-                        (UIntPtr)items.Count,
-                        configPtr);
-                    if (resultPtr == IntPtr.Zero)
-                    {
-                        ThrowLastError();
-                    }
-                    return ConvertBatchResult(resultPtr);
-                }
-                finally
-                {
-                    GCHandlePool.Return(itemsHandle);
-                    GCHandlePool.Return(configHandle);
-                    InteropUtilities.FreeUtf8(configPtr);
-                }
-            }
-            finally
-            {
-                for (var i = 0; i < pinnedBufferCount; i++)
-                {
-                    GCHandlePool.Return(pinnedBuffers[i]);
-                }
-
-                for (var i = 0; i < mimePtrCount; i++)
-                {
-                    InteropUtilities.FreeUtf8(mimePtrs[i]);
-                }
-
-                foreach (var ptr in fileConfigPtrs)
-                {
-                    if (ptr != IntPtr.Zero) InteropUtilities.FreeUtf8(ptr);
-                }
-            }
-        }
-        finally
-        {
-            System.Buffers.ArrayPool<NativeMethods.CBytesWithMime>.Shared.Return(cItems);
-            System.Buffers.ArrayPool<IntPtr>.Shared.Return(mimePtrs);
-            System.Buffers.ArrayPool<GCHandle>.Shared.Return(pinnedBuffers);
-        }
-    }
-
-    /// <summary>
-    /// Asynchronously extracts multiple files with per-file configuration overrides.
-    /// </summary>
-    public static Task<IReadOnlyList<ExtractionResult>> BatchExtractFilesWithConfigsAsync(IReadOnlyList<FileItemWithConfig> items, ExtractionConfig? config = null, CancellationToken cancellationToken = default)
-    {
-        return Task.Run(() => BatchExtractFilesWithConfigsSync(items, config), cancellationToken);
-    }
-
-    /// <summary>
-    /// Asynchronously extracts multiple in-memory documents with per-file configuration overrides.
-    /// </summary>
-    public static Task<IReadOnlyList<ExtractionResult>> BatchExtractBytesWithConfigsAsync(IReadOnlyList<BytesItemWithConfig> items, ExtractionConfig? config = null, CancellationToken cancellationToken = default)
-    {
-        return Task.Run(() => BatchExtractBytesWithConfigsSync(items, config), cancellationToken);
     }
 
     /// <summary>

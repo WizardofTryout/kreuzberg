@@ -235,55 +235,11 @@ fn main() -> kreuzberg::Result<()> {
 }
 ```
 
-### `batch_extract_file_with_configs` (async, parallel)
-
-Extract multiple files with per-file configuration overrides.
-
-```rust
-pub async fn batch_extract_file_with_configs(
-    items: Vec<(PathBuf, Option<FileExtractionConfig>)>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>>
-```
-
-**Requires tokio-runtime feature.** Each item is a `(path, optional_per_file_config)` pair. `None` config uses batch defaults.
-
-### `batch_extract_file_with_configs_sync` (sync, parallel)
-
-Synchronous variant. **Requires tokio-runtime feature.**
-
-```rust
-pub fn batch_extract_file_with_configs_sync(
-    items: Vec<(PathBuf, Option<FileExtractionConfig>)>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>>
-```
-
-### `batch_extract_bytes_with_configs` (async, parallel)
-
-Extract multiple byte arrays with per-file configuration overrides.
-
-```rust
-pub async fn batch_extract_bytes_with_configs(
-    items: Vec<(Vec<u8>, String, Option<FileExtractionConfig>)>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>>
-```
-
-### `batch_extract_bytes_with_configs_sync` (sync, parallel)
-
-Synchronous variant.
-
-```rust
-pub fn batch_extract_bytes_with_configs_sync(
-    items: Vec<(Vec<u8>, String, Option<FileExtractionConfig>)>,
-    config: &ExtractionConfig,
-) -> Result<Vec<ExtractionResult>>
-```
-
 ### `FileExtractionConfig`
 
-Per-file overrides for batch operations. All fields `Option<T>` — `None` = use batch default.
+Per-file overrides for batch operations, passed as an optional parameter to `batch_extract_file` / `batch_extract_bytes` (and their sync variants). All fields `Option<T>` — `None` = use batch default.
+
+> **Note (v4.5.0):** The separate `batch_extract_file_with_configs` / `batch_extract_bytes_with_configs` functions have been removed. Per-file configs are now an optional parameter on the unified batch functions.
 
 ```rust
 pub struct FileExtractionConfig {

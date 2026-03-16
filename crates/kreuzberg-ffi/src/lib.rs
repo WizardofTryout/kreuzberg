@@ -46,8 +46,7 @@ pub use error::{
     kreuzberg_error_code_unsupported_format, kreuzberg_error_code_validation, kreuzberg_get_error_details,
 };
 pub use extraction::{
-    kreuzberg_batch_extract_bytes_sync, kreuzberg_batch_extract_bytes_with_configs_sync,
-    kreuzberg_batch_extract_files_sync, kreuzberg_batch_extract_files_with_configs_sync, kreuzberg_extract_bytes_sync,
+    kreuzberg_batch_extract_bytes_sync, kreuzberg_batch_extract_files_sync, kreuzberg_extract_bytes_sync,
     kreuzberg_extract_bytes_sync_with_config, kreuzberg_extract_file_sync, kreuzberg_extract_file_sync_with_config,
 };
 pub use helpers::*;
@@ -498,8 +497,11 @@ mod tests {
             let path2 = CString::new("/tmp/test2.txt").unwrap();
             let paths = [path1.as_ptr(), path2.as_ptr()];
 
+            // Create a file_config_jsons array with NULL entries (use base config for all)
+            let file_configs: [*const c_char; 2] = [ptr::null(), ptr::null()];
+
             // This should not crash with NULL config (though it may fail due to missing files)
-            let result = kreuzberg_batch_extract_files_sync(paths.as_ptr(), 2, ptr::null());
+            let result = kreuzberg_batch_extract_files_sync(paths.as_ptr(), file_configs.as_ptr(), 2, ptr::null());
 
             // Result might be NULL due to file not existing, but it shouldn't crash
             if !result.is_null() {
@@ -696,7 +698,7 @@ mod tests {
     #[test]
     fn test_batch_extract_null_paths() {
         unsafe {
-            let result = kreuzberg_batch_extract_files_sync(ptr::null(), 0, ptr::null());
+            let result = kreuzberg_batch_extract_files_sync(ptr::null(), ptr::null(), 0, ptr::null());
             assert!(result.is_null(), "Should return NULL for NULL paths pointer");
         }
     }
@@ -705,7 +707,7 @@ mod tests {
     #[test]
     fn test_batch_extract_bytes_null() {
         unsafe {
-            let result = kreuzberg_batch_extract_bytes_sync(ptr::null(), 0, ptr::null());
+            let result = kreuzberg_batch_extract_bytes_sync(ptr::null(), ptr::null(), 0, ptr::null());
             assert!(result.is_null(), "Should return NULL for NULL bytes pointer");
         }
     }

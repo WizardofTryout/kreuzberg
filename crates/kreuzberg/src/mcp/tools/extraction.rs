@@ -3,7 +3,7 @@
 use base64::prelude::*;
 use std::borrow::Cow;
 use crate::{
-    ExtractionConfig, FileExtractionConfig, batch_extract_file, batch_extract_file_with_configs, extract_bytes,
+    ExtractionConfig, FileExtractionConfig, batch_extract_file, extract_bytes,
     extract_file, mcp::errors::map_kreuzberg_error_to_mcp,
     mcp::format::{build_config, format_extraction_result},
     mcp::params::{BatchExtractFilesParams, ExtractBytesParams, ExtractFileParams},
@@ -100,7 +100,7 @@ pub(in crate::mcp) trait ExtractionTool {
             pdf_opts.passwords.get_or_insert_with(Vec::new).push(pwd.clone());
         }
 
-        let results = if let Some(file_configs) = params.file_configs {
+        let items: Vec<(std::path::PathBuf, Option<FileExtractionConfig>)> = if let Some(file_configs) = params.file_configs {
             // Validate length matches paths
             if file_configs.len() != params.paths.len() {
                 return Err(McpError::invalid_params(
@@ -113,7 +113,7 @@ pub(in crate::mcp) trait ExtractionTool {
                 ));
             }
 
-            let items: Vec<(std::path::PathBuf, Option<FileExtractionConfig>)> = params
+            params
                 .paths
                 .iter()
                 .zip(file_configs.into_iter())
@@ -129,16 +129,14 @@ pub(in crate::mcp) trait ExtractionTool {
                         })?;
                     Ok((std::path::PathBuf::from(path), file_config))
                 })
-                .collect::<Result<Vec<_>, McpError>>()?;
-
-            batch_extract_file_with_configs(items, &config)
-                .await
-                .map_err(map_kreuzberg_error_to_mcp)?
+                .collect::<Result<Vec<_>, McpError>>()?
         } else {
-            batch_extract_file(params.paths.clone(), &config)
-                .await
-                .map_err(map_kreuzberg_error_to_mcp)?
+            params.paths.iter().map(|p| (std::path::PathBuf::from(p), None)).collect()
         };
+
+        let results = batch_extract_file(items, &config)
+            .await
+            .map_err(map_kreuzberg_error_to_mcp)?;
 
         let response = serde_json::to_string_pretty(&results).unwrap_or_default();
         Ok(CallToolResult::success(vec![Content::text(response)]))
