@@ -854,7 +854,11 @@ fn extract_raw_date_header(data: &[u8]) -> Option<String> {
 }
 
 /// Extract email content from either .eml or .msg format
-pub fn extract_email_content(data: &[u8], mime_type: &str, fallback_codepage: Option<u32>) -> Result<EmailExtractionResult> {
+pub fn extract_email_content(
+    data: &[u8],
+    mime_type: &str,
+    fallback_codepage: Option<u32>,
+) -> Result<EmailExtractionResult> {
     if data.is_empty() {
         return Err(KreuzbergError::validation("Email content is empty".to_string()));
     }
@@ -1519,9 +1523,7 @@ mod tests {
     #[test]
     fn test_parse_msg_default_unchanged_with_real_fixture() {
         // This is a Western English fixture, so windows-1252 default is correct.
-        let data = include_bytes!(
-            "../../../../test_documents/vendored/unstructured/msg/fake-email.msg"
-        );
+        let data = include_bytes!("../../../../test_documents/vendored/unstructured/msg/fake-email.msg");
         let result = parse_msg_content(data, None).unwrap();
         assert!(!result.cleaned_text.is_empty());
     }
@@ -1530,9 +1532,7 @@ mod tests {
     fn test_parse_msg_invalid_codepage_falls_back_silently() {
         // An unrecognized fallback codepage (99999) silently degrades to windows-1252.
         // For a Western English fixture the output is identical to the no-fallback case.
-        let data = include_bytes!(
-            "../../../../test_documents/vendored/unstructured/msg/fake-email.msg"
-        );
+        let data = include_bytes!("../../../../test_documents/vendored/unstructured/msg/fake-email.msg");
         let result_invalid = parse_msg_content(data, Some(99999)).unwrap();
         let result_default = parse_msg_content(data, None).unwrap();
         assert_eq!(result_invalid.subject, result_default.subject);

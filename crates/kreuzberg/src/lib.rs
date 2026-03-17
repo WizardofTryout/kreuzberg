@@ -113,7 +113,7 @@ pub use core::extractor::{batch_extract_bytes_sync, extract_bytes_sync};
 pub use core::extractor::{batch_extract_file_sync, extract_file_sync};
 
 pub use core::config::{
-    AccelerationConfig, ChunkSizing, ChunkerType, ChunkingConfig, EmbeddingConfig, EmbeddingModelType, EmailConfig,
+    AccelerationConfig, ChunkSizing, ChunkerType, ChunkingConfig, EmailConfig, EmbeddingConfig, EmbeddingModelType,
     ExecutionProviderType, ExtractionConfig, FileExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig,
     OcrConfig, OutputFormat, PageConfig, PostProcessorConfig, TokenReductionConfig,
 };

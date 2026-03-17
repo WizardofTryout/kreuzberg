@@ -139,7 +139,7 @@ fn decode_flate_to_png(
 
     // PDF FlateDecode pixel rows may carry a PNG predictor byte (value 2 = Sub,
     // etc. per PDF spec §7.4.4.4 / PNG predictor). Strip it if row-stride matches.
-    let bytes_per_channel = (bpc + 7) / 8;
+    let bytes_per_channel = bpc.div_ceil(8);
     let raw_row_stride = w * channels * bytes_per_channel; // bytes per row without predictor
     let pred_row_stride = raw_row_stride + 1; // +1 for predictor byte
 
@@ -382,8 +382,8 @@ mod tests {
     #[cfg(feature = "pdf")]
     #[test]
     fn test_decode_flate_valid_rgb_image() {
-        use flate2::write::ZlibEncoder;
         use flate2::Compression;
+        use flate2::write::ZlibEncoder;
         use std::io::Write;
 
         // Create a 2×2 RGB image: 4 pixels × 3 channels = 12 bytes raw.

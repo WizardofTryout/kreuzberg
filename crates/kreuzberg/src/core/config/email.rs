@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 /// Configuration for email extraction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
+#[derive(Default)]
 pub struct EmailConfig {
     /// Windows codepage number to use when an MSG file contains no codepage property.
     /// Defaults to `None`, which falls back to windows-1252.
@@ -25,14 +26,6 @@ pub struct EmailConfig {
     /// - 932:  Japanese (Shift-JIS)
     /// - 936:  Simplified Chinese (GBK)
     pub msg_fallback_codepage: Option<u32>,
-}
-
-impl Default for EmailConfig {
-    fn default() -> Self {
-        Self {
-            msg_fallback_codepage: None,
-        }
-    }
 }
 
 #[cfg(test)]

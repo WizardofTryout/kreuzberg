@@ -188,10 +188,12 @@ mod tests {
         use crate::core::config::EmailConfig;
 
         // Extractor with email config set should not panic or error on invalid data
-        let mut config = ExtractionConfig::default();
-        config.email = Some(EmailConfig {
-            msg_fallback_codepage: Some(1251),
-        });
+        let config = ExtractionConfig {
+            email: Some(EmailConfig {
+                msg_fallback_codepage: Some(1251),
+            }),
+            ..Default::default()
+        };
         let extractor = EmailExtractor::new();
         // Empty data returns a validation error — config is still used without panic
         let result = extractor.extract_sync(b"", "application/vnd.ms-outlook", &config);

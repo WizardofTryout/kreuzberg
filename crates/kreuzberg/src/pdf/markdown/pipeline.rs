@@ -381,40 +381,12 @@ fn process_single_page(
     } = input;
 
     if let Some(mut paragraphs) = struct_paragraphs {
-        // When layout hints are available and paragraphs have positional data,
-        // convert to pseudo-segments and run through region assembly for better
-        // structural alignment with layout model predictions.
-        let has_text_hints = page_hints.as_ref().is_some_and(|hints| {
-            hints.iter().any(|h| {
-                h.confidence >= 0.5
-                    && !matches!(
-                        h.class,
-                        super::types::LayoutHintClass::Table | super::types::LayoutHintClass::Picture
-                    )
-            })
-        });
-        let has_positional_data = paragraphs.iter().any(|p| p.block_bbox.is_some());
-
-        if has_text_hints && has_positional_data {
-            // Convert struct-tree paragraphs to pseudo-segments using block_bbox
-            let pseudo_segments = paragraphs_to_pseudo_segments(&paragraphs);
-            if !pseudo_segments.is_empty() {
-                let hints = page_hints.as_ref().unwrap();
-                let mut region_paras = super::regions::assemble_region_paragraphs(
-                    pseudo_segments,
-                    hints,
-                    heading_map,
-                    0.5,
-                    doc_body_font_size,
-                    i,
-                    &table_bboxes,
-                );
-                retain_page_furniture_safely(&mut region_paras);
-                return region_paras;
-            }
-        }
-
-        // Fallback: original struct-tree processing
+        // Structure tree pages: use the PDF's own paragraph structure.
+        // The structure tree preserves the author's intended paragraph boundaries
+        // and heading hierarchy. Layout overrides (apply_layout_overrides) handle
+        // classification corrections from the layout model without destroying
+        // paragraph structure.
+        //
         // Apply heading classification to struct tree pages that have
         // font size variation but no structure-tree-level headings.
         if needs_classify {
@@ -1052,43 +1024,6 @@ fn filter_standalone_page_numbers(segments: &mut Vec<SegmentData>) {
     for &idx in candidates.iter().rev() {
         segments.remove(idx);
     }
-}
-
-/// Convert structure-tree paragraphs with block_bbox into pseudo-segments.
-///
-/// Each paragraph becomes a single `SegmentData` positioned at its block_bbox,
-/// with its full text content joined. This enables region assembly to assign
-/// struct-tree content to layout regions using spatial overlap.
-fn paragraphs_to_pseudo_segments(paragraphs: &[super::types::PdfParagraph]) -> Vec<crate::pdf::hierarchy::SegmentData> {
-    let mut segments = Vec::new();
-    for para in paragraphs {
-        let (left, bottom, right, top) = match para.block_bbox {
-            Some(bbox) => bbox,
-            None => continue,
-        };
-        let text: String = para
-            .lines
-            .iter()
-            .map(|l| l.segments.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" "))
-            .collect::<Vec<_>>()
-            .join(" ");
-        if text.trim().is_empty() {
-            continue;
-        }
-        segments.push(crate::pdf::hierarchy::SegmentData {
-            text,
-            x: left,
-            y: bottom,
-            width: right - left,
-            height: top - bottom,
-            font_size: para.dominant_font_size,
-            is_bold: para.is_bold,
-            is_italic: false,
-            is_monospace: para.is_code_block,
-            baseline_y: bottom,
-        });
-    }
-    segments
 }
 
 /// Dehyphenate paragraphs by rejoining words split across line boundaries.
