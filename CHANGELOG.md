@@ -125,6 +125,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Go `MarshalJSON` cyclomatic complexity lint**: Extracted helper functions to reduce cyclomatic complexity and pass linter checks.
 - **Unused doc comment warning on `thread_local!` macro**: Suppressed incorrect rustdoc warnings on Rust macro definitions.
+- **Docker musl builds (CI Docker)**: Alpine/musl Docker images now install `onnxruntime-dev` from Alpine edge and set `ORT_LIB_LOCATION` to link against the system library, fixing the `ort-sys` build failure for `x86_64-unknown-linux-musl` targets. All features (embeddings, layout-detection) now work in musl CLI images.
+- **CI Python**: Fixed batch mock signatures in `test_ocr_backend_registration.py` to include the `file_configs` parameter. Fixed `EmbeddingPreset` doctest formatting.
+- **CI WASM (Clippy)**: Added `#[allow(clippy::unnecessary_cast)]` for platform-dependent `c_ulong` → `u32` casts in pdfium bindings.
+- **CI C#/Java**: FFI batch functions now accept NULL for `file_config_jsons` (meaning "no per-file configs") instead of rejecting it.
+- **CI Elixir**: Added missing `acceleration` field to `ExtractionConfig.to_map/1` doctests.
+- **CI Go**: Lowered `go.mod` minimum version from 1.26 to 1.25 to match CI toolchain.
+- **CI R**: Vendor script now copies root `Cargo.lock` to ensure consistent dependency resolution.
 
 ---
 

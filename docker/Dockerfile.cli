@@ -17,11 +17,17 @@ ARG PDFIUM_VERSION=7678
 
 WORKDIR /build
 
-# Install build dependencies
+# Install build dependencies + ONNX Runtime from Alpine edge (musl-native).
+# ort-sys checks ORT_LIB_LOCATION before attempting download, so this overrides
+# the download-binaries feature transparently — no Cargo feature changes needed.
+# Edge repos needed because onnxruntime depends on abseil-cpp/protobuf from edge/main.
 RUN apk add --no-cache \
     curl gcc g++ musl-dev cmake make pkgconf \
     openssl-dev openssl-libs-static \
-    perl linux-headers git file
+    perl linux-headers git file && \
+    apk add --no-cache onnxruntime-dev \
+    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
+    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main
 
 # Install Rust via rustup
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
@@ -43,6 +49,10 @@ ENV KREUZBERG_PDFIUM_PREBUILT=/build/pdfium
 # This is required for pdfium's Bundled strategy which embeds libpdfium.so
 # and dlopens at runtime. Same pattern used in Dockerfile.musl-ffi.
 ENV RUSTFLAGS="-C target-feature=-crt-static"
+
+# Point ort-sys to Alpine's system ORT library instead of downloading prebuilt binaries.
+ENV ORT_LIB_LOCATION=/usr/lib
+ENV ORT_PREFER_DYNAMIC_LINK=1
 
 # Copy workspace manifests and crates
 COPY Cargo.toml Cargo.lock ./
@@ -70,7 +80,10 @@ RUN file /build/kreuzberg && \
 FROM alpine:3.21
 
 # Install runtime dependencies needed by dynamically linked binary
-RUN apk add --no-cache libstdc++ libgcc
+RUN apk add --no-cache libstdc++ libgcc && \
+    apk add --no-cache onnxruntime \
+    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
+    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main
 
 COPY --from=builder /build/kreuzberg /usr/local/bin/kreuzberg
 

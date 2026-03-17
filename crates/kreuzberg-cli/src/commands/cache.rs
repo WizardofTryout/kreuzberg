@@ -159,8 +159,8 @@ pub fn warm_command(
 ) -> Result<()> {
     let cache_base = resolve_cache_base(cache_dir);
 
-    let mut downloaded = Vec::new();
-    let mut already_cached = Vec::new();
+    let mut downloaded: Vec<String> = Vec::new();
+    let mut already_cached: Vec<String> = Vec::new();
 
     #[cfg(feature = "paddle-ocr")]
     {

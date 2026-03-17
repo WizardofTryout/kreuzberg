@@ -23,10 +23,14 @@ WORKDIR /build
 
 # Install build dependencies — Alpine's g++ and libstdc++ are musl-native,
 # so tesseract C++ compilation works without glibc conflicts.
+# onnxruntime-dev from edge provides musl-native ORT for linking.
 RUN apk add --no-cache \
     curl gcc g++ musl-dev cmake make pkgconf \
     openssl-dev openssl-libs-static \
-    perl linux-headers git file patchelf
+    perl linux-headers git file patchelf && \
+    apk add --no-cache onnxruntime-dev \
+    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
+    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main
 
 # Install Rust via rustup (Alpine's packaged Rust may be too old / not nightly)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
@@ -44,16 +48,16 @@ RUN mkdir -p /build/pdfium && \
     tar -xzf /build/pdfium.tgz -C /build/pdfium && \
     rm /build/pdfium.tgz
 
-# NOTE: ONNX Runtime is NOT needed at build time.
-# kreuzberg-paddle-ocr uses ort's "load-dynamic" feature, which loads
-# libonnxruntime.so via dlopen() at runtime. Users must install ONNX Runtime
-# on the target system separately.
-
 ENV KREUZBERG_PDFIUM_PREBUILT=/build/pdfium
 
 # Disable crt-static so the binary can dlopen shared libraries at runtime.
 # musl's static dlopen doesn't export libc symbols to loaded .so files.
 ENV RUSTFLAGS="-C target-feature=-crt-static"
+
+# Point ort-sys to Alpine's system ORT library instead of downloading prebuilt binaries.
+# ort-sys checks ORT_LIB_LOCATION before attempting download (build/main.rs line 45).
+ENV ORT_LIB_LOCATION=/usr/lib
+ENV ORT_PREFER_DYNAMIC_LINK=1
 
 # Copy workspace manifests and crates
 COPY Cargo.toml Cargo.lock ./
@@ -77,6 +81,8 @@ RUN patchelf --set-rpath '$ORIGIN/lib' /build/kreuzberg
 RUN mkdir -p /build/lib && \
     cp /usr/lib/libstdc++.so.6 /build/lib/ && \
     cp /usr/lib/libgcc_s.so.1 /build/lib/ && \
+    # Bundle ONNX Runtime for embeddings/layout-detection at runtime
+    cp /usr/lib/libonnxruntime.so* /build/lib/ 2>/dev/null || true && \
     # Copy the musl dynamic linker/libc
     cp /lib/ld-musl-*.so.1 /build/lib/ 2>/dev/null || true
 
