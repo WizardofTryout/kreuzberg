@@ -133,7 +133,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache-dependency-path: packages/go/v4/go.sum
 
       - name: Cache PDFium
@@ -405,7 +405,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           cache: false
 
       - name: Cache PDFium
