@@ -1237,6 +1237,9 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
           dest-dir: target/release
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Ruby dependencies
         run: scripts/ci/ruby/install-ruby-deps.sh packages/ruby
 
@@ -1431,6 +1434,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Setup MSYS2 (Windows)
         if: matrix.settings.os == 'windows-latest'
         uses: msys2/setup-msys2@v2
@@ -1571,6 +1577,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
           dest-dir: target/release
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
@@ -1719,6 +1728,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
 
@@ -1844,6 +1856,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
           dest-dir: target/release
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
@@ -2285,6 +2300,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Setup MSYS2 (Windows)
         if: matrix.settings.os == 'windows-latest'
@@ -3302,6 +3320,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Download Java native artifacts
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}

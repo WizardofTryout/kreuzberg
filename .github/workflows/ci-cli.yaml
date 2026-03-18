@@ -107,6 +107,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Setup OpenSSL
         uses: kreuzberg-dev/actions/setup-openssl@v1
 

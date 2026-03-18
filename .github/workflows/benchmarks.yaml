@@ -104,6 +104,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
 
@@ -195,6 +198,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Run benchmark
         env:
           FRAMEWORK: kreuzberg-rust
@@ -256,6 +262,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Setup PaddleOCR models
         uses: ./.github/actions/setup-paddle-ocr-models
@@ -327,6 +336,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
@@ -406,6 +418,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
@@ -578,6 +593,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
 
@@ -685,6 +703,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
 
@@ -766,6 +787,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
@@ -868,6 +892,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
 
@@ -960,6 +987,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
 
@@ -1047,6 +1077,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
@@ -1154,6 +1187,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
 
@@ -1239,6 +1275,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Run benchmark
         env:

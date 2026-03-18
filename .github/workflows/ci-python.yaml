@@ -144,6 +144,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Clean previous wheel artifacts
         shell: bash
         run: scripts/ci/python/clean-artifacts.sh
@@ -319,6 +322,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Setup PaddleOCR Models
         uses: ./.github/actions/setup-paddle-ocr-models

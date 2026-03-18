@@ -126,6 +126,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Vendor kreuzberg core crate
         shell: bash
         run: python3 scripts/ci/r/vendor-kreuzberg-core.py
@@ -191,6 +194,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Cache Hugging Face models (fastembed)
         uses: ./.github/actions/cache-hf-fastembed

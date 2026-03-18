@@ -144,6 +144,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Configure Tesseract data path
         shell: bash
         run: scripts/ci/rust/setup-tessdata-env.sh
@@ -219,6 +222,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1

@@ -159,6 +159,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Cache Hugging Face models (fastembed)
         uses: ./.github/actions/cache-hf-fastembed
 

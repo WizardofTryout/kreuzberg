@@ -129,32 +129,30 @@ public class KeywordConfigTests
     [Fact]
     public void YakeParams_ShouldAcceptCustomParameters()
     {
-        var yakeParams = new Dictionary<string, object?>
+        var config = new KeywordConfig
         {
-            { "top", 10 },
-            { "threshold", 0.8 }
+            YakeParams = new YakeParamsConfig { WindowSize = 10 }
         };
 
-        var config = new KeywordConfig { YakeParams = yakeParams };
-
         Assert.NotNull(config.YakeParams);
-        Assert.Equal(2, config.YakeParams.Count);
-        Assert.Equal(10, config.YakeParams["top"]);
+        Assert.Equal(10, config.YakeParams.WindowSize);
     }
 
     [Fact]
     public void RakeParams_ShouldAcceptCustomParameters()
     {
-        var rakeParams = new Dictionary<string, object?>
+        var config = new KeywordConfig
         {
-            { "min_length", 3 },
-            { "max_length", 5 }
+            RakeParams = new RakeParamsConfig
+            {
+                MinWordLength = 3,
+                MaxWordsPerPhrase = 5
+            }
         };
 
-        var config = new KeywordConfig { RakeParams = rakeParams };
-
         Assert.NotNull(config.RakeParams);
-        Assert.Equal(2, config.RakeParams.Count);
+        Assert.Equal(3, config.RakeParams.MinWordLength);
+        Assert.Equal(5, config.RakeParams.MaxWordsPerPhrase);
     }
 
     [Fact]
@@ -237,8 +235,6 @@ public class KeywordConfigTests
     [Fact]
     public void CompleteConfiguration_WithAllFields()
     {
-        var yakeParams = new Dictionary<string, object?> { { "threshold", 0.8 } };
-
         var config = new KeywordConfig
         {
             Algorithm = "yake",
@@ -246,7 +242,7 @@ public class KeywordConfigTests
             MinScore = 0.4,
             Language = "en",
             NgramRange = new List<int> { 1, 2 },
-            YakeParams = yakeParams
+            YakeParams = new YakeParamsConfig { WindowSize = 5 }
         };
 
         var json = JsonSerializer.Serialize(config);

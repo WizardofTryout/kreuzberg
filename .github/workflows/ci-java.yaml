@@ -129,6 +129,9 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
           dest-dir: target/release
 
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
+
       - name: Install Task
         uses: kreuzberg-dev/actions/install-task@v1
 
@@ -249,6 +252,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
           dest-dir: target/release
+
+      - name: Setup Layout Models
+        uses: ./.github/actions/setup-layout-models
 
       - name: Cache Hugging Face models (fastembed)
         uses: ./.github/actions/cache-hf-fastembed
