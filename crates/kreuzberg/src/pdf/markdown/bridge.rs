@@ -156,7 +156,7 @@ pub(super) fn objects_to_page_data(
     let page_height = page.height().value;
     let page_width = page.width().value;
 
-    // Primary path: Geometric cell-merging (adapted from docling-parse).
+    // Primary path: Geometric cell-merging (adapted from the reference cell-merging algorithm).
     // Builds per-character cells from pdfium's loose_bounds() API,
     // merges using geometric adjacency. Produces correct word boundaries
     // without inside_rect(), avoiding \x02 markers and line-break spaces.
@@ -498,7 +498,7 @@ fn merge_cells_in_row(mut row: TextRow) -> Vec<MergedCellGroup> {
     groups
 }
 
-// ── Geometric cell-merging (adapted from docling-parse, MIT license) ──
+// ── Geometric cell-merging (adapted from the reference cell-merging algorithm, MIT license) ──
 // See ATTRIBUTIONS.md for license details.
 // Currently only used by tests; gated to avoid dead_code warnings.
 
@@ -509,7 +509,7 @@ fn dist(x0: f32, y0: f32, x1: f32, y1: f32) -> f32 {
 
 /// A character cell with axis-aligned bounding box for geometric merging.
 ///
-/// Adapted from docling-parse's `page_item<PAGE_CELL>`. Uses 4-coordinate
+/// Adapted from the reference cell-merging algorithm's `page_item<PAGE_CELL>`. Uses 4-coordinate
 /// axis-aligned rects (pdfium gives `PdfRect`, not rotated quads).
 struct CharCell {
     text: String,
@@ -554,7 +554,7 @@ impl CharCell {
 
     /// Check if `other` is geometrically adjacent to this cell.
     ///
-    /// Adapted from docling-parse's `is_adjacent_to(other, eps_d0, eps_d1)`:
+    /// Adapted from the reference cell-merging algorithm's `is_adjacent_to(other, eps_d0, eps_d1)`:
     /// - d0: distance from this cell's bottom-right to other's bottom-left
     /// - d1: distance from this cell's top-right to other's top-left
     fn is_adjacent_to(&self, other: &Self, eps_d0: f32, eps_d1: f32) -> bool {
@@ -565,7 +565,7 @@ impl CharCell {
 
     /// Merge `other` into this cell.
     ///
-    /// Adapted from docling-parse's `merge_with(other, delta)`:
+    /// Adapted from the reference cell-merging algorithm's `merge_with(other, delta)`:
     /// If the gap between cells exceeds `space_threshold`, insert a space
     /// (word boundary). Otherwise concatenate directly (same word).
     fn merge_with(&mut self, other: &Self, space_threshold: f32) {
@@ -695,7 +695,7 @@ fn contract_right_to_left(cells: &mut [CharCell], merge_factor: f32, space_facto
     }
 }
 
-/// Three-pass geometric cell merging (adapted from docling-parse).
+/// Three-pass geometric cell merging (adapted from the reference cell-merging algorithm).
 ///
 /// Merges adjacent character cells into textlines using geometric distance:
 /// 1. L→R pass: merge consecutive cells that are spatially adjacent
@@ -711,7 +711,7 @@ fn merge_cells_geometric(cells: &mut Vec<CharCell>, merge_factor: f32, space_fac
     cells.retain(|c| c.active);
 }
 
-/// Extract text segments using geometric cell-merging (adapted from docling-parse).
+/// Extract text segments using geometric cell-merging (adapted from the reference cell-merging algorithm).
 ///
 /// Builds per-character cells directly from pdfium's `loose_bounds()` API
 /// (`FPDFText_GetLooseCharBox`), which returns the full advance-width character
@@ -736,6 +736,12 @@ fn extract_segments_cell_merge(page: &PdfPage, page_width: f32) -> Option<Vec<Se
             Err(_) => continue,
         };
 
+        // Skip pdfium-generated synthetic characters (word boundary markers).
+        // These have estimated positions that interfere with geometric merging.
+        if ch.is_generated().unwrap_or(false) {
+            continue;
+        }
+
         // Get character value.
         let unicode_val = ch.unicode_value();
         let uc = match char::from_u32(unicode_val) {
@@ -744,7 +750,7 @@ fn extract_segments_cell_merge(page: &PdfPage, page_width: f32) -> Option<Vec<Se
         };
 
         // Skip control characters and newlines, but keep spaces
-        // (space characters bridge word gaps for line-level merging).
+        // (real space characters bridge word gaps for line-level merging).
         if uc.is_control() || uc == '\n' || uc == '\r' || uc == '\t' {
             continue;
         }
@@ -802,20 +808,56 @@ fn extract_segments_cell_merge(page: &PdfPage, page_width: f32) -> Option<Vec<Se
     }
 
     // Filter sidebar cells (e.g., rotated arXiv IDs along page margins).
-    let sidebar_cutoff = page_width * 0.05;
-    cells.retain(|c| c.right > sidebar_cutoff);
+    // Use center-x check: rotated text may have wide loose_bounds that
+    // extend into the page, but the center stays in the margin.
+    let sidebar_cutoff = page_width * 0.06;
+    cells.retain(|c| (c.left + c.right) * 0.5 > sidebar_cutoff);
 
     if cells.is_empty() {
         return None;
     }
 
-    // Merge characters into textlines using docling-parse's three-pass algorithm.
-    // merge_factor=1.5: adjacent threshold as fraction of avg char width.
-    //   With loose_bounds, adjacent chars have touching/overlapping boxes,
-    //   so 1.5 is sufficient (close to docling-parse's 1.0).
-    // space_factor=0.33: gap > 0.33 * avg_char_width → insert space (word boundary).
-    //   Same as docling-parse's default for textline assembly.
-    merge_cells_geometric(&mut cells, 1.5, 0.33);
+    // Merge characters into textlines using the reference cell-merging algorithm's three-pass algorithm.
+    // merge_factor=3.5: adjacent threshold as fraction of avg char width.
+    //   Higher than the reference cell-merging algorithm's 1.0 because pdfium's loose_bounds
+    //   have gaps around decomposed ligature glyphs (fi→f+i) that can
+    //   be up to ~3x the average character width.
+    // space_factor=0.35: gap > 0.35 * avg_char_width → insert space (word boundary).
+    merge_cells_geometric(&mut cells, 3.5, 0.35);
+
+    // Post-merge: repair ligature-decomposition breaks within textlines.
+    // Pdfium decomposes ligature glyphs (fi, fl, ff) into sub-characters
+    // with gaps. After merging, these appear as "f " + "i/l/f" patterns
+    // within a cell's text. Remove the spurious space when preceded by
+    // a letter (mid-word context).
+    for cell in &mut cells {
+        if !cell.text.contains("f ") {
+            continue;
+        }
+        let bytes = cell.text.as_bytes();
+        let mut result = String::with_capacity(cell.text.len());
+        let mut j = 0;
+        let mut modified = false;
+        while j < bytes.len() {
+            if bytes[j] == b'f'
+                && j + 2 < bytes.len()
+                && bytes[j + 1] == b' '
+                && (bytes[j + 2] == b'i' || bytes[j + 2] == b'l' || bytes[j + 2] == b'f')
+                && j > 0
+                && bytes[j - 1].is_ascii_alphabetic()
+            {
+                result.push('f');
+                j += 2; // skip space
+                modified = true;
+            } else {
+                result.push(bytes[j] as char);
+                j += 1;
+            }
+        }
+        if modified {
+            cell.text = result;
+        }
+    }
 
     // Convert merged cells to SegmentData.
     let mut segments: Vec<SegmentData> = Vec::with_capacity(cells.len());
@@ -1031,7 +1073,7 @@ fn build_line_text(chars: &[CharInfo], repair_map: Option<&[(char, &str)]>) -> S
                         (ci.font_size + real_prev.font_size) * 0.3
                     };
                     // Veto the space if gap < 50% of character width.
-                    // This threshold is calibrated from docling-parse's 0.33 on
+                    // This threshold is calibrated from the reference cell-merging algorithm's 0.33 on
                     // advance widths, adjusted up because tight_bounds are narrower.
                     if gap < avg_char_width * 0.5 {
                         // Remove already-pushed space — chars are too close.
@@ -1295,7 +1337,7 @@ fn assemble_segments_from_chars(char_infos: &[CharInfo], repair_map: Option<&[(c
 
     // ── Pass 2: emit segments, merging cross-line hyphenated word breaks ──
     //
-    // Follows docling's `sanitize_text()` approach: when a line ends with a
+    // Follows the reference `sanitize_text()` approach: when a line ends with a
     // hyphen that pdfium recognises as a line-break hyphen (`is_hyphen` flag
     // from `FPDFText_IsHyphen`), strip the hyphen and join directly with the
     // next line's text.  This precisely handles "soft-" + "ware" → "software",
@@ -1419,7 +1461,7 @@ fn compute_right_margin(char_infos: &[CharInfo], line_ranges: &[(usize, usize)])
 ///    U+2010 HYPHEN, U+00AD SOFT HYPHEN) — excluding em/en dashes that are
 ///    intentional punctuation.
 ///
-/// This mirrors docling's `sanitize_text` which strips trailing `-` at line
+/// This mirrors the reference `sanitize_text` which strips trailing `-` at line
 /// boundaries to rejoin hyphenated words.
 fn line_ends_with_break_hyphen(line_chars: &[CharInfo]) -> bool {
     // Find the last non-space character.
@@ -2515,7 +2557,7 @@ mod tests {
         );
     }
 
-    // ── Geometric cell-merging tests (docling-parse port) ──
+    // ── Geometric cell-merging tests (the reference cell-merging algorithm port) ──
 
     fn make_char_cell(text: &str, left: f32, bottom: f32, right: f32, top: f32) -> CharCell {
         CharCell {
@@ -2650,7 +2692,7 @@ mod tests {
     #[test]
     fn test_merge_geometric_full_line_with_space_char() {
         // Characters forming "Hello World" — the space character bridges the gap.
-        // In docling-parse, line cell merging keeps space chars (unlike word merging).
+        // In the reference cell-merging algorithm, line cell merging keeps space chars (unlike word merging).
         let cw = 6.0; // char width
         let mut cells = vec![
             make_char_cell("H", 0.0, 0.0, cw, 12.0),

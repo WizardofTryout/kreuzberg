@@ -110,7 +110,7 @@ pub(super) fn build_ligature_repair_map(page: &PdfPage) -> Option<Vec<(char, &'s
 /// After replacing ligature characters, collapses spurious spaces that result
 /// from the replacement: e.g., "ﬁ rst" → "fi rst" → "first". When a ligature
 /// expansion is immediately followed by a space and a lowercase letter, the
-/// space is removed (matching Docling's regex-based post-processing).
+/// space is removed (matching the reference regex-based post-processing).
 pub(super) fn apply_ligature_repairs(text: &str, repair_map: &[(char, &str)]) -> String {
     let mut result = String::with_capacity(text.len() + 16);
     for ch in text.chars() {
@@ -426,7 +426,7 @@ pub(super) fn repair_broken_word_spacing(text: &str) -> Cow<'_, str> {
 /// glyph and the continuation of the word (e.g. "ﬁ eld"), which must be absorbed
 /// to produce correct text ("field").
 ///
-/// Matches Docling's approach:
+/// Matches the reference approach:
 /// ```python
 /// _LIGATURE_RE = re.compile(r"([\ufb00-\ufb06])( (?=\w))?")
 /// ```
@@ -525,7 +525,7 @@ pub(super) fn repair_ligature_spaces(text: &str) -> Cow<'_, str> {
 
 /// Normalize Unicode characters commonly found in PDFs to their ASCII equivalents.
 ///
-/// Matches docling's `sanitize_text()` normalizations for curly quotes, fraction
+/// Matches the reference `sanitize_text()` normalizations for curly quotes, fraction
 /// slash, and bullet characters. This improves TF1 by ensuring extracted text
 /// matches ground truth tokenization.
 pub(super) fn normalize_unicode_text(text: &str) -> Cow<'_, str> {
