@@ -200,7 +200,13 @@ pub(super) fn objects_to_page_data(
             }
         };
 
-        if let Some(segments) = best {
+        if let Some(mut segments) = best {
+            // Post-process: fix cross-line word breaks using full_text as reference.
+            // When inside_rect() inserts spaces at line boundaries (e.g., "docu ment"),
+            // check if the joined form ("document") appears in the full page text.
+            if !data.full_text.is_empty() {
+                repair_word_breaks_from_full_text(&mut segments, &data.full_text);
+            }
             return (segments, images);
         }
 
@@ -530,6 +536,70 @@ fn merge_cells_in_row(mut row: TextRow) -> Vec<MergedCellGroup> {
     }
 
     groups
+}
+
+/// Repair cross-line word breaks in segments using the full page text as reference.
+///
+/// When `inside_rect()` inserts spaces at line boundaries (e.g., "docu ment"),
+/// this function checks if the joined form ("document") appears in the full
+/// page text. If so, the space is removed.
+fn repair_word_breaks_from_full_text(segments: &mut [SegmentData], full_text: &str) {
+    // Normalize full_text: strip control chars (including \x02 soft-hyphen markers)
+    // so word lookups match our cleaned segment text.
+    let normalized_full: String = full_text
+        .chars()
+        .filter(|c| !c.is_control() || *c == ' ' || *c == '\n')
+        .collect();
+    let full_words: std::collections::HashSet<&str> =
+        normalized_full.split_whitespace().collect();
+
+    for seg in segments.iter_mut() {
+        if !seg.text.contains(' ') {
+            continue;
+        }
+        let mut result = String::with_capacity(seg.text.len());
+        let words: Vec<&str> = seg.text.split(' ').collect();
+        let mut i = 0;
+        let mut changed = false;
+        while i < words.len() {
+            if i + 1 < words.len()
+                && !words[i].is_empty()
+                && !words[i + 1].is_empty()
+            {
+                // Strip control chars for matching (pdfium's \x02 markers etc.)
+                let w1_clean: String = words[i].chars().filter(|c| !c.is_control()).collect();
+                let w2_clean: String =
+                    words[i + 1].chars().filter(|c| !c.is_control()).collect();
+
+                if w1_clean.ends_with(|c: char| c.is_alphabetic())
+                    && w2_clean.starts_with(|c: char| c.is_lowercase())
+                {
+                    let joined = format!("{}{}", w1_clean, w2_clean);
+                    if full_words.contains(joined.as_str())
+                        && !full_words.contains(w1_clean.as_str())
+                    {
+                        // The joined form exists in full_text but the fragment doesn't
+                        // → this is a spurious line-break space.
+                        if !result.is_empty() {
+                            result.push(' ');
+                        }
+                        result.push_str(&joined);
+                        i += 2;
+                        changed = true;
+                        continue;
+                    }
+                }
+            }
+            if !result.is_empty() {
+                result.push(' ');
+            }
+            result.push_str(words[i]);
+            i += 1;
+        }
+        if changed {
+            seg.text = result;
+        }
+    }
 }
 
 // ── Segment-level extraction from DTO ──
@@ -2341,4 +2411,91 @@ mod tests {
         );
     }
 
+    // ── repair_word_breaks_from_full_text tests ──
+
+    fn make_seg(text: &str) -> SegmentData {
+        SegmentData {
+            text: text.to_string(),
+            x: 0.0,
+            y: 0.0,
+            width: 100.0,
+            height: 12.0,
+            font_size: 12.0,
+            is_bold: false,
+            is_italic: false,
+            is_monospace: false,
+            baseline_y: 0.0,
+        }
+    }
+
+    #[test]
+    fn test_repair_word_break_basic() {
+        let mut segs = vec![make_seg("given docu ment here")];
+        let full_text = "given document here";
+        repair_word_breaks_from_full_text(&mut segs, full_text);
+        assert_eq!(segs[0].text, "given document here");
+    }
+
+    #[test]
+    fn test_repair_word_break_with_stx_marker() {
+        // Segment text has \x02 marker (pre-normalization)
+        let mut segs = vec![make_seg("given docu\x02 ment here")];
+        let full_text = "given docu\x02ment here";
+        repair_word_breaks_from_full_text(&mut segs, full_text);
+        assert_eq!(segs[0].text, "given document here");
+    }
+
+    #[test]
+    fn test_repair_preserves_real_word_boundaries() {
+        let mut segs = vec![make_seg("hello world test")];
+        let full_text = "hello world test";
+        repair_word_breaks_from_full_text(&mut segs, full_text);
+        assert_eq!(segs[0].text, "hello world test");
+    }
+
+    #[test]
+    fn test_repair_multiple_breaks_in_one_segment() {
+        let mut segs = vec![make_seg("ad ditional con version")];
+        let full_text = "additional conversion";
+        repair_word_breaks_from_full_text(&mut segs, full_text);
+        assert_eq!(segs[0].text, "additional conversion");
+    }
+
+    #[test]
+    fn test_repair_no_change_when_fragment_is_real_word() {
+        // "con" is a real word in full_text, so "con version" should NOT be joined
+        let mut segs = vec![make_seg("con version")];
+        let full_text = "con version conversion";
+        repair_word_breaks_from_full_text(&mut segs, full_text);
+        // "con" IS in full_words, so it should NOT be repaired
+        assert_eq!(segs[0].text, "con version");
+    }
+
+    #[test]
+    fn test_repair_uppercase_not_joined() {
+        // Second fragment starts with uppercase — not a line-break pattern
+        let mut segs = vec![make_seg("hello World")];
+        let full_text = "helloWorld hello World";
+        repair_word_breaks_from_full_text(&mut segs, full_text);
+        assert_eq!(segs[0].text, "hello World");
+    }
+
+    #[test]
+    fn test_repair_empty_full_text() {
+        let mut segs = vec![make_seg("docu ment")];
+        repair_word_breaks_from_full_text(&mut segs, "");
+        assert_eq!(segs[0].text, "docu ment");
+    }
+
+    #[test]
+    fn test_repair_across_multiple_segments() {
+        let mut segs = vec![
+            make_seg("first docu ment"),
+            make_seg("second cor recting"),
+        ];
+        let full_text = "first document second correcting";
+        repair_word_breaks_from_full_text(&mut segs, full_text);
+        assert_eq!(segs[0].text, "first document");
+        assert_eq!(segs[1].text, "second correcting");
+    }
 }
