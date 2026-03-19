@@ -340,9 +340,12 @@ pub(crate) async fn extract_with_ocr(
 
     // Encode all page images to PNG bytes in parallel (CPU-bound).
     // Each element is (page_idx, image_data, width, height).
+    // We wrap image bytes in Arc so that spawning per-page OCR tasks only
+    // clones a pointer instead of copying the entire PNG buffer.
     use rayon::prelude::*;
+    use std::sync::Arc;
     #[allow(clippy::type_complexity)]
-    let encoded_pages: crate::Result<Vec<(usize, Vec<u8>, u32, u32)>> = images
+    let encoded_pages: crate::Result<Vec<(usize, Arc<Vec<u8>>, u32, u32)>> = images
         .par_iter()
         .enumerate()
         .map(|(page_idx, image)| {
@@ -356,7 +359,7 @@ pub(crate) async fn extract_with_ocr(
                     message: format!("Failed to encode image: {}", e),
                     source: None,
                 })?;
-            Ok((page_idx, image_bytes.into_inner(), width, height))
+            Ok((page_idx, Arc::new(image_bytes.into_inner()), width, height))
         })
         .collect();
     let encoded_pages = encoded_pages?;
@@ -373,7 +376,7 @@ pub(crate) async fn extract_with_ocr(
     for (page_idx, image_data, _width, _height) in &encoded_pages {
         let backend_clone = std::sync::Arc::clone(&backend);
         let config_clone = ocr_config_owned.clone();
-        let data_clone = image_data.clone();
+        let data_clone = Arc::clone(image_data);
         let idx = *page_idx;
         join_set.spawn(async move {
             let result = backend_clone.process_image(&data_clone, &config_clone).await;

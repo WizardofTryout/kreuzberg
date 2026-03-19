@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::{
     ocr_error::OcrError,
     ocr_result::{Point, TextBox},
@@ -9,43 +11,51 @@ use ndarray::{Array, Array4};
 pub struct OcrUtils;
 
 impl OcrUtils {
+    /// Normalize image pixels and transpose from HWC (row-major RGB) to CHW tensor format.
+    ///
+    /// Formula per pixel: `output[ch] = pixel[ch] * norm[ch] - mean[ch] * norm[ch]`
+    ///
+    /// Optimizations over the original implementation:
+    /// - Pre-computes `mean * norm` constants (was recomputed per-pixel)
+    /// - Uses raw slice access (avoids per-pixel bounds checks)
+    /// - Row-major iteration with pre-computed row offsets (cache-friendly)
     pub fn substract_mean_normalize(img_src: &image::RgbImage, mean_vals: &[f32], norm_vals: &[f32]) -> Array4<f32> {
-        let cols = img_src.width();
-        let rows = img_src.height();
-        let channels = 3;
+        let cols = img_src.width() as usize;
+        let rows = img_src.height() as usize;
 
-        let mut input_tensor = Array::zeros((1, channels as usize, rows as usize, cols as usize));
+        let mut input_tensor = Array::zeros((1, 3, rows, cols));
 
-        // Get image data
-        // SAFETY: This is safe because:
-        // 1. The RgbImage is guaranteed to have width=cols and height=rows with 3 channels (RGB)
-        // 2. We iterate exactly over the valid range: r in [0, rows), c in [0, cols), ch in [0, 3)
-        // 3. The index calculation (r * cols * channels + c * channels + ch) is always < cols * rows * 3,
-        //    which equals the total number of pixels in an RGB image
-        // 4. RgbImage::get_unchecked is safe here because the calculated indices are within bounds
-        // 5. mean_vals and norm_vals are expected to have at least 3 elements for RGB (channels=3),
-        //    and we access them only with ch in [0, 3), so bounds are guaranteed
-        // 6. input_tensor is properly initialized and we access it with valid indices [0, ch, r, c]
-        unsafe {
-            for r in 0..rows {
-                for c in 0..cols {
-                    for ch in 0..channels {
-                        let idx = (r * cols * channels + c * channels + ch) as usize;
-                        let value = img_src.get_unchecked(idx).to_owned();
-                        let data =
-                            value as f32 * norm_vals[ch as usize] - mean_vals[ch as usize] * norm_vals[ch as usize];
-                        input_tensor[[0, ch as usize, r as usize, c as usize]] = data;
-                    }
-                }
+        // Pre-compute adjusted mean constants: mean[ch] * norm[ch]
+        // This avoids a multiply per pixel per channel (was 3× per pixel before).
+        let adjusted = [
+            mean_vals[0] * norm_vals[0],
+            mean_vals[1] * norm_vals[1],
+            mean_vals[2] * norm_vals[2],
+        ];
+
+        // Access raw pixel buffer directly — avoids per-pixel bounds checks.
+        // RgbImage stores pixels in row-major HWC format: [R, G, B, R, G, B, ...].
+        let raw = img_src.as_raw();
+
+        for r in 0..rows {
+            let row_offset = r * cols * 3;
+            for c in 0..cols {
+                let idx = row_offset + c * 3;
+                // Channel-separated output (CHW format for ONNX Runtime).
+                input_tensor[[0, 0, r, c]] = raw[idx] as f32 * norm_vals[0] - adjusted[0];
+                input_tensor[[0, 1, r, c]] = raw[idx + 1] as f32 * norm_vals[1] - adjusted[1];
+                input_tensor[[0, 2, r, c]] = raw[idx + 2] as f32 * norm_vals[2] - adjusted[2];
             }
         }
 
         input_tensor
     }
 
-    pub fn make_padding(img_src: &image::RgbImage, padding: u32) -> Result<image::RgbImage, OcrError> {
+    /// Add white padding around the image, or borrow it unchanged when padding=0.
+    /// Returns Cow to avoid cloning the image in the common no-padding case.
+    pub fn make_padding<'a>(img_src: &'a image::RgbImage, padding: u32) -> Result<Cow<'a, image::RgbImage>, OcrError> {
         if padding == 0 {
-            return Ok(img_src.clone());
+            return Ok(Cow::Borrowed(img_src));
         }
 
         let width = img_src.width();
@@ -60,7 +70,7 @@ impl OcrUtils {
 
         image::imageops::replace(&mut padding_src, img_src, padding as i64, padding as i64);
 
-        Ok(padding_src)
+        Ok(Cow::Owned(padding_src))
     }
 
     pub fn get_part_images(img_src: &image::RgbImage, text_boxes: &[TextBox]) -> Vec<image::RgbImage> {
@@ -100,12 +110,13 @@ impl OcrUtils {
             return img_crop;
         }
 
-        let img_crop_width = ((points[0].x as i32 - points[1].x as i32).pow(2) as f32
-            + (points[0].y as i32 - points[1].y as i32).pow(2) as f32)
-            .sqrt() as u32;
-        let img_crop_height = ((points[0].x as i32 - points[3].x as i32).pow(2) as f32
-            + (points[0].y as i32 - points[3].y as i32).pow(2) as f32)
-            .sqrt() as u32;
+        // Direct multiplication instead of .pow(2) — avoids integer power function overhead.
+        let dx_w = (points[0].x as i32 - points[1].x as i32) as f32;
+        let dy_w = (points[0].y as i32 - points[1].y as i32) as f32;
+        let img_crop_width = (dx_w * dx_w + dy_w * dy_w).sqrt() as u32;
+        let dx_h = (points[0].x as i32 - points[3].x as i32) as f32;
+        let dy_h = (points[0].y as i32 - points[3].y as i32) as f32;
+        let img_crop_height = (dx_h * dx_h + dy_h * dy_h).sqrt() as u32;
 
         // Ensure dimensions are valid (non-zero)
         if img_crop_width == 0 || img_crop_height == 0 {

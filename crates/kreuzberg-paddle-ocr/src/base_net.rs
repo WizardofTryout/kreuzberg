@@ -16,8 +16,10 @@ pub trait BaseNet {
         let builder = Session::builder()?;
         let builder = match builder_fn {
             Some(custom) => custom(builder)?,
+            // Level3 enables all Level2 optimizations plus layout optimizations
+            // (NHWC→NCHW fusion, memory planning) for better inference throughput.
             None => builder
-                .with_optimization_level(GraphOptimizationLevel::Level2)
+                .with_optimization_level(GraphOptimizationLevel::Level3)
                 .map_err(|e| OcrError::Ort(ort::Error::new(e.message())))?
                 .with_intra_threads(num_thread)
                 .map_err(|e| OcrError::Ort(ort::Error::new(e.message())))?

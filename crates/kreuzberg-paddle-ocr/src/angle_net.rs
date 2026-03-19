@@ -48,7 +48,8 @@ impl AngleNet {
         most_angle: bool,
         cls_thresh: f32,
     ) -> Result<Vec<Angle>, OcrError> {
-        let mut angles = Vec::new();
+        // Pre-allocate — we know exact count upfront.
+        let mut angles = Vec::with_capacity(part_imgs.len());
 
         if do_angle {
             for img in part_imgs {

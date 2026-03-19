@@ -133,6 +133,7 @@ impl OcrLite {
         }
         resize += 2 * padding;
 
+        // Cow avoids cloning the image when padding=0 (the common case).
         let padding_src = OcrUtils::make_padding(img_src, padding)?;
 
         let scale = ScaleParam::get_scale_param(&padding_src, resize);
