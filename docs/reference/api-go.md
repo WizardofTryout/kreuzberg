@@ -714,7 +714,7 @@ PDF-specific extraction options.
 
 ```go title="Go"
 type PdfConfig struct {
-	AllowSingleColumnTables *bool       // Allow extraction of single-column tables
+	AllowSingleColumnTables *bool       // <span class="version-badge">v4.5.0</span> Allow extraction of single-column tables
 	BottomMarginFraction    *float64    // Bottom margin to ignore during extraction
 	ExtractAnnotations      *bool       // Extract PDF annotations
 	ExtractImages           *bool       // Extract embedded images
@@ -727,7 +727,7 @@ type PdfConfig struct {
 
 ---
 
-### ConcurrencyConfig
+### ConcurrencyConfig <span class="version-badge">v4.5.0</span>
 
 Concurrency configuration for controlling parallel extraction.
 

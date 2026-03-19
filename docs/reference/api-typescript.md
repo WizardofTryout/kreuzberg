@@ -411,7 +411,7 @@ Main configuration interface for extraction operations.
 ```typescript title="TypeScript"
 interface ExtractionConfig {
   chunking?: ChunkingConfig | null;
-  concurrency?: ConcurrencyConfig | null;
+  concurrency?: ConcurrencyConfig | null; // <span class="version-badge">v4.5.0</span>
   enableQualityProcessing?: boolean;
   forceOcr?: boolean;
   htmlOptions?: HtmlConversionOptions | null;
@@ -684,7 +684,7 @@ interface PdfConfig {
 
 **Fields:**
 
-- `allowSingleColumnTables` (boolean): Allow extraction of single-column tables. Default: false
+- `allowSingleColumnTables` (boolean) <span class="version-badge">v4.5.0</span>: Allow extraction of single-column tables. Default: false
 - `passwords` (string[] | null): List of passwords to try for encrypted PDFs. Default: null
 - `extractImages` (boolean): Extract images from PDF. Default: false
 - `imageDpi` (number): DPI for image extraction. Default: 300
@@ -729,6 +729,8 @@ const config: ExtractionConfig = {
 ```
 
 ---
+
+
 
 ### ChunkingConfig
 

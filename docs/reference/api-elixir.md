@@ -1026,13 +1026,13 @@ config = %Kreuzberg.ExtractionConfig{
 
 When configuring `pdf_options` map:
 
-- `"allow_single_column_tables"` (Boolean): Allow extraction of single-column tables. Default: false
+- `"allow_single_column_tables"` (Boolean): <span class="version-badge">v4.5.0</span> Allow extraction of single-column tables. Default: false
 - `"extract_annotations"` (Boolean): Extract PDF annotations. Default: false
 - `"extract_images"` (Boolean): Extract images from PDF. Default: false
 - `"extract_metadata"` (Boolean): Extract PDF metadata. Default: true
 - `"passwords"` (List<String>): Passwords to try for encrypted PDFs. Default: nil
 
-**Concurrency Configuration:**
+**Concurrency Configuration:** <span class="version-badge">v4.5.0</span>
 
 When configuring `concurrency` map:
 

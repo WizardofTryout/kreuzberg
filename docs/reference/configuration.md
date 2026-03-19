@@ -245,7 +245,7 @@ Main extraction configuration controlling all aspects of document processing.
 | `postprocessor`              | `PostProcessorConfig?`     | `None`                 | Post-processing pipeline configuration                                                                                                                                                           |
 | `pages`                      | `PageConfig?`              | `None`                 | Page extraction and tracking configuration                                                                                                                                                       |
 | `max_concurrent_extractions` | `int?`                     | `None`                 | Maximum concurrent batch extractions (defaults to num_cpus \* 2)                                                                                                                                 |
-| `concurrency`                | `ConcurrencyConfig?`       | `None`                 | Concurrency configuration for threading (max_threads caps Rayon, ONNX intra-op threads, and batch semaphore)                                                                                    |
+| `concurrency`                | `ConcurrencyConfig?` <span class="version-badge">v4.5.0</span> | `None`                 | Concurrency configuration for threading (max_threads caps Rayon, ONNX intra-op threads, and batch semaphore)                                                                                    |
 | `result_format`              | `OutputFormat`             | `Unified`              | Result structure format: `Unified` (content in single field) or `ElementBased` (semantic elements array)                                                                                         |
 | `output_format`              | `OutputFormat`             | `Plain`                | Output format for extracted text content (Plain, Markdown, Djot, Html, Structured)                                                                                                               |
 | `html_options`               | `ConversionOptions`        | `None`                 | HTML to Markdown conversion options (heading styles, list formatting, code block styles). Only available with `html` feature.                                                                    |
@@ -1586,7 +1586,7 @@ PDF-specific extraction configuration.
 | `extract_metadata`         | `bool`             | `true`  | Extract PDF metadata (title, author, creation date, etc.)                 |
 | `passwords`                | `list[str]?`       | `None`  | List of passwords to try for encrypted PDFs (tries in order)              |
 | `hierarchy`                | `HierarchyConfig?` | `None`  | Hierarchy extraction configuration (None = hierarchy extraction disabled) |
-| `allow_single_column_tables` | `bool`             | `false` | Relax min column count from 2-3 to 1, allowing single-column table extraction |
+| `allow_single_column_tables` <span class="version-badge">v4.5.0</span> | `bool`             | `false` | Relax min column count from 2-3 to 1, allowing single-column table extraction |
 
 ### Example
 
@@ -3509,7 +3509,7 @@ ORT silently falls back to CPU if the requested provider is unavailable.
 
 ---
 
-## ConcurrencyConfig
+## ConcurrencyConfig <span class="version-badge">v4.5.0</span>
 
 Controls thread pool and concurrency limits for Rayon parallelism, ONNX Runtime intra-op threading, and batch extraction semaphore.
 

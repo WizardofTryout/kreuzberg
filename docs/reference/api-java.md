@@ -788,7 +788,7 @@ PDF-specific extraction options.
 ```java title="PdfConfiguration.java"
 // Configure PDF-specific extraction options
 PdfConfig pdf = PdfConfig.builder()
-    .allowSingleColumnTables(false) // Allow extraction of single-column tables
+    .allowSingleColumnTables(false) // <span class="version-badge">v4.5.0</span> Allow extraction of single-column tables
     .extractImages(true)         // Extract images from PDF
     .extractMetadata(true)       // Extract PDF metadata
     .renderImages(false)         // Render pages as images for processing
@@ -844,6 +844,10 @@ ConcurrencyConfig concurrency = ConcurrencyConfig.builder()
     .maxThreads(4)               // Maximum number of concurrent threads
     .build();
 ```
+
+**Fields:**
+
+- `maxThreads` (Integer): Maximum number of concurrent threads for parallel extraction. Default: null (system default)
 
 **Example:**
 

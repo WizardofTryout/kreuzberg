@@ -360,7 +360,7 @@ Main configuration class for extraction operations.
 **Fields:**
 
 - `chunking` (`ChunkingConfig | None`): Text chunking configuration. Default: `None`
-- `concurrency` (`ConcurrencyConfig | None`): <span class="version-badge">v4.5.0</span> Concurrency configuration. Default: `None`
+- `concurrency` (`ConcurrencyConfig | None`) <span class="version-badge">v4.5.0</span>: Concurrency configuration. Default: `None`
 - `enable_quality_processing` (`bool`): Enable quality post-processing. Default: `True`
 - `force_ocr` (`bool`): Force OCR processing even for searchable documents. Default: `False`
 - `html_options` (`HtmlConversionOptions | None`): HTML-specific conversion options. Default: `None`
@@ -519,7 +519,7 @@ PDF-specific configuration.
 
 **Fields:**
 
-- `allow_single_column_tables` (`bool`): <span class="version-badge">v4.5.0</span> Allow extraction of single-column tables. Default: `False`
+- `allow_single_column_tables` (`bool`) <span class="version-badge">v4.5.0</span>: Allow extraction of single-column tables. Default: `False`
 - `extract_images` (`bool`): Extract images from PDF documents.
   Default: `False`
 - `passwords` (`list[str] | None`): List of passwords to try when opening
@@ -562,6 +562,8 @@ config = ExtractionConfig(
     concurrency=ConcurrencyConfig(max_threads=4)
 )
 ```
+
+---
 
 ---
 

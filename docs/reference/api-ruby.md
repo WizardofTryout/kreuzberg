@@ -241,7 +241,7 @@ result = Kreuzberg.extract_file_sync("document.pdf", config: config)
     - `min_confidence` (Float): Minimum confidence threshold (0.0-1.0).
 
 - `pdf_options` (Hash): PDF-specific options
-  - `allow_single_column_tables` (Boolean): Allow extraction of single-column tables. Default: false
+  - `allow_single_column_tables` (Boolean): <span class="version-badge">v4.5.0</span> Allow extraction of single-column tables. Default: false
   - `extract_annotations` (Boolean): Extract PDF annotations. Default: false
   - `extract_images` (Boolean): Extract images from PDF. Default: false
   - `extract_metadata` (Boolean): Extract PDF metadata. Default: true
@@ -255,7 +255,7 @@ result = Kreuzberg.extract_file_sync("document.pdf", config: config)
   - `top_margin_fraction` (Float): Fractional top margin to ignore (0.0-1.0).
   - `bottom_margin_fraction` (Float): Fractional bottom margin to ignore (0.0-1.0).
 
-- `concurrency` (Hash): Concurrency configuration for extraction parallelization
+- `concurrency` (Hash): <span class="version-badge">v4.5.0</span> Concurrency configuration for extraction parallelization
   - `max_threads` (Integer): Maximum number of threads for parallel extraction. Default: nil (system default)
 
 - `chunking` (Hash): Text chunking options

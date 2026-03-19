@@ -1298,8 +1298,9 @@ Configuration object for extraction. All fields are optional; defaults are used 
 
 **Fields:**
 
+- `allowSingleColumnTables` (boolean): Allow extraction of single-column tables. Default: false
 - `chunkingConfig` (ChunkingConfig): Text chunking configuration
-- `concurrencyConfig` (ConcurrencyConfig): Concurrency configuration for extraction parallelization
+- `concurrencyConfig` <span class="version-badge">v4.5.0</span> (ConcurrencyConfig): Concurrency configuration for extraction parallelization
 - `enableChunking` (boolean): Split text into semantic chunks
 - `enableLanguageDetection` (boolean): Detect document language
 - `enableQuality` (boolean): Enable encoding detection and normalization
@@ -1341,6 +1342,16 @@ Image preprocessing configuration for improving OCR quality on scanned documents
 - `deskew` (boolean): Correct skew (tilted images)
 - `invertColors` (boolean): Invert colors
 - `targetDpi` (number): Target DPI for OCR processing (default: 300)
+
+---
+
+### ConcurrencyConfig <span class="version-badge">v4.5.0</span>
+
+Configuration for extraction parallelization.
+
+**Fields:**
+
+- `maxThreads` (number | undefined): Maximum number of threads for parallel extraction. Default: undefined (system default)
 
 ---
 

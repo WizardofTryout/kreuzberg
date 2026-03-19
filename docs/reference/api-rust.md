@@ -436,7 +436,7 @@ pub struct ExtractionConfig {
 **Fields:**
 
 - `chunking` (Option<ChunkingConfig>): Text chunking configuration. Default: None
-- `concurrency` (Option<ConcurrencyConfig>): Concurrency configuration. Default: None
+- `concurrency` (Option<ConcurrencyConfig>) <span class="version-badge">v4.5.0</span>: Concurrency configuration. Default: None
 - `enable_quality_processing` (bool): Enable quality post-processing. Default: true
 - `force_ocr` (bool): Force OCR even for text-based PDFs. Default: false
 - `html_options` (Option<[ConversionOptions](https://docs.html-to-markdown.kreuzberg.dev/reference/configuration/)>): HTML conversion options from [html-to-markdown](https://docs.html-to-markdown.kreuzberg.dev) (when feature `html`). Default: None
@@ -613,7 +613,7 @@ pub struct PdfConfig {
 
 **Fields:**
 
-- `allow_single_column_tables` (bool): Allow extraction of single-column tables. Default: false
+- `allow_single_column_tables` (bool) <span class="version-badge">v4.5.0</span>: Allow extraction of single-column tables. Default: false
 - `extract_images` (bool): Extract images from PDF. Default: false
 - `passwords` (Option<Vec<String>>): List of passwords to try for encrypted PDFs. Default: None
 - `extract_metadata` (bool): Extract PDF metadata. Default: true
@@ -635,7 +635,7 @@ let pdf_config = PdfConfig {
 
 ---
 
-### ConcurrencyConfig
+### ConcurrencyConfig <span class="version-badge">v4.5.0</span>
 
 Concurrency configuration for controlling parallel extraction.
 

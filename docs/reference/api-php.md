@@ -838,7 +838,7 @@ readonly class PdfConfig
 - `$startPage` (int|null): Start page for extraction (0-indexed). Default: null (all pages)
 - `$endPage` (int|null): End page for extraction (0-indexed). Default: null (all pages)
 - `$imageQuality` (int): JPEG quality for extracted images (1-100). Default: 95
-- `$allowSingleColumnTables` (bool): Allow extraction of single-column tables. Default: false
+- `$allowSingleColumnTables` (bool): <span class="version-badge">v4.5.0</span> Allow extraction of single-column tables. Default: false
 
 **Examples:**
 
@@ -911,7 +911,7 @@ $config = new ChunkingConfig(
 
 ---
 
-### ConcurrencyConfig
+### ConcurrencyConfig <span class="version-badge">v4.5.0</span>
 
 Concurrency configuration for extraction parallelization.
 

@@ -1799,13 +1799,26 @@ The C# bindings use P/Invoke to load the native `libkreuzberg_ffi` library. The 
 
 ---
 
-### ConcurrencyConfig
+### ConcurrencyConfig <span class="version-badge">v4.5.0</span>
 
 Configuration for concurrent extraction parallelization.
 
 **Properties:**
 
 - `MaxThreads` (int?): Maximum number of threads to use for concurrent extraction operations. If null, uses system default.
+
+---
+
+### PdfConfig
+
+Configuration for PDF-specific extraction options.
+
+**Properties:**
+
+- `AllowSingleColumnTables` <span class="version-badge">v4.5.0</span> (bool?): Allow extraction of single-column tables. Default: false.
+- `ExtractImages` (bool?): Extract images from the PDF. Default: false.
+- `ExtractMetadata` (bool?): Extract PDF metadata. Default: true.
+- `ExtractAnnotations` (bool?): Extract PDF annotations. Default: false.
 
 ---
 
