@@ -474,98 +474,56 @@ struct Guardrail {
 }
 
 /// Quality guardrails — minimum thresholds for specific documents and pipelines.
-/// Thresholds are set to ~90% of observed baseline scores (floor).
-/// Generated from initial_baseline.json (2026-03-05, git 6c7598f43).
+/// Thresholds are set to ~90% of observed scores (floor) to catch regressions
+/// without false-positive failures from run-to-run variance.
+/// Updated: 2026-03-20, git b2cb26479, 6-pipeline benchmark.
 const GUARDRAILS: &[Guardrail] = &[
-    // Baseline pipeline guardrails — representative docs across score ranges
-    // Perfect scores (100% SF1)
-    Guardrail {
-        doc_name: "extra-attrs-example",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.90),
-        min_tf1: Some(0.90),
-    },
-    Guardrail {
-        doc_name: "test-punkt",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.90),
-        min_tf1: Some(0.90),
-    },
-    // High SF1 (>60%)
-    Guardrail {
-        doc_name: "pdfa_032",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.60),
-        min_tf1: Some(0.88),
-    },
-    Guardrail {
-        doc_name: "pdf_tiny_memo",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.72),
-        min_tf1: Some(0.90),
-    },
-    Guardrail {
-        doc_name: "nougat_011",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.65),
-        min_tf1: Some(0.89),
-    },
-    Guardrail {
-        doc_name: "pdf_tables",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.55),
-        min_tf1: Some(0.90),
-    },
-    Guardrail {
-        doc_name: "la-precinct-bulletin-2014-p1",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.57),
-        min_tf1: Some(0.88),
-    },
-    // Medium SF1 (30-60%)
-    Guardrail {
-        doc_name: "amt_handbook_sample",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.47),
-        min_tf1: Some(0.84),
-    },
-    Guardrail {
-        doc_name: "multi_page",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.44),
-        min_tf1: Some(0.90),
-    },
-    Guardrail {
-        doc_name: "pdf_medium",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.39),
-        min_tf1: Some(0.86),
-    },
-    Guardrail {
-        doc_name: "2305.03393v1",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.37),
-        min_tf1: Some(0.88),
-    },
-    Guardrail {
-        doc_name: "pdf_google_docs",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.33),
-        min_tf1: Some(0.84),
-    },
-    Guardrail {
-        doc_name: "pdf_structure",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.28),
-        min_tf1: Some(0.90),
-    },
-    // Tables
-    Guardrail {
-        doc_name: "nics-background-checks-2015-11",
-        pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.27),
-        min_tf1: Some(0.90),
-    },
+    // ── Baseline (pdfium text extraction, no OCR, no layout) ──
+    Guardrail { doc_name: "extra-attrs-example", pipeline: Pipeline::Baseline, min_sf1: Some(0.90), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "test-punkt", pipeline: Pipeline::Baseline, min_sf1: Some(0.90), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "multi_page", pipeline: Pipeline::Baseline, min_sf1: Some(0.79), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "pdf_tiny_memo", pipeline: Pipeline::Baseline, min_sf1: Some(0.70), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "nougat_011", pipeline: Pipeline::Baseline, min_sf1: Some(0.70), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "2305.03393v1", pipeline: Pipeline::Baseline, min_sf1: Some(0.63), min_tf1: Some(0.87) },
+    Guardrail { doc_name: "pdfa_032", pipeline: Pipeline::Baseline, min_sf1: Some(0.58), min_tf1: Some(0.88) },
+    Guardrail { doc_name: "la-precinct-bulletin-2014-p1", pipeline: Pipeline::Baseline, min_sf1: Some(0.57), min_tf1: Some(0.87) },
+    Guardrail { doc_name: "pdf_tables", pipeline: Pipeline::Baseline, min_sf1: Some(0.54), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "pdf_medium", pipeline: Pipeline::Baseline, min_sf1: Some(0.49), min_tf1: Some(0.86) },
+    Guardrail { doc_name: "pdf_google_docs", pipeline: Pipeline::Baseline, min_sf1: Some(0.45), min_tf1: Some(0.84) },
+    Guardrail { doc_name: "pdf_structure", pipeline: Pipeline::Baseline, min_sf1: Some(0.69), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "nics-background-checks-2015-11", pipeline: Pipeline::Baseline, min_sf1: Some(0.37), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "amt_handbook_sample", pipeline: Pipeline::Baseline, min_sf1: Some(0.69), min_tf1: Some(0.83) },
+    // ── Layout (pdfium + layout detection) ──
+    Guardrail { doc_name: "extra-attrs-example", pipeline: Pipeline::Layout, min_sf1: None, min_tf1: None },
+    Guardrail { doc_name: "test-punkt", pipeline: Pipeline::Layout, min_sf1: Some(0.90), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "multi_page", pipeline: Pipeline::Layout, min_sf1: Some(0.88), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "pdf_tiny_memo", pipeline: Pipeline::Layout, min_sf1: Some(0.80), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "nougat_011", pipeline: Pipeline::Layout, min_sf1: Some(0.70), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "pdf_structure", pipeline: Pipeline::Layout, min_sf1: Some(0.80), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "pdf_medium", pipeline: Pipeline::Layout, min_sf1: Some(0.60), min_tf1: Some(0.86) },
+    Guardrail { doc_name: "2305.03393v1", pipeline: Pipeline::Layout, min_sf1: Some(0.56), min_tf1: Some(0.87) },
+    // ── Tesseract (OCR, no layout) ──
+    Guardrail { doc_name: "test-punkt", pipeline: Pipeline::Tesseract, min_sf1: Some(0.90), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "nougat_011", pipeline: Pipeline::Tesseract, min_sf1: Some(0.62), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "pdfa_032", pipeline: Pipeline::Tesseract, min_sf1: Some(0.62), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "pdf_medium", pipeline: Pipeline::Tesseract, min_sf1: Some(0.47), min_tf1: Some(0.83) },
+    Guardrail { doc_name: "pdf_image_only_german", pipeline: Pipeline::Tesseract, min_sf1: Some(0.49), min_tf1: Some(0.75) },
+    Guardrail { doc_name: "pdf_non_searchable", pipeline: Pipeline::Tesseract, min_sf1: Some(0.33), min_tf1: Some(0.90) },
+    // ── Tesseract + Layout ──
+    Guardrail { doc_name: "test-punkt", pipeline: Pipeline::TesseractLayout, min_sf1: Some(0.90), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "nougat_011", pipeline: Pipeline::TesseractLayout, min_sf1: Some(0.87), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "pdfa_032", pipeline: Pipeline::TesseractLayout, min_sf1: Some(0.81), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "pdf_non_searchable", pipeline: Pipeline::TesseractLayout, min_sf1: Some(0.33), min_tf1: Some(0.90) },
+    // ── PaddleOCR (mobile, no layout) ──
+    Guardrail { doc_name: "extra-attrs-example", pipeline: Pipeline::Paddle, min_sf1: Some(0.90), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "pdf_tiny_memo", pipeline: Pipeline::Paddle, min_sf1: Some(0.64), min_tf1: Some(0.86) },
+    Guardrail { doc_name: "pdf_structure", pipeline: Pipeline::Paddle, min_sf1: Some(0.40), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "pdf_non_searchable", pipeline: Pipeline::Paddle, min_sf1: Some(0.33), min_tf1: Some(0.90) },
+    Guardrail { doc_name: "multi_page", pipeline: Pipeline::Paddle, min_sf1: Some(0.27), min_tf1: Some(0.89) },
+    // ── PaddleOCR + Layout ──
+    Guardrail { doc_name: "pdf_structure", pipeline: Pipeline::PaddleLayout, min_sf1: Some(0.62), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "multi_page", pipeline: Pipeline::PaddleLayout, min_sf1: Some(0.51), min_tf1: Some(0.89) },
+    Guardrail { doc_name: "pdf_non_searchable", pipeline: Pipeline::PaddleLayout, min_sf1: Some(0.33), min_tf1: Some(0.90) },
 ];
 
 /// Check guardrails, returning a list of failure messages (empty = all passed).
