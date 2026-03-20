@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.5.1] - 2026-03-20
+
+### Fixed
+
+- **Java FFI `CBatchResult` struct layout mismatch**: The `count` and `results` fields were swapped in the Java Panama FFM layout, causing all batch extraction operations to fail with memory access errors.
+- **Go FFI stale C header**: The `CExtractionResult` struct field order in the Go binding's C header did not match the Rust `#[repr(C)]` layout (reordered alphabetically in 4.5.0, added `djot_content_json`). Go read fields at wrong offsets, causing `pages_json` to deserialize `metadata_json` instead.
+- **FFI `LayoutDetectionConfig` not feature-gated**: The FFI crate unconditionally imported `LayoutDetectionConfig` and exposed `kreuzberg_config_builder_set_layout`, causing compilation failures on targets without the `layout-detection` feature (e.g., `x86_64-pc-windows-gnu`).
+- **Python wheel builds on Linux aarch64**: OpenSSL library path was hardcoded to `x86_64-linux-gnu` in the manylinux build script, failing on aarch64 runners. Now detects architecture via `uname -m`.
+- **R batch function signature mismatch**: R wrapper functions were missing the `file_configs` parameter when calling native Rust functions, causing "Expected Scalar, got Language" errors on all batch operations.
+- **R package ORT linking**: The R build configuration (`config.R`) did not link against ONNX Runtime when `ORT_LIB_LOCATION` was set, causing `undefined symbol: OrtGetApiBase` at load time.
+
+---
+
 ## [4.5.0] - 2026-03-20
 
 ### Added
