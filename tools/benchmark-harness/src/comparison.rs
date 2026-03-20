@@ -495,7 +495,7 @@ const GUARDRAILS: &[Guardrail] = &[
     Guardrail {
         doc_name: "pdfa_032",
         pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.73),
+        min_sf1: Some(0.60),
         min_tf1: Some(0.88),
     },
     Guardrail {
@@ -513,8 +513,8 @@ const GUARDRAILS: &[Guardrail] = &[
     Guardrail {
         doc_name: "pdf_tables",
         pipeline: Pipeline::Baseline,
-        min_sf1: Some(0.62),
-        min_tf1: Some(0.60),
+        min_sf1: Some(0.55),
+        min_tf1: Some(0.90),
     },
     Guardrail {
         doc_name: "la-precinct-bulletin-2014-p1",

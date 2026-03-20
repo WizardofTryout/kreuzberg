@@ -7,6 +7,54 @@
 
 use pdfium_render::prelude::*;
 
+/// Known proportional font families where pdfium's `font_is_fixed_pitch()`
+/// returns a false positive (common with non-embedded Type 1 fonts).
+const KNOWN_PROPORTIONAL_FONTS: &[&str] = &[
+    "helvetica",
+    "arial",
+    "times",
+    "georgia",
+    "verdana",
+    "tahoma",
+    "trebuchet",
+    "calibri",
+    "cambria",
+    "garamond",
+    "palatino",
+    "book antiqua",
+    "century",
+    "dejavu sans",
+    "dejavu serif",
+    "liberation sans",
+    "liberation serif",
+    "noto sans",
+    "noto serif",
+    "roboto",
+    "open sans",
+    "lato",
+    "inter",
+    "segoe",
+    "gill sans",
+    "optima",
+    "futura",
+    "avenir",
+    "lucida sans",
+    "lucida bright",
+];
+
+/// Check if pdfium's fixed-pitch flag should be trusted for the given font.
+///
+/// Returns `true` only if the font is truly monospace — overrides false
+/// positives from pdfium for known proportional fonts.
+pub(crate) fn is_truly_monospace(pdfium_fixed_pitch: bool, font_name: &str) -> bool {
+    if !pdfium_fixed_pitch {
+        return false;
+    }
+    let lower = font_name.to_ascii_lowercase();
+    // If the font name matches a known proportional family, ignore the flag.
+    !KNOWN_PROPORTIONAL_FONTS.iter().any(|p| lower.contains(p))
+}
+
 /// All character data extracted from pdfium in a single pass.
 #[derive(Clone, Debug)]
 pub(crate) struct ExtractedChar {
@@ -126,7 +174,7 @@ fn sample_segment_font(
             let scaled = ch.scaled_font_size().value;
             let fs = if scaled > 0.0 { scaled } else { 12.0 };
             let info = ch.font_info();
-            let mono = ch.font_is_fixed_pitch();
+            let mono = is_truly_monospace(ch.font_is_fixed_pitch(), &info.0);
             let bl_y = ch.origin().map(|o| o.1.value).unwrap_or(default_baseline);
             return (fs, info.1, info.2, mono, bl_y);
         }
@@ -273,7 +321,7 @@ pub(crate) fn extract_page_text_data(page: &PdfPage) -> Option<PageTextData> {
             font_size: effective_fs,
             is_bold: font_info.1,
             is_italic: font_info.2,
-            is_monospace: ch.font_is_fixed_pitch(),
+            is_monospace: is_truly_monospace(ch.font_is_fixed_pitch(), &font_info.0),
             is_symbolic,
             has_map_error,
             is_generated: false,

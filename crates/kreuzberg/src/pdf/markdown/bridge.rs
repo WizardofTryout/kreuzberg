@@ -174,8 +174,43 @@ pub(super) fn objects_to_page_data(
             segs.iter().map(|s| s.text.split_whitespace().count()).sum::<usize>()
         });
 
+        tracing::debug!(
+            page = page_number,
+            full_text_len = data.full_text.len(),
+            ref_tokens,
+            dto_tokens,
+            merged_tokens,
+            "best-of-two extraction: token comparison"
+        );
+        if let Some(ref segs) = dto_result {
+            for (i, s) in segs.iter().enumerate() {
+                tracing::debug!(page = page_number, seg = i, text = %s.text, "dto segment");
+            }
+        }
+        if let Some(ref segs) = merged_result {
+            for (i, s) in segs.iter().enumerate() {
+                tracing::debug!(page = page_number, seg = i, text = %s.text, "merged segment");
+            }
+        }
+
         // Pick the result whose token count is closer to the reference.
         // If DTO is within 10% of merged, prefer DTO (better word boundaries).
+        // Additionally, compare total character counts to detect spurious
+        // characters from pdfium's segment API (e.g., extra glyphs at
+        // attribute boundaries).
+        let ref_chars = data.full_text.chars().filter(|c| !c.is_whitespace()).count();
+        let dto_chars = dto_result.as_ref().map_or(0, |segs| {
+            segs.iter()
+                .flat_map(|s| s.text.chars())
+                .filter(|c| !c.is_whitespace())
+                .count()
+        });
+        let merged_chars = merged_result.as_ref().map_or(0, |segs| {
+            segs.iter()
+                .flat_map(|s| s.text.chars())
+                .filter(|c| !c.is_whitespace())
+                .count()
+        });
         let best = if ref_tokens == 0 {
             dto_result.or(merged_result)
         } else {
@@ -183,8 +218,23 @@ pub(super) fn objects_to_page_data(
             let merged_diff = (merged_tokens as f64 - ref_tokens as f64).abs();
 
             if dto_result.is_some() && merged_result.is_some() {
-                let dto_within_10pct = dto_diff <= merged_diff * 1.1;
-                if dto_within_10pct { dto_result } else { merged_result }
+                // If DTO has more characters than the reference while merged
+                // matches, prefer merged (DTO picked up spurious glyphs).
+                let dto_char_diff = (dto_chars as isize - ref_chars as isize).unsigned_abs();
+                let merged_char_diff = (merged_chars as isize - ref_chars as isize).unsigned_abs();
+                if dto_char_diff > merged_char_diff && merged_char_diff == 0 {
+                    tracing::debug!(
+                        page = page_number,
+                        dto_chars,
+                        merged_chars,
+                        ref_chars,
+                        "preferring merged: DTO has spurious characters"
+                    );
+                    merged_result
+                } else {
+                    let dto_within_10pct = dto_diff <= merged_diff * 1.1;
+                    if dto_within_10pct { dto_result } else { merged_result }
+                }
             } else {
                 dto_result.or(merged_result)
             }
@@ -439,7 +489,7 @@ fn sample_font_from_segment(seg: &pdfium_render::prelude::PdfPageTextSegment<'_>
             let scaled = ch.scaled_font_size().value;
             let fs = if scaled > 0.0 { scaled } else { 12.0 };
             let info = ch.font_info();
-            let mono = ch.font_is_fixed_pitch();
+            let mono = crate::pdf::text_data::is_truly_monospace(ch.font_is_fixed_pitch(), &info.0);
             let bl_y = ch.origin().map(|o| o.1.value).unwrap_or(default_baseline);
             return (fs, info.1, info.2, mono, bl_y);
         }
