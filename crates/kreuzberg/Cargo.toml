@@ -220,11 +220,11 @@ indexmap = "2.13.0"
 tracing = { workspace = true }
 pdfium-render = { workspace = true, features = ["thread_safe", "image_latest"], optional = true }
 pdf_oxide = { workspace = true, optional = true }
-lopdf = { version = "0.39.0", optional = true }
+lopdf = { version = "0.40.0", optional = true }
 calamine = { version = "0.34.0", features = ["dates"], optional = true }
 
 roxmltree = { version = "0.21.1", optional = true }
-zip = { version = "8.2.0", optional = true, default-features = false, features = [
+zip = { version = "8.3.0", optional = true, default-features = false, features = [
     "deflate-flate2",
 ] }
 mail-parser = { version = "0.11.2", optional = true }
@@ -235,7 +235,7 @@ html-to-markdown-rs = { workspace = true, features = [
 ], optional = true }
 cfb = { version = "0.14.0", optional = true }
 quick-xml = { version = "0.39.2", features = ["serialize"], optional = true }
-tar = { version = "0.4.44", optional = true }
+tar = { version = "0.4.45", optional = true }
 sevenz-rust2 = { version = "0.20.2", optional = true }
 flate2 = { version = "1.1", optional = true }
 
@@ -308,8 +308,8 @@ ndarray = { version = "0.17", optional = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 filetime = "0.2"
-tar = "0.4.44"
-zip = { version = "8.2.0", default-features = false, features = ["deflate-flate2"] }
+tar = "0.4.45"
+zip = { version = "8.3.0", default-features = false, features = ["deflate-flate2"] }
 serial_test = "3.4.0"
 anyhow = { workspace = true }
 tokio = { workspace = true, features = ["macros", "time"] }
