@@ -103,7 +103,7 @@ type ExtractionConfig struct {
 	OutputFormat             string                   `json:"output_format,omitempty"`
 	ResultFormat             string                   `json:"result_format,omitempty"`
 	CacheNamespace           *string                  `json:"cache_namespace,omitempty"`
-	CacheTtlSecs             *uint64                  `json:"cache_ttl_secs,omitempty"`
+	CacheTTLSecs             *uint64                  `json:"cache_ttl_secs,omitempty"`
 }
 
 // SecurityLimitsConfig controls security thresholds for archive extraction.

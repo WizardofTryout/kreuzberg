@@ -84,8 +84,7 @@ pub(super) fn filter_generated_spaces_direct(
                         ) != 0
                         {
                             let gap = left as f32 - prev_r;
-                            let next_fs =
-                                bindings.FPDFText_GetFontSize(text_page_handle, jdx) as f32;
+                            let next_fs = bindings.FPDFText_GetFontSize(text_page_handle, jdx) as f32;
                             let ref_fs = if next_fs > 0.0 { next_fs } else { prev_font_size };
                             if gap > ref_fs * space_ratio {
                                 result.push(' ');
@@ -124,15 +123,7 @@ pub(super) fn filter_generated_spaces_direct(
         let mut bottom = 0.0_f64;
         let mut right = 0.0_f64;
         let mut top = 0.0_f64;
-        if bindings.FPDFText_GetCharBox(
-            text_page_handle,
-            idx,
-            &mut left,
-            &mut right,
-            &mut bottom,
-            &mut top,
-        ) != 0
-        {
+        if bindings.FPDFText_GetCharBox(text_page_handle, idx, &mut left, &mut right, &mut bottom, &mut top) != 0 {
             prev_right_x = Some(right as f32);
         }
 

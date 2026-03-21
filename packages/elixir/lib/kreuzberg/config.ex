@@ -108,6 +108,8 @@ defmodule Kreuzberg.ExtractionConfig do
       iex> Kreuzberg.ExtractionConfig.to_map(config)
       %{
         "acceleration" => nil,
+        "cache_namespace" => nil,
+        "cache_ttl_secs" => nil,
         "chunking" => %{"size" => 512},
         "concurrency" => nil,
         "email" => nil,
@@ -297,6 +299,8 @@ defmodule Kreuzberg.ExtractionConfig do
       iex> Kreuzberg.ExtractionConfig.to_map(config)
       %{
         "acceleration" => nil,
+        "cache_namespace" => nil,
+        "cache_ttl_secs" => nil,
         "chunking" => %{"size" => 512},
         "concurrency" => nil,
         "email" => nil,
@@ -324,6 +328,8 @@ defmodule Kreuzberg.ExtractionConfig do
       iex> Kreuzberg.ExtractionConfig.to_map(config)
       %{
         "acceleration" => nil,
+        "cache_namespace" => nil,
+        "cache_ttl_secs" => nil,
         "chunking" => nil,
         "concurrency" => nil,
         "email" => nil,

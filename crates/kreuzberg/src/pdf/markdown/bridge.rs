@@ -359,8 +359,7 @@ fn extract_segments_merged(page: &PdfPage, page_height: f32) -> Option<Vec<Segme
 
     // Detect at page level whether word spacing is broken.
     let page_text = text_obj.all();
-    let page_needs_respacing =
-        super::text_repair::text_has_broken_word_spacing(&page_text);
+    let page_needs_respacing = super::text_repair::text_has_broken_word_spacing(&page_text);
 
     // Step 1: Extract text rects into cells.
     let mut cells: Vec<TextCell> = Vec::with_capacity(seg_count);

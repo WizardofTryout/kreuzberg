@@ -126,8 +126,7 @@ fn extract_segments_from_api(text_obj: &PdfPageText) -> Vec<ExtractedSegment> {
     // Detect at page level whether word spacing is broken.
     // Only then apply the expensive per-char respacing to all segments.
     let page_text = text_obj.all();
-    let page_needs_respacing =
-        crate::pdf::markdown::text_repair::text_has_broken_word_spacing(&page_text);
+    let page_needs_respacing = crate::pdf::markdown::text_repair::text_has_broken_word_spacing(&page_text);
     if page_needs_respacing {
         tracing::debug!("Page has broken word spacing, applying respacing to all segments");
     }

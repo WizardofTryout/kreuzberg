@@ -5,6 +5,16 @@ package e2e
 
 import "testing"
 
+func TestSmokeSmokeCacheNamespace(t *testing.T) {
+	result := runExtraction(t, "text/report.txt", []byte(`{
+"cache_namespace": "test_tenant",
+"cache_ttl_secs": 3600,
+"use_cache": true
+}`))
+	assertExpectedMime(t, result, []string{"text/plain"})
+	assertMinContentLength(t, result, 5)
+}
+
 func TestSmokeSmokeDocxBasic(t *testing.T) {
 	result := runExtraction(t, "docx/fake.docx", nil)
 	assertExpectedMime(t, result, []string{"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})

@@ -170,7 +170,7 @@ func WithCacheNamespace(ns string) ExtractionOption {
 // Overrides the server default TTL for this extraction request.
 func WithCacheTTLSecs(secs uint64) ExtractionOption {
 	return func(c *ExtractionConfig) {
-		c.CacheTtlSecs = &secs
+		c.CacheTTLSecs = &secs
 	}
 }
 

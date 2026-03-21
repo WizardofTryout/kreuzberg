@@ -136,6 +136,8 @@ fn download_traineddata(url: &str, dest: &Path) -> Result<(), String> {
 
             let body = response
                 .into_body()
+                .with_config()
+                .limit(50 * 1024 * 1024)
                 .read_to_vec()
                 .map_err(|e| format!("Failed to read response body: {e}"))?;
 
