@@ -430,7 +430,7 @@ pub fn create_rust_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter>
 
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-rust-batch",
+        "kreuzberg-rust",
         binary_path,
         args,
         vec![],
@@ -468,7 +468,7 @@ pub fn create_python_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapte
 
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-python-batch",
+        "kreuzberg-python",
         command,
         args,
         vec![],
@@ -506,7 +506,7 @@ pub fn create_node_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter>
 
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-node-batch",
+        "kreuzberg-node",
         command,
         args,
         vec![],
@@ -627,7 +627,7 @@ pub fn create_wasm_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter>
 
     let supported_formats = get_kreuzberg_wasm_supported_formats();
     Ok(
-        SubprocessAdapter::with_batch_support("kreuzberg-wasm-batch", command, args, vec![], supported_formats)
+        SubprocessAdapter::with_batch_support("kreuzberg-wasm", command, args, vec![], supported_formats)
             .with_max_timeout(Duration::from_secs(600)),
     )
 }
@@ -674,7 +674,7 @@ pub fn create_ruby_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter>
     let env = build_library_env()?;
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-ruby-batch",
+        "kreuzberg-ruby",
         command,
         args,
         env,
@@ -714,7 +714,7 @@ pub fn create_r_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter> {
     let env = build_library_env()?;
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-r-batch",
+        "kreuzberg-r",
         command,
         args,
         env,
@@ -770,7 +770,7 @@ pub fn create_go_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter> {
     }
     let supported_formats = get_kreuzberg_supported_formats();
     let mut adapter =
-        SubprocessAdapter::with_batch_support("kreuzberg-go-batch", command, args, env, supported_formats);
+        SubprocessAdapter::with_batch_support("kreuzberg-go", command, args, env, supported_formats);
     adapter.set_working_dir(scripts_dir);
     Ok(adapter)
 }
@@ -825,7 +825,7 @@ pub fn create_java_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter>
     ];
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-java-batch",
+        "kreuzberg-java",
         command,
         args,
         env,
@@ -927,7 +927,7 @@ pub fn create_php_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter> 
     let env = build_library_env()?;
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-php-batch",
+        "kreuzberg-php",
         command,
         args,
         env,
@@ -1031,7 +1031,7 @@ pub fn create_elixir_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapte
 
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-elixir-batch",
+        "kreuzberg-elixir",
         command,
         args,
         env,
@@ -1160,7 +1160,7 @@ pub fn create_c_batch_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter> {
 
     let supported_formats = get_kreuzberg_supported_formats();
     Ok(SubprocessAdapter::with_batch_support(
-        "kreuzberg-c-batch",
+        "kreuzberg-c",
         binary_path,
         args,
         env,
