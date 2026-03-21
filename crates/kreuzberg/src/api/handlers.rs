@@ -387,6 +387,18 @@ pub async fn embed_handler(JsonApi(request): JsonApi<EmbedRequest>) -> Result<Js
     // Use default config if none provided
     let config = request.config.unwrap_or_default();
 
+    // Validate preset name if model type is Preset
+    if let crate::core::config::EmbeddingModelType::Preset { ref name } = config.model
+        && crate::get_preset(name).is_none()
+    {
+        let available: Vec<&str> = crate::list_presets();
+        return Err(ApiError::validation(crate::error::KreuzbergError::validation(format!(
+            "Unknown embedding preset '{}'. Available: {}",
+            name,
+            available.join(", ")
+        ))));
+    }
+
     // Create chunks from input texts
     let mut chunks: Vec<Chunk> = request
         .texts
@@ -517,6 +529,14 @@ pub async fn chunk_handler(JsonApi(request): JsonApi<ChunkRequest>) -> Result<Js
     let cfg = request.config.unwrap_or_default();
     let max_characters = cfg.max_characters.unwrap_or(2000);
     let overlap = cfg.overlap.unwrap_or(100);
+
+    // Validate max_characters bounds
+    if max_characters == 0 || max_characters > 1_000_000 {
+        return Err(ApiError::validation(crate::error::KreuzbergError::validation(format!(
+            "max_characters must be between 1 and 1,000,000, got {}",
+            max_characters
+        ))));
+    }
 
     // Validate chunking configuration
     if overlap >= max_characters {
@@ -865,6 +885,8 @@ mod tests {
             .route("/detect", post(detect_handler))
             .route("/cache/manifest", get(cache_manifest_handler))
             .route("/cache/warm", post(cache_warm_handler))
+            .route("/embed", post(embed_handler))
+            .route("/chunk", post(chunk_handler))
             .with_state(state)
     }
 
@@ -946,5 +968,90 @@ mod tests {
         assert!(json["cache_dir"].is_string());
         assert!(json["downloaded"].is_array());
         assert!(json["already_cached"].is_array());
+    }
+
+    #[cfg(feature = "embeddings")]
+    #[tokio::test]
+    async fn test_embed_handler_invalid_preset_returns_400() {
+        let app = test_router();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/embed")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"texts": ["hello"], "config": {"model": {"type": "preset", "name": "nonexistent_preset"}}}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let error_msg = json["message"].as_str().unwrap_or("");
+        assert!(
+            error_msg.contains("Unknown embedding preset"),
+            "Expected preset validation error, got: {}",
+            error_msg
+        );
+    }
+
+    #[tokio::test]
+    async fn test_chunk_handler_max_characters_zero_returns_400() {
+        let app = test_router();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chunk")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"text": "hello world", "chunker_type": "text", "config": {"max_characters": 0}}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let error_msg = json["message"].as_str().unwrap_or("");
+        assert!(
+            error_msg.contains("max_characters must be between"),
+            "Expected bounds error, got: {}",
+            error_msg
+        );
+    }
+
+    #[tokio::test]
+    async fn test_chunk_handler_max_characters_too_large_returns_400() {
+        let app = test_router();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chunk")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"text": "hello world", "chunker_type": "text", "config": {"max_characters": 2000000}}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let error_msg = json["message"].as_str().unwrap_or("");
+        assert!(
+            error_msg.contains("max_characters must be between"),
+            "Expected bounds error, got: {}",
+            error_msg
+        );
     }
 }

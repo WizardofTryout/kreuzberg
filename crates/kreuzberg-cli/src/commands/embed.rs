@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result};
 
-use crate::OutputFormat;
+use crate::{OutputFormat, style};
 
 /// Execute the embed command: generate embeddings for input texts.
 pub fn embed_command(texts: Vec<String>, preset: &str, format: OutputFormat) -> Result<()> {
@@ -85,7 +85,7 @@ pub fn embed_command(texts: Vec<String>, preset: &str, format: OutputFormat) -> 
         OutputFormat::Text => {
             for (i, embedding) in embeddings.iter().enumerate() {
                 if texts.len() > 1 {
-                    println!("# text {}", i + 1);
+                    println!("{}", style::dim(&format!("# text {}", i + 1)));
                 }
                 let values: Vec<String> = embedding.iter().map(|v| format!("{v}")).collect();
                 println!("{}", values.join(","));

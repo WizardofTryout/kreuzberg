@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result};
 
-use crate::OutputFormat;
+use crate::{OutputFormat, style};
 
 /// Execute the chunk command: split text into chunks.
 pub fn chunk_command(text: String, config: kreuzberg::ChunkingConfig, format: OutputFormat) -> Result<()> {
@@ -33,7 +33,7 @@ pub fn chunk_command(text: String, config: kreuzberg::ChunkingConfig, format: Ou
         OutputFormat::Text => {
             for (i, chunk) in result.chunks.iter().enumerate() {
                 if result.chunks.len() > 1 {
-                    println!("--- chunk {} ---", i + 1);
+                    println!("{}", style::dim(&format!("--- chunk {} ---", i + 1)));
                 }
                 println!("{}", chunk.content);
             }

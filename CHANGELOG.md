@@ -18,11 +18,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CLI `embed` command**: Generate vector embeddings from text via `kreuzberg embed --text "..." --preset balanced`. Supports stdin, multiple texts, JSON/text output. Feature-gated on `embeddings`.
+- **CLI `chunk` command**: Split text into chunks via `kreuzberg chunk --text "..." --chunk-size 512`. Configurable size, overlap, chunker type, tokenizer model.
+- **CLI `completions` command**: Generate shell completions for bash, zsh, fish, powershell via `kreuzberg completions <shell>`.
+- **CLI `--log-level` global flag**: Override `RUST_LOG` via `kreuzberg --log-level debug extract doc.pdf`.
+- **CLI extraction overrides**: 27 flags exposed via `ExtractionOverrides` struct with `#[command(flatten)]`. New flags: `--layout-preset`, `--layout-confidence`, `--acceleration`, `--extract-pages`, `--page-markers`, `--extract-images`, `--target-dpi`, `--pdf-extract-images`, `--pdf-extract-metadata`, `--token-reduction`, `--include-structure`, `--max-concurrent`, `--max-threads`, `--msg-codepage`, `--ocr-auto-rotate`.
+- **CLI colored output**: Text output uses `anstyle` for colored headers, labels, success values, and dim separators. Respects `NO_COLOR` env var.
+- **API `POST /detect`**: MIME type detection endpoint via multipart file upload.
+- **API `GET /version`**: Version info endpoint.
+- **API `GET /cache/manifest`**: Model manifest with checksums and sizes.
+- **API `POST /cache/warm`**: Eager model download endpoint with embedding preset support.
+- **MCP `get_version` tool**: Query server version from MCP clients.
+- **MCP `cache_manifest` tool**: Get model manifest via MCP.
+- **MCP `cache_warm` tool**: Pre-download models via MCP.
+- **MCP `embed_text` tool**: Generate embeddings via MCP (feature-gated).
+- **MCP `chunk_text` tool**: Text chunking via MCP.
 - **Pipeline table extraction tracing**: Added zero-cost `tracing::trace!` and `tracing::debug!` logging throughout the layout detection and table extraction pipeline for easier debugging.
 - **TATR model availability check**: Layout detection now returns an error if table regions are detected but the TATR model is unavailable, instead of silently falling back to degraded extraction.
 - **Publish idempotency checks**: All publish jobs now have re-check steps using `check-registry@v1` before publishing. Added `check-elixir-release` job for GitHub release asset verification.
 - **ARM benchmark runners**: Benchmark workflows switched to `runner-medium-arm64` for ARM-native performance testing.
 - **Registry check tool**: `python3 scripts/publish/check_all_registries.py <version>` checks all 10+ registries and GitHub release assets locally.
+
+### Changed
+
+- **CLI batch flags**: Batch command now supports all extraction override flags (chunking, layout, acceleration, etc.) via shared `ExtractionOverrides` struct, matching extract command parity.
+- **CLI config architecture**: Replaced 13-parameter `apply_extraction_overrides` function with `ExtractionOverrides` struct using `#[command(flatten)]`. Config fields auto-scale as `ExtractionConfig` evolves.
+- **MCP tool architecture**: Removed dead `tools/` trait-based duplicates; all tools implemented directly in `server.rs`.
+
+### Improved
+
+- **CLI validation**: OCR backend values validated (tesseract, paddle-ocr, easyocr). Chunk size/overlap bounds checked. DPI range (36-2400) and layout confidence (0.0-1.0) validated. Zero-value `max_concurrent`/`max_threads` rejected. `--chunking-tokenizer` errors when feature disabled.
+- **API validation**: Embedding preset names validated in `/embed`. Chunk `max_characters` bounds checked (1-1M) in `/chunk`.
+- **MCP validation**: Empty paths rejected in `batch_extract_files`. Chunk `max_characters` bounds checked in `chunk_text`. Embedding preset validated in `embed_text`.
+- **Chunk overlap auto-clamping**: When `--chunk-size` is smaller than default overlap, overlap is automatically clamped to `size/4` instead of producing a confusing error.
 
 ---
 

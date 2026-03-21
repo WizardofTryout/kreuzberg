@@ -3455,6 +3455,7 @@ dependencies = [
 name = "kreuzberg-cli"
 version = "4.5.1"
 dependencies = [
+ "anstyle",
  "anyhow",
  "base64 0.22.1",
  "clap",

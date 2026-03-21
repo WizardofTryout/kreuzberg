@@ -155,6 +155,10 @@ impl KreuzbergMcp {
         use super::format::build_config;
         use crate::batch_extract_file;
 
+        if params.paths.is_empty() {
+            return Err(rmcp::ErrorData::invalid_params("paths array must not be empty", None));
+        }
+
         let config =
             build_config(&self.default_config, params.config).map_err(|e| rmcp::ErrorData::invalid_params(e, None))?;
 
@@ -646,6 +650,13 @@ fn chunk_text_impl(params: super::params::ChunkTextParams) -> Result<CallToolRes
 
     let max_characters = params.max_characters.unwrap_or(2000);
     let overlap = params.overlap.unwrap_or(100);
+
+    if max_characters == 0 || max_characters > 1_000_000 {
+        return Err(rmcp::ErrorData::invalid_params(
+            format!("max_characters must be between 1 and 1,000,000, got {}", max_characters),
+            None,
+        ));
+    }
 
     if overlap >= max_characters {
         return Err(rmcp::ErrorData::invalid_params(
@@ -1247,5 +1258,70 @@ mod tests {
         let result = server.chunk_text(rmcp::handler::server::wrapper::Parameters(params));
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().code.0, -32602);
+    }
+
+    #[tokio::test]
+    async fn test_batch_extract_files_empty_paths_returns_error() {
+        let server = KreuzbergMcp::with_config(ExtractionConfig::default());
+        let params = crate::mcp::params::BatchExtractFilesParams {
+            paths: vec![],
+            config: None,
+            pdf_password: None,
+            file_configs: None,
+        };
+
+        let result = server
+            .batch_extract_files(rmcp::handler::server::wrapper::Parameters(params))
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.code.0, -32602);
+        assert!(
+            err.message.contains("paths array must not be empty"),
+            "Expected empty paths error, got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn test_chunk_text_max_characters_zero_returns_error() {
+        let server = KreuzbergMcp::with_config(ExtractionConfig::default());
+        let params = crate::mcp::params::ChunkTextParams {
+            text: "Some text to chunk".to_string(),
+            max_characters: Some(0),
+            overlap: None,
+            chunker_type: None,
+        };
+
+        let result = server.chunk_text(rmcp::handler::server::wrapper::Parameters(params));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.code.0, -32602);
+        assert!(
+            err.message.contains("max_characters must be between"),
+            "Expected bounds error, got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn test_chunk_text_max_characters_too_large_returns_error() {
+        let server = KreuzbergMcp::with_config(ExtractionConfig::default());
+        let params = crate::mcp::params::ChunkTextParams {
+            text: "Some text to chunk".to_string(),
+            max_characters: Some(2_000_000),
+            overlap: None,
+            chunker_type: None,
+        };
+
+        let result = server.chunk_text(rmcp::handler::server::wrapper::Parameters(params));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.code.0, -32602);
+        assert!(
+            err.message.contains("max_characters must be between"),
+            "Expected bounds error, got: {}",
+            err.message
+        );
     }
 }

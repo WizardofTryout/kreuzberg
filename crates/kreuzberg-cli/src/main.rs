@@ -54,6 +54,7 @@
 #![deny(unsafe_code)]
 
 mod commands;
+mod style;
 
 use anyhow::{Context, Result};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
@@ -62,11 +63,12 @@ use clap::{CommandFactory, Parser, Subcommand};
 use commands::embed_command;
 #[cfg(feature = "mcp")]
 use commands::mcp_command;
+use commands::overrides::ExtractionOverrides;
 #[cfg(feature = "api")]
 use commands::serve_command;
 use commands::{
-    apply_extraction_overrides, batch_command, chunk_command, clear_command, extract_command, load_config,
-    manifest_command, stats_command, warm_command,
+    batch_command, chunk_command, clear_command, extract_command, load_config, manifest_command, stats_command,
+    warm_command,
 };
 use kreuzberg::{OutputFormat as ContentOutputFormat, detect_mime_type};
 use serde_json::json;
@@ -119,67 +121,9 @@ enum Commands {
         #[arg(short, long, default_value = "text")]
         format: OutputFormat,
 
-        /// Enable OCR (overrides config file)
-        #[arg(long)]
-        ocr: Option<bool>,
-
-        /// OCR backend to use when --ocr is enabled (tesseract, paddle-ocr, easyocr)
-        #[arg(long)]
-        ocr_backend: Option<String>,
-
-        /// OCR language code. Tesseract: ISO 639-3 (eng, fra, deu). PaddleOCR: flexible (en, ch, french, korean).
-        #[arg(long)]
-        ocr_language: Option<String>,
-
-        /// Force OCR even if text extraction succeeds (overrides config file)
-        #[arg(long)]
-        force_ocr: Option<bool>,
-
-        /// Disable caching (overrides config file)
-        #[arg(long)]
-        no_cache: Option<bool>,
-
-        /// Enable chunking (overrides config file)
-        #[arg(long)]
-        chunk: Option<bool>,
-
-        /// Chunk size in characters (overrides config file)
-        #[arg(long)]
-        chunk_size: Option<usize>,
-
-        /// Chunk overlap in characters (overrides config file)
-        #[arg(long)]
-        chunk_overlap: Option<usize>,
-
-        /// Tokenizer model for token-based chunk sizing (e.g., "Xenova/gpt-4o", "bert-base-uncased").
-        /// Implicitly enables chunking. Requires the chunking-tokenizers feature.
-        #[arg(long)]
-        chunking_tokenizer: Option<String>,
-
-        /// Enable quality processing (overrides config file)
-        #[arg(long)]
-        quality: Option<bool>,
-
-        /// Enable language detection (overrides config file)
-        #[arg(long)]
-        detect_language: Option<bool>,
-
-        /// Content output format (plain, markdown, djot, html). Canonical flag.
-        ///
-        /// Controls the format of the extracted content.
-        /// Note: This is different from --format which controls CLI output (text/json).
-        #[arg(long, value_enum)]
-        output_format: Option<ContentOutputFormatArg>,
-
-        /// Content output format (DEPRECATED: Use --output-format instead).
-        ///
-        /// This flag is maintained for backward compatibility. Use --output-format for new code.
-        #[arg(long, value_enum, hide = true)]
-        content_format: Option<ContentOutputFormatArg>,
-
-        /// Password(s) for encrypted PDFs. Can be specified multiple times.
-        #[arg(long)]
-        pdf_password: Vec<String>,
+        /// Extraction configuration overrides
+        #[command(flatten)]
+        overrides: ExtractionOverrides,
     },
 
     /// Batch extract from multiple documents
@@ -209,67 +153,9 @@ enum Commands {
         #[arg(short, long, default_value = "json")]
         format: OutputFormat,
 
-        /// Enable OCR (overrides config file)
-        #[arg(long)]
-        ocr: Option<bool>,
-
-        /// OCR backend to use when --ocr is enabled (tesseract, paddle-ocr, easyocr)
-        #[arg(long)]
-        ocr_backend: Option<String>,
-
-        /// OCR language code. Tesseract: ISO 639-3 (eng, fra, deu). PaddleOCR: flexible (en, ch, french, korean).
-        #[arg(long)]
-        ocr_language: Option<String>,
-
-        /// Force OCR even if text extraction succeeds (overrides config file)
-        #[arg(long)]
-        force_ocr: Option<bool>,
-
-        /// Disable caching (overrides config file)
-        #[arg(long)]
-        no_cache: Option<bool>,
-
-        /// Enable chunking (overrides config file)
-        #[arg(long)]
-        chunk: Option<bool>,
-
-        /// Chunk size in characters (overrides config file)
-        #[arg(long)]
-        chunk_size: Option<usize>,
-
-        /// Chunk overlap in characters (overrides config file)
-        #[arg(long)]
-        chunk_overlap: Option<usize>,
-
-        /// Tokenizer model for token-based chunk sizing (e.g., "Xenova/gpt-4o", "bert-base-uncased").
-        /// Implicitly enables chunking. Requires the chunking-tokenizers feature.
-        #[arg(long)]
-        chunking_tokenizer: Option<String>,
-
-        /// Enable quality processing (overrides config file)
-        #[arg(long)]
-        quality: Option<bool>,
-
-        /// Enable language detection (overrides config file)
-        #[arg(long)]
-        detect_language: Option<bool>,
-
-        /// Content output format (plain, markdown, djot, html). Canonical flag.
-        ///
-        /// Controls the format of the extracted content.
-        /// Note: This is different from --format which controls CLI output (text/json).
-        #[arg(long, value_enum)]
-        output_format: Option<ContentOutputFormatArg>,
-
-        /// Content output format (DEPRECATED: Use --output-format instead).
-        ///
-        /// This flag is maintained for backward compatibility. Use --output-format for new code.
-        #[arg(long, value_enum, hide = true)]
-        content_format: Option<ContentOutputFormatArg>,
-
-        /// Password(s) for encrypted PDFs. Can be specified multiple times.
-        #[arg(long)]
-        pdf_password: Vec<String>,
+        /// Extraction configuration overrides
+        #[command(flatten)]
+        overrides: ExtractionOverrides,
 
         /// Path to a JSON file mapping file paths to per-file extraction config overrides.
         /// The JSON should be an object where keys are file paths and values are FileExtractionConfig objects.
@@ -624,6 +510,31 @@ fn validate_batch_paths(paths: &[PathBuf]) -> Result<()> {
 /// - If present in JSON, override the config value
 /// - If not present in JSON, keep the config value
 /// - This enables partial config updates via CLI flags
+
+/// Apply inline JSON or base64 JSON overrides to an extraction config.
+fn apply_json_overrides(
+    config: &mut kreuzberg::ExtractionConfig,
+    config_json: Option<String>,
+    config_json_base64: Option<String>,
+) -> Result<()> {
+    if let Some(json_str) = config_json {
+        let json_value: serde_json::Value =
+            serde_json::from_str(&json_str).context("Failed to parse --config-json as JSON")?;
+        *config =
+            merge_json_into_config(config, json_value).context("Failed to merge --config-json with file config")?;
+    } else if let Some(base64_str) = config_json_base64 {
+        let json_bytes = STANDARD
+            .decode(&base64_str)
+            .context("Failed to decode base64 in --config-json-base64")?;
+        let json_str = String::from_utf8(json_bytes).context("Base64-decoded content is not valid UTF-8")?;
+        let json_value: serde_json::Value =
+            serde_json::from_str(&json_str).context("Failed to parse decoded --config-json-base64 as JSON")?;
+        *config = merge_json_into_config(config, json_value)
+            .context("Failed to merge --config-json-base64 with file config")?;
+    }
+    Ok(())
+}
+
 fn merge_json_into_config(
     base_config: &kreuzberg::ExtractionConfig,
     json_value: serde_json::Value,
@@ -670,66 +581,14 @@ fn main() -> Result<()> {
             config_json_base64,
             mime_type,
             format,
-            ocr,
-            ocr_backend,
-            ocr_language,
-            force_ocr,
-            no_cache,
-            chunk,
-            chunk_size,
-            chunk_overlap,
-            chunking_tokenizer,
-            quality,
-            detect_language,
-            output_format,
-            content_format,
-            pdf_password,
+            overrides,
         } => {
             validate_file_exists(&path)?;
-            validate_chunk_params(chunk_size, chunk_overlap)?;
+            overrides.validate()?;
 
             let mut config = load_config(config_path)?;
-
-            // Apply inline JSON config if provided (merge with file config)
-            if let Some(json_str) = config_json {
-                let json_value: serde_json::Value =
-                    serde_json::from_str(&json_str).context("Failed to parse --config-json as JSON")?;
-                // Merge inline JSON with file config
-                config = merge_json_into_config(&config, json_value)
-                    .context("Failed to merge --config-json with file config")?;
-            } else if let Some(base64_str) = config_json_base64 {
-                let json_bytes = STANDARD
-                    .decode(&base64_str)
-                    .context("Failed to decode base64 in --config-json-base64")?;
-                let json_str = String::from_utf8(json_bytes).context("Base64-decoded content is not valid UTF-8")?;
-                let json_value: serde_json::Value =
-                    serde_json::from_str(&json_str).context("Failed to parse decoded --config-json-base64 as JSON")?;
-                // Merge inline JSON with file config
-                config = merge_json_into_config(&config, json_value)
-                    .context("Failed to merge --config-json-base64 with file config")?;
-            }
-
-            apply_extraction_overrides(
-                &mut config,
-                ocr,
-                ocr_backend.as_deref(),
-                ocr_language.as_deref(),
-                force_ocr,
-                no_cache,
-                chunk,
-                chunk_size,
-                chunk_overlap,
-                chunking_tokenizer.as_deref(),
-                quality,
-                detect_language,
-                output_format,
-                content_format,
-            );
-
-            if !pdf_password.is_empty() {
-                let pdf_opts = config.pdf_options.get_or_insert_with(Default::default);
-                pdf_opts.passwords = Some(pdf_password);
-            }
+            apply_json_overrides(&mut config, config_json, config_json_base64)?;
+            overrides.apply(&mut config);
 
             extract_command(path, config, mime_type, format)?;
         }
@@ -740,67 +599,15 @@ fn main() -> Result<()> {
             config_json,
             config_json_base64,
             format,
-            ocr,
-            ocr_backend,
-            ocr_language,
-            force_ocr,
-            no_cache,
-            chunk,
-            chunk_size,
-            chunk_overlap,
-            chunking_tokenizer,
-            quality,
-            detect_language,
-            output_format,
-            content_format,
-            pdf_password,
+            overrides,
             file_configs,
         } => {
             validate_batch_paths(&paths)?;
-            validate_chunk_params(chunk_size, chunk_overlap)?;
+            overrides.validate()?;
 
             let mut config = load_config(config_path)?;
-
-            // Apply inline JSON config if provided (merge with file config)
-            if let Some(json_str) = config_json {
-                let json_value: serde_json::Value =
-                    serde_json::from_str(&json_str).context("Failed to parse --config-json as JSON")?;
-                // Merge inline JSON with file config
-                config = merge_json_into_config(&config, json_value)
-                    .context("Failed to merge --config-json with file config")?;
-            } else if let Some(base64_str) = config_json_base64 {
-                let json_bytes = STANDARD
-                    .decode(&base64_str)
-                    .context("Failed to decode base64 in --config-json-base64")?;
-                let json_str = String::from_utf8(json_bytes).context("Base64-decoded content is not valid UTF-8")?;
-                let json_value: serde_json::Value =
-                    serde_json::from_str(&json_str).context("Failed to parse decoded --config-json-base64 as JSON")?;
-                // Merge inline JSON with file config
-                config = merge_json_into_config(&config, json_value)
-                    .context("Failed to merge --config-json-base64 with file config")?;
-            }
-
-            apply_extraction_overrides(
-                &mut config,
-                ocr,
-                ocr_backend.as_deref(),
-                ocr_language.as_deref(),
-                force_ocr,
-                no_cache,
-                chunk,
-                chunk_size,
-                chunk_overlap,
-                chunking_tokenizer.as_deref(),
-                quality,
-                detect_language,
-                output_format,
-                content_format,
-            );
-
-            if !pdf_password.is_empty() {
-                let pdf_opts = config.pdf_options.get_or_insert_with(Default::default);
-                pdf_opts.passwords = Some(pdf_password);
-            }
+            apply_json_overrides(&mut config, config_json, config_json_base64)?;
+            overrides.apply(&mut config);
 
             let file_configs_map = if let Some(file_configs_path) = file_configs {
                 let file_configs_json = std::fs::read_to_string(&file_configs_path)
@@ -832,7 +639,7 @@ fn main() -> Result<()> {
 
             match format {
                 OutputFormat::Text => {
-                    println!("{}", mime_type);
+                    println!("{}", style::success(&mime_type));
                 }
                 OutputFormat::Json => {
                     let output = json!({
@@ -852,10 +659,10 @@ fn main() -> Result<()> {
             let formats = kreuzberg::list_supported_formats();
             match format {
                 OutputFormat::Text => {
-                    println!("{:<15} MIME TYPE", "EXTENSION");
-                    println!("{:<15} ---------", "---------");
+                    println!("{:<15} {}", style::label("EXTENSION"), style::label("MIME TYPE"));
+                    println!("{}", style::dim(&format!("{:<15} ---------", "---------")));
                     for f in &formats {
-                        println!(".{:<14} {}", f.extension, f.mime_type);
+                        println!("{:<15} {}", style::success(&format!(".{}", f.extension)), f.mime_type);
                     }
                 }
                 OutputFormat::Json => {
@@ -873,7 +680,7 @@ fn main() -> Result<()> {
 
             match format {
                 OutputFormat::Text => {
-                    println!("{} {}", name, version);
+                    println!("{} {}", style::label(name), style::success(version));
                 }
                 OutputFormat::Json => {
                     let output = json!({

@@ -8,7 +8,7 @@ use kreuzberg::cache;
 use serde_json::json;
 use std::path::PathBuf;
 
-use crate::OutputFormat;
+use crate::{OutputFormat, style};
 
 /// Execute cache stats command
 pub fn stats_command(cache_dir: Option<PathBuf>, format: OutputFormat) -> Result<()> {
@@ -28,14 +28,26 @@ pub fn stats_command(cache_dir: Option<PathBuf>, format: OutputFormat) -> Result
 
     match format {
         OutputFormat::Text => {
-            println!("Cache Statistics");
-            println!("================");
-            println!("Directory: {}", cache_dir_str);
-            println!("Total files: {}", stats.total_files);
-            println!("Total size: {:.2} MB", stats.total_size_mb);
-            println!("Available space: {:.2} MB", stats.available_space_mb);
-            println!("Oldest file age: {:.2} days", stats.oldest_file_age_days);
-            println!("Newest file age: {:.2} days", stats.newest_file_age_days);
+            println!("{}", style::header("Cache Statistics"));
+            println!("{}", style::dim("================"));
+            println!("{} {}", style::label("Directory:"), style::success(&cache_dir_str));
+            println!("{} {}", style::label("Total files:"), stats.total_files);
+            println!("{} {:.2} MB", style::label("Total size:"), stats.total_size_mb);
+            println!(
+                "{} {:.2} MB",
+                style::label("Available space:"),
+                stats.available_space_mb
+            );
+            println!(
+                "{} {:.2} days",
+                style::label("Oldest file age:"),
+                stats.oldest_file_age_days
+            );
+            println!(
+                "{} {:.2} days",
+                style::label("Newest file age:"),
+                stats.newest_file_age_days
+            );
         }
         OutputFormat::Json => {
             let output = json!({
@@ -74,10 +86,10 @@ pub fn clear_command(cache_dir: Option<PathBuf>, format: OutputFormat) -> Result
 
     match format {
         OutputFormat::Text => {
-            println!("Cache cleared successfully");
-            println!("Directory: {}", cache_dir_str);
-            println!("Removed files: {}", removed_files);
-            println!("Freed space: {:.2} MB", freed_mb);
+            println!("{}", style::success("Cache cleared successfully"));
+            println!("{} {}", style::label("Directory:"), style::success(&cache_dir_str));
+            println!("{} {}", style::label("Removed files:"), removed_files);
+            println!("{} {:.2} MB", style::label("Freed space:"), freed_mb);
         }
         OutputFormat::Json => {
             let output = json!({
@@ -114,21 +126,36 @@ pub fn manifest_command(format: OutputFormat) -> Result<()> {
 
     match format {
         OutputFormat::Text => {
-            println!("Model Manifest (kreuzberg {})", version);
-            println!("====================================");
-            println!("{:<50} {:>12} SHA256", "PATH", "SIZE");
-            println!("{:<50} {:>12} ------", "----", "----");
+            println!(
+                "{} {}",
+                style::header("Model Manifest"),
+                style::dim(&format!("(kreuzberg {})", version))
+            );
+            println!("{}", style::dim("===================================="));
+            println!(
+                "{:<50} {:>12} {}",
+                style::label("PATH"),
+                style::label("SIZE"),
+                style::label("SHA256")
+            );
+            println!("{}", style::dim(&format!("{:<50} {:>12} ------", "----", "----")));
             for entry in &entries {
                 let size_str = if entry.size_bytes > 0 {
                     format!("{:.1} MB", entry.size_bytes as f64 / 1_048_576.0)
                 } else {
                     "unknown".to_string()
                 };
-                println!("{:<50} {:>12} {}", entry.relative_path, size_str, &entry.sha256[..12]);
+                println!(
+                    "{:<50} {:>12} {}",
+                    entry.relative_path,
+                    size_str,
+                    style::dim(&entry.sha256[..12])
+                );
             }
             println!();
             println!(
-                "Total: {} files, {:.1} MB",
+                "{} {} files, {:.1} MB",
+                style::label("Total:"),
                 entries.len(),
                 total_size_bytes as f64 / 1_048_576.0
             );
@@ -236,18 +263,21 @@ pub fn warm_command(
     match format {
         OutputFormat::Text => {
             if !downloaded.is_empty() {
-                println!("Downloaded:");
+                println!("{}", style::label("Downloaded:"));
                 for d in &downloaded {
-                    println!("  {}", d);
+                    println!("  {}", style::success(d));
                 }
             }
             if !already_cached.is_empty() {
-                println!("Already cached:");
+                println!("{}", style::label("Already cached:"));
                 for c in &already_cached {
-                    println!("  {}", c);
+                    println!("  {}", style::dim(c));
                 }
             }
-            println!("All models ready in {}", cache_base.display());
+            println!(
+                "All models ready in {}",
+                style::success(&cache_base.display().to_string())
+            );
         }
         OutputFormat::Json => {
             let output = json!({
