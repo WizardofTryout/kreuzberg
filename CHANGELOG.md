@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Apple iWork Format Support**: Native parsing for modern (2013+) `.pages`, `.numbers`, and `.key` files via a new `iwork` feature flag. Uses zero-allocation protobuf text extraction from Snappy-compressed IWA containers.
+
+---
+
 ## [4.5.2] - 2026-03-21
 
 ### Fixed
@@ -66,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.5.1] - 2026-03-20
 
-### Fixed
+## [4.5.1] - 2026-03-20
 
 - **Java FFI `CBatchResult` struct layout mismatch**: The `count` and `results` fields were swapped in the Java Panama FFM layout, causing all batch extraction operations to fail with memory access errors.
 - **Go FFI stale C header**: The `CExtractionResult` struct field order in the Go binding's C header did not match the Rust `#[repr(C)]` layout (reordered alphabetically in 4.5.0, added `djot_content_json`). Go read fields at wrong offsets, causing `pages_json` to deserialize `metadata_json` instead.
