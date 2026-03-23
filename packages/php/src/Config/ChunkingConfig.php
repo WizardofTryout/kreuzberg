@@ -262,11 +262,8 @@ readonly class ChunkingConfig
             'respect_paragraphs' => $this->respectParagraphs,
             'embedding' => $embedding,
             'sizing' => $sizing,
+            'prepend_heading_context' => $this->prependHeadingContext,
         ], static fn ($value): bool => $value !== null);
-
-        if ($this->prependHeadingContext) {
-            $result['prepend_heading_context'] = $this->prependHeadingContext;
-        }
 
         return $result;
     }

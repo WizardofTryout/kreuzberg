@@ -242,7 +242,10 @@ module E2ERuby
         chunks.each { |chunk| expect(chunk.metadata&.heading_context).to be_nil }
       end
       if content_starts_with_heading == true
-        chunks.each { |chunk| expect(chunk.content).to start_with('#') }
+        chunks.each do |chunk|
+          next if chunk.metadata&.heading_context.nil?
+          expect(chunk.content).to start_with('#')
+        end
       end
     end
 

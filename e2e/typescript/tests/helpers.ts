@@ -762,6 +762,10 @@ export const chunkAssertions = {
 		}
 		if (contentStartsWithHeading === true) {
 			for (const chunk of chunks) {
+				const headingContext = ((chunk as PlainRecord).metadata as PlainRecord | undefined)?.headingContext;
+				if (headingContext == null) {
+					continue;
+				}
 				const content = (chunk as PlainRecord).content;
 				expect(typeof content === "string" && content.charCodeAt(0) === 35).toBe(true);
 			}

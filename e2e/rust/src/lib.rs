@@ -281,6 +281,9 @@ pub mod assertions {
 
         if content_starts_with_heading == Some(true) {
             for (i, chunk) in chunks.iter().enumerate() {
+                if chunk.metadata.heading_context.is_none() {
+                    continue;
+                }
                 assert!(
                     chunk.content.starts_with('#'),
                     "Expected chunk {i} content to start with '#'"

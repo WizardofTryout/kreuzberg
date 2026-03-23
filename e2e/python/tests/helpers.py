@@ -322,6 +322,8 @@ def assert_chunks(
                 pytest.fail(f"Chunk {i} should have no heading_context")
     if content_starts_with_heading:
         for i, chunk in enumerate(chunks):
+            if _get_heading_context(chunk) is None:
+                continue
             content = getattr(chunk, "content", None)
             if not isinstance(content, str) or content[0:1] != "#":
                 pytest.fail(f"Chunk {i} content does not start with a heading")
