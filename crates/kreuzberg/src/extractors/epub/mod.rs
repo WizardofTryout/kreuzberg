@@ -18,7 +18,8 @@ mod parsing;
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::{ExtractionResult, Metadata};
+use crate::types::ExtractionResult;
+use crate::types::Metadata;
 use ahash::AHashMap;
 use async_trait::async_trait;
 use std::borrow::Cow;
@@ -26,8 +27,9 @@ use std::io::Cursor;
 use zip::ZipArchive;
 
 use content::extract_content;
+use content::extract_text_from_xhtml;
 use metadata::extract_metadata;
-use parsing::{parse_container_xml, read_file_from_zip};
+use parsing::{parse_container_xml, read_file_from_zip, resolve_path};
 
 /// EPUB format extractor using permissive-licensed dependencies.
 ///
@@ -46,6 +48,78 @@ impl Default for EpubExtractor {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[cfg(feature = "office")]
+impl EpubExtractor {
+    /// Build a `DocumentStructure` from the EPUB spine.
+    ///
+    /// Each spine item becomes a heading (level 1) section, with the chapter text
+    /// split into paragraphs underneath.
+    ///
+    /// Accepts the already-parsed `spine_hrefs` from content extraction to avoid
+    /// redundantly re-reading and re-parsing the OPF file from the ZIP archive.
+    fn build_document_structure(
+        archive: &mut ZipArchive<Cursor<Vec<u8>>>,
+        spine_hrefs: &[String],
+        manifest_dir: &str,
+    ) -> Option<crate::types::document_structure::DocumentStructure> {
+        use crate::types::builder::DocumentStructureBuilder;
+
+        let mut builder = DocumentStructureBuilder::new().source_format("epub");
+
+        for (index, href) in spine_hrefs.iter().enumerate() {
+            let file_path = resolve_path(manifest_dir, href);
+            let xhtml_content = match read_file_from_zip(archive, &file_path) {
+                Ok(content) => content,
+                Err(_) => continue,
+            };
+
+            // Try to extract the title from the first heading in the XHTML
+            let chapter_title =
+                extract_title_from_xhtml(&xhtml_content).unwrap_or_else(|| format!("Chapter {}", index + 1));
+
+            builder.push_heading(1, &chapter_title, None, None);
+
+            // Extract plain text and split into paragraphs
+            let text = extract_text_from_xhtml(&xhtml_content);
+            for paragraph in text.split("\n\n") {
+                let trimmed = paragraph.trim();
+                if !trimmed.is_empty() {
+                    builder.push_paragraph(trimmed, vec![], None, None);
+                }
+            }
+        }
+
+        Some(builder.build())
+    }
+}
+
+/// Extract the first heading text from XHTML content.
+#[cfg(feature = "office")]
+fn extract_title_from_xhtml(xhtml: &str) -> Option<String> {
+    // Strip DOCTYPE for roxmltree
+    let sanitized = content::strip_doctype_for_title(xhtml);
+    let doc = roxmltree::Document::parse(&sanitized).ok()?;
+
+    for node in doc.root().descendants() {
+        if node.is_element() {
+            let tag = node.tag_name().name().to_ascii_lowercase();
+            if matches!(tag.as_str(), "h1" | "h2" | "h3") {
+                let text: String = node
+                    .descendants()
+                    .filter(|n| n.is_text())
+                    .filter_map(|n| n.text())
+                    .collect::<Vec<_>>()
+                    .join("");
+                let trimmed = text.trim().to_string();
+                if !trimmed.is_empty() {
+                    return Some(trimmed);
+                }
+            }
+        }
+    }
+    None
 }
 
 impl Plugin for EpubExtractor {
@@ -112,7 +186,7 @@ impl DocumentExtractor for EpubExtractor {
 
         let opf_xml = read_file_from_zip(&mut archive, &opf_path)?;
 
-        let (extracted_content, fully_converted, processing_warnings) =
+        let (extracted_content, fully_converted, processing_warnings, spine_hrefs) =
             extract_content(&mut archive, &opf_path, &manifest_dir, config)?;
 
         let (epub_metadata, additional_metadata) = extract_metadata(&opf_xml)?;
@@ -129,6 +203,13 @@ impl DocumentExtractor for EpubExtractor {
                 crate::core::config::OutputFormat::Djot => Some("djot".to_string()),
                 _ => None,
             }
+        } else {
+            None
+        };
+
+        // Build document structure from spine chapters (only when requested)
+        let document = if config.include_document_structure {
+            Self::build_document_structure(&mut archive, &spine_hrefs, &manifest_dir)
         } else {
             None
         };
@@ -153,7 +234,7 @@ impl DocumentExtractor for EpubExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,

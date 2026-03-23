@@ -16,6 +16,8 @@ use crate::core::config::ExtractionConfig;
 #[cfg(feature = "office")]
 use crate::plugins::{DocumentExtractor, Plugin};
 #[cfg(feature = "office")]
+use crate::types::builder::DocumentStructureBuilder;
+#[cfg(feature = "office")]
 use crate::types::{ExtractedImage, ExtractionResult, Metadata};
 #[cfg(feature = "office")]
 use ahash::AHashMap;
@@ -31,7 +33,7 @@ use serde_json::{Value, json};
 use std::borrow::Cow;
 
 #[cfg(feature = "office")]
-type NotebookContent = (String, AHashMap<Cow<'static, str>, Value>, Vec<ExtractedImage>);
+type NotebookContent = (String, AHashMap<Cow<'static, str>, Value>, Vec<ExtractedImage>, Value);
 
 /// Jupyter Notebook extractor.
 ///
@@ -86,7 +88,7 @@ impl JupyterExtractor {
             }
         }
 
-        Ok((extracted_content, metadata, images))
+        Ok((extracted_content, metadata, images, notebook))
     }
 
     /// Extract content from a single cell.
@@ -290,6 +292,52 @@ impl JupyterExtractor {
         Ok(())
     }
 
+    /// Build a `DocumentStructure` from the already-parsed notebook JSON.
+    ///
+    /// Markdown cells become paragraphs, code cells become code blocks.
+    fn build_document_structure(notebook: &Value) -> Option<crate::types::document_structure::DocumentStructure> {
+        let cells = notebook.get("cells")?.as_array()?;
+
+        // Determine the kernel language for code cells
+        let kernel_lang = notebook
+            .get("metadata")
+            .and_then(|m| m.get("kernelspec"))
+            .and_then(|k| k.get("language"))
+            .and_then(|l| l.as_str())
+            .or_else(|| {
+                notebook
+                    .get("metadata")
+                    .and_then(|m| m.get("language_info"))
+                    .and_then(|l| l.get("name"))
+                    .and_then(|n| n.as_str())
+            });
+
+        let mut builder = DocumentStructureBuilder::new().source_format("jupyter");
+
+        for cell in cells {
+            let cell_type = cell.get("cell_type").and_then(|t| t.as_str()).unwrap_or("unknown");
+            let source_text = Self::extract_source(cell.get("source").unwrap_or(&Value::Null));
+            let trimmed = source_text.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            match cell_type {
+                "markdown" => {
+                    builder.push_paragraph(trimmed, vec![], None, None);
+                }
+                "code" => {
+                    builder.push_code(trimmed, kernel_lang, None);
+                }
+                _ => {
+                    builder.push_paragraph(trimmed, vec![], None, None);
+                }
+            }
+        }
+
+        Some(builder.build())
+    }
+
     /// Extract error output.
     fn extract_error_output(output: &Value, content: &mut String) -> Result<()> {
         if let Some(ename) = output.get("ename").and_then(|e| e.as_str()) {
@@ -371,7 +419,8 @@ impl DocumentExtractor for JupyterExtractor {
             config.output_format,
             crate::core::config::OutputFormat::Plain | crate::core::config::OutputFormat::Structured
         );
-        let (extracted_content, additional_metadata, extracted_images) = Self::extract_notebook(content, plain)?;
+        let (extracted_content, additional_metadata, extracted_images, notebook_json) =
+            Self::extract_notebook(content, plain)?;
 
         let mut metadata_additional = AHashMap::new();
         for (key, value) in additional_metadata {
@@ -393,6 +442,14 @@ impl DocumentExtractor for JupyterExtractor {
         } else {
             None
         };
+
+        // Build document structure from already-parsed notebook (no re-parse)
+        let document = if config.include_document_structure {
+            Self::build_document_structure(&notebook_json)
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: extracted_content,
             mime_type: mime_type.to_string().into(),
@@ -408,7 +465,7 @@ impl DocumentExtractor for JupyterExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,

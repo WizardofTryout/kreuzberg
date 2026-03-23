@@ -76,6 +76,13 @@ impl SyncExtractor for HtmlExtractor {
             _ => None,
         };
 
+        // Build document structure from the original HTML.
+        let document = if config.include_document_structure {
+            Some(crate::extraction::html::structure::build_document_structure(&html))
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: content_text,
             mime_type: mime_type.to_string().into(),
@@ -92,7 +99,7 @@ impl SyncExtractor for HtmlExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,

@@ -35,6 +35,7 @@
 
 mod converter;
 mod stack_management;
+pub(crate) mod structure;
 mod types;
 
 // Public API re-exports

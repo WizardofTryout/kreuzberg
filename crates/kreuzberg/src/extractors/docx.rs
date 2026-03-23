@@ -43,27 +43,26 @@ impl Default for DocxExtractor {
 ///
 /// Creates a hierarchical tree with heading-based sections, paragraphs,
 /// lists, tables, images, headers/footers, and footnotes/endnotes.
+/// Uses `DocumentStructureBuilder` for automatic section nesting and
+/// collects `TextAnnotation`s from Run formatting data.
 fn build_document_structure(doc: &crate::extraction::docx::parser::Document) -> crate::types::DocumentStructure {
-    use crate::types::{
-        ContentLayer, DocumentNode, DocumentStructure, GridCell, NodeContent, NodeId, NodeIndex, TableGrid,
-    };
+    use crate::types::builder::DocumentStructureBuilder;
+    use crate::types::{GridCell, TableGrid};
 
-    let mut structure = DocumentStructure::with_capacity(
-        doc.paragraphs.len() + doc.tables.len() + doc.drawings.len() + doc.headers.len() + doc.footers.len() + 16,
-    );
-    let mut section_stack: Vec<(u8, NodeIndex)> = Vec::new();
-    let mut node_count: u32 = 0;
-
-    // Helper to find the current parent based on section_stack
-    let current_parent = |stack: &[(u8, NodeIndex)]| -> Option<NodeIndex> { stack.last().map(|(_, idx)| *idx) };
+    let capacity =
+        doc.paragraphs.len() + doc.tables.len() + doc.drawings.len() + doc.headers.len() + doc.footers.len() + 16;
+    let mut b = DocumentStructureBuilder::with_capacity(capacity).source_format("docx");
 
     // Process body elements in document order
     for element in &doc.elements {
         match element {
             crate::extraction::docx::parser::DocumentElement::Paragraph(idx) => {
                 let paragraph = &doc.paragraphs[*idx];
-                let text = paragraph.runs_to_markdown();
-                if text.is_empty() {
+
+                // Collect plain text and annotations from runs, separating math runs
+                let (text, annotations, math_formulas) = collect_run_annotations(&paragraph.runs);
+
+                if text.is_empty() && math_formulas.is_empty() {
                     continue;
                 }
 
@@ -71,89 +70,35 @@ fn build_document_structure(doc: &crate::extraction::docx::parser::Document) -> 
                 let heading_level = paragraph.style.as_deref().and_then(|s| doc.resolve_heading_level(s));
 
                 if let Some(level) = heading_level {
-                    // Pop sections at same or deeper level
-                    while section_stack.last().is_some_and(|(l, _)| *l >= level) {
-                        section_stack.pop();
-                    }
-
-                    // Create a Group node for the heading section
-                    let group = DocumentNode {
-                        id: NodeId::generate("group", &text, None, node_count),
-                        content: NodeContent::Group {
-                            label: None,
-                            heading_level: Some(level),
-                            heading_text: Some(text.clone()),
-                        },
-                        parent: current_parent(&section_stack),
-                        children: Vec::new(),
-                        content_layer: ContentLayer::Body,
-                        page: None,
-                        page_end: None,
-                        bbox: None,
-                        annotations: Vec::new(),
-                        attributes: None,
+                    // For headings, use plain text (annotations are less relevant)
+                    let heading_text = if text.is_empty() {
+                        paragraph.runs_to_markdown()
+                    } else {
+                        text
                     };
-                    node_count += 1;
-                    let group_idx = structure.push_node(group);
-                    if let Some(parent_idx) = current_parent(&section_stack) {
-                        structure.add_child(parent_idx, group_idx);
-                    }
-
-                    // Add heading node as child of group
-                    let heading = DocumentNode {
-                        id: NodeId::generate("heading", &text, None, node_count),
-                        content: NodeContent::Heading { level, text },
-                        parent: Some(group_idx),
-                        children: Vec::new(),
-                        content_layer: ContentLayer::Body,
-                        page: None,
-                        page_end: None,
-                        bbox: None,
-                        annotations: Vec::new(),
-                        attributes: None,
-                    };
-                    node_count += 1;
-                    let heading_idx = structure.push_node(heading);
-                    structure.add_child(group_idx, heading_idx);
-
-                    section_stack.push((level, group_idx));
+                    b.push_heading(level, &heading_text, None, None);
                 } else if paragraph.numbering_id.is_some() {
-                    // List item - create as paragraph for now (list grouping done by transform)
-                    let node = DocumentNode {
-                        id: NodeId::generate("list_item", &text, None, node_count),
-                        content: NodeContent::ListItem { text },
-                        parent: current_parent(&section_stack),
-                        children: Vec::new(),
-                        content_layer: ContentLayer::Body,
-                        page: None,
-                        page_end: None,
-                        bbox: None,
-                        annotations: Vec::new(),
-                        attributes: None,
-                    };
-                    node_count += 1;
-                    let idx = structure.push_node(node);
-                    if let Some(parent_idx) = current_parent(&section_stack) {
-                        structure.add_child(parent_idx, idx);
+                    // Push any preceding math formulas as standalone nodes
+                    for formula in &math_formulas {
+                        b.push_formula(formula, None);
+                    }
+                    if !text.is_empty() {
+                        // List item - create as list item (list grouping done by transform)
+                        let is_ordered = paragraph
+                            .numbering_id
+                            .zip(paragraph.numbering_level)
+                            .and_then(|(nid, nlvl)| doc.numbering_defs.get(&(nid, nlvl)))
+                            .is_some_and(|lt| *lt == crate::extraction::docx::parser::ListType::Numbered);
+                        let list = b.push_list(is_ordered, None);
+                        b.push_list_item(list, &text, None);
                     }
                 } else {
-                    // Regular paragraph
-                    let node = DocumentNode {
-                        id: NodeId::generate("paragraph", &text, None, node_count),
-                        content: NodeContent::Paragraph { text },
-                        parent: current_parent(&section_stack),
-                        children: Vec::new(),
-                        content_layer: ContentLayer::Body,
-                        page: None,
-                        page_end: None,
-                        bbox: None,
-                        annotations: Vec::new(),
-                        attributes: None,
-                    };
-                    node_count += 1;
-                    let idx = structure.push_node(node);
-                    if let Some(parent_idx) = current_parent(&section_stack) {
-                        structure.add_child(parent_idx, idx);
+                    // Push any math formulas as standalone Formula nodes
+                    for formula in &math_formulas {
+                        b.push_formula(formula, None);
+                    }
+                    if !text.is_empty() {
+                        b.push_paragraph(&text, annotations, None, None);
                     }
                 }
             }
@@ -186,87 +131,41 @@ fn build_document_structure(doc: &crate::extraction::docx::parser::Document) -> 
                     }
                 }
                 let grid = TableGrid { rows, cols, cells };
-                let node = DocumentNode {
-                    id: NodeId::generate("table", "", None, node_count),
-                    content: NodeContent::Table { grid },
-                    parent: current_parent(&section_stack),
-                    children: Vec::new(),
-                    content_layer: ContentLayer::Body,
-                    page: None,
-                    page_end: None,
-                    bbox: None,
-                    annotations: Vec::new(),
-                    attributes: None,
-                };
-                node_count += 1;
-                let table_idx = structure.push_node(node);
-                if let Some(parent_idx) = current_parent(&section_stack) {
-                    structure.add_child(parent_idx, table_idx);
-                }
+                b.push_table(grid, None, None);
             }
             crate::extraction::docx::parser::DocumentElement::Drawing(idx) => {
                 let drawing = &doc.drawings[*idx];
                 let description = drawing.doc_properties.as_ref().and_then(|dp| dp.description.clone());
-                let node = DocumentNode {
-                    id: NodeId::generate("image", "", None, node_count),
-                    content: NodeContent::Image {
-                        description,
-                        image_index: Some(*idx as u32),
-                    },
-                    parent: current_parent(&section_stack),
-                    children: Vec::new(),
-                    content_layer: ContentLayer::Body,
-                    page: None,
-                    page_end: None,
-                    bbox: None,
-                    annotations: Vec::new(),
-                    attributes: None,
-                };
-                node_count += 1;
-                let img_idx = structure.push_node(node);
-                if let Some(parent_idx) = current_parent(&section_stack) {
-                    structure.add_child(parent_idx, img_idx);
-                }
+                b.push_image(description.as_deref(), Some(*idx as u32), None, None);
             }
         }
     }
 
-    // Add headers and footers with appropriate content layers
-    {
-        let items_and_layers: &[(&[crate::extraction::docx::parser::HeaderFooter], ContentLayer)] = &[
-            (&doc.headers, ContentLayer::Header),
-            (&doc.footers, ContentLayer::Footer),
-        ];
-        for (items, layer) in items_and_layers {
-            for hf in *items {
-                let text: String = hf
-                    .paragraphs
-                    .iter()
-                    .map(|p| p.runs_to_markdown())
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                if text.is_empty() {
-                    continue;
-                }
-                let node = DocumentNode {
-                    id: NodeId::generate("paragraph", &text, None, node_count),
-                    content: NodeContent::Paragraph { text },
-                    parent: None,
-                    children: Vec::new(),
-                    content_layer: *layer,
-                    page: None,
-                    page_end: None,
-                    bbox: None,
-                    annotations: Vec::new(),
-                    attributes: None,
-                };
-                node_count += 1;
-                structure.push_node(node);
-            }
+    // Add headers and footers
+    for hf in &doc.headers {
+        let text: String = hf
+            .paragraphs
+            .iter()
+            .map(|p| p.runs_to_markdown())
+            .collect::<Vec<_>>()
+            .join("\n");
+        if !text.is_empty() {
+            b.push_header(&text, None);
+        }
+    }
+    for hf in &doc.footers {
+        let text: String = hf
+            .paragraphs
+            .iter()
+            .map(|p| p.runs_to_markdown())
+            .collect::<Vec<_>>()
+            .join("\n");
+        if !text.is_empty() {
+            b.push_footer(&text, None);
         }
     }
 
-    // Add footnotes and endnotes as Footnote content layer
+    // Add footnotes and endnotes
     for note in doc.footnotes.iter().chain(doc.endnotes.iter()) {
         let text: String = note
             .paragraphs
@@ -274,27 +173,64 @@ fn build_document_structure(doc: &crate::extraction::docx::parser::Document) -> 
             .map(|p| p.runs_to_markdown())
             .collect::<Vec<_>>()
             .join(" ");
-        if text.is_empty() {
-            continue;
+        if !text.is_empty() {
+            b.push_footnote(&text, None);
         }
-        let node = DocumentNode {
-            id: NodeId::generate("footnote", &text, None, node_count),
-            content: NodeContent::Footnote { text },
-            parent: None,
-            children: Vec::new(),
-            content_layer: ContentLayer::Footnote,
-            page: None,
-            page_end: None,
-            bbox: None,
-            annotations: Vec::new(),
-            attributes: None,
-        };
-        node_count += 1;
-        structure.push_node(node);
     }
 
-    debug_assert!(structure.validate().is_ok());
-    structure
+    b.build()
+}
+
+/// Collect plain text, annotations, and math formulas from a slice of Runs.
+///
+/// Returns `(plain_text, annotations, math_formulas)` where:
+/// - `plain_text` is the concatenated non-math run text
+/// - `annotations` are byte-offset-based formatting annotations for the plain text
+/// - `math_formulas` are LaTeX strings from math runs (to be emitted as Formula nodes)
+fn collect_run_annotations(
+    runs: &[crate::extraction::docx::parser::Run],
+) -> (String, Vec<crate::types::TextAnnotation>, Vec<String>) {
+    use crate::types::builder;
+
+    let mut text = String::new();
+    let mut annotations = Vec::new();
+    let mut math_formulas = Vec::new();
+
+    for run in runs {
+        // Math runs become standalone Formula nodes
+        if let Some((ref latex, _is_display)) = run.math_latex {
+            if !latex.is_empty() {
+                math_formulas.push(latex.clone());
+            }
+            continue;
+        }
+
+        if run.text.is_empty() {
+            continue;
+        }
+
+        let start = text.len() as u32;
+        text.push_str(&run.text);
+        let end = text.len() as u32;
+
+        if run.bold {
+            annotations.push(builder::bold(start, end));
+        }
+        if run.italic {
+            annotations.push(builder::italic(start, end));
+        }
+        if run.underline {
+            annotations.push(builder::underline(start, end));
+        }
+        if run.strikethrough {
+            annotations.push(builder::strikethrough(start, end));
+        }
+        if let Some(ref url) = run.hyperlink_url {
+            annotations.push(builder::link(start, end, url, None));
+        }
+    }
+
+    (text, annotations, math_formulas)
 }
 
 type DocxParseResult = (

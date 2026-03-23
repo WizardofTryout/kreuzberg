@@ -89,6 +89,43 @@ impl SyncExtractor for EmailExtractor {
             }
         }
 
+        let document = if config.include_document_structure {
+            use crate::types::builder::DocumentStructureBuilder;
+            let mut builder = DocumentStructureBuilder::new().source_format("email");
+
+            // Push email headers as a metadata block
+            let mut header_entries = Vec::new();
+            if let Some(ref subject) = email_result.subject {
+                header_entries.push(("Subject".to_string(), subject.clone()));
+            }
+            if let Some(ref from) = email_result.from_email {
+                header_entries.push(("From".to_string(), from.clone()));
+            }
+            if !email_result.to_emails.is_empty() {
+                header_entries.push(("To".to_string(), email_result.to_emails.join(", ")));
+            }
+            if !email_result.cc_emails.is_empty() {
+                header_entries.push(("CC".to_string(), email_result.cc_emails.join(", ")));
+            }
+            if let Some(ref date) = email_result.date {
+                header_entries.push(("Date".to_string(), date.clone()));
+            }
+            if !header_entries.is_empty() {
+                builder.push_metadata_block(header_entries, None);
+            }
+
+            // Push body paragraphs
+            for paragraph in email_result.cleaned_text.split("\n\n") {
+                let trimmed = paragraph.trim();
+                if !trimmed.is_empty() {
+                    builder.push_paragraph(trimmed, vec![], None, None);
+                }
+            }
+            Some(builder.build())
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: text,
             mime_type: mime_type.to_string().into(),
@@ -107,7 +144,7 @@ impl SyncExtractor for EmailExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,

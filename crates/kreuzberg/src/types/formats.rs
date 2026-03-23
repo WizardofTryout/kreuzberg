@@ -4,6 +4,7 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use super::document_structure::DocumentStructure;
 use super::extraction::ExtractedImage;
 use super::metadata::PptxMetadata;
 use super::page::{PageContent, PageStructure};
@@ -105,6 +106,9 @@ pub struct PptxExtractionResult {
     /// Per-slide content (when page tracking is enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page_contents: Option<Vec<PageContent>>,
+    /// Structured document representation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub document: Option<DocumentStructure>,
 }
 
 /// Email extraction result.

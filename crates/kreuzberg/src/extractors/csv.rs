@@ -60,7 +60,7 @@ impl DocumentExtractor for CsvExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let text = decode_csv_bytes(content);
         let delimiter = if mime_type == "text/tab-separated-values" {
@@ -112,6 +112,15 @@ impl DocumentExtractor for CsvExtractor {
             serde_json::Value::String("native_csv".to_string()),
         );
 
+        let document = if config.include_document_structure && !rows.is_empty() {
+            use crate::types::builder::DocumentStructureBuilder;
+            let mut builder = DocumentStructureBuilder::new().source_format("csv");
+            builder.push_table_simple(&rows, None);
+            Some(builder.build())
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: content_text,
             mime_type: mime_type.to_string().into(),
@@ -127,7 +136,7 @@ impl DocumentExtractor for CsvExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,

@@ -55,7 +55,7 @@ impl Plugin for PlainTextExtractor {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl DocumentExtractor for PlainTextExtractor {
     #[cfg_attr(feature = "otel", tracing::instrument(
-        skip(self, content, _config),
+        skip(self, content, config),
         fields(
             extractor.name = self.name(),
             content.size_bytes = content.len(),
@@ -65,13 +65,27 @@ impl DocumentExtractor for PlainTextExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let text = String::from_utf8_lossy(content).into_owned();
         let text = text.trim_end_matches('\n').trim_end_matches('\r').to_string();
         let line_count = text.lines().count();
         let word_count = text.split_whitespace().count();
         let character_count = text.len();
+
+        let document = if config.include_document_structure {
+            use crate::types::builder::DocumentStructureBuilder;
+            let mut builder = DocumentStructureBuilder::new().source_format("text");
+            for paragraph in text.split("\n\n") {
+                let trimmed = paragraph.trim();
+                if !trimmed.is_empty() {
+                    builder.push_paragraph(trimmed, vec![], None, None);
+                }
+            }
+            Some(builder.build())
+        } else {
+            None
+        };
 
         Ok(ExtractionResult {
             content: text,
@@ -95,7 +109,7 @@ impl DocumentExtractor for PlainTextExtractor {
             elements: None,
             djot_content: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,
@@ -168,7 +182,7 @@ impl Plugin for MarkdownExtractor {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl DocumentExtractor for MarkdownExtractor {
     #[cfg_attr(feature = "otel", tracing::instrument(
-        skip(self, content, _config),
+        skip(self, content, config),
         fields(
             extractor.name = self.name(),
             content.size_bytes = content.len(),
@@ -178,9 +192,15 @@ impl DocumentExtractor for MarkdownExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let text_result = parse_text(content, true)?;
+
+        let document = if config.include_document_structure {
+            Some(build_markdown_document_structure(&text_result.content))
+        } else {
+            None
+        };
 
         Ok(ExtractionResult {
             content: text_result.content,
@@ -204,7 +224,7 @@ impl DocumentExtractor for MarkdownExtractor {
             elements: None,
             djot_content: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,
@@ -225,6 +245,126 @@ impl DocumentExtractor for MarkdownExtractor {
     fn priority(&self) -> i32 {
         50
     }
+}
+
+/// Build a `DocumentStructure` from markdown content using line-by-line parsing.
+///
+/// Recognizes:
+/// - Headings (`#`, `##`, `###`, etc.)
+/// - Fenced code blocks (`` ``` ``)
+/// - Unordered lists (`- ` or `* `)
+/// - Ordered lists (`1. `, `2. `, etc.)
+/// - Paragraphs (text separated by blank lines)
+fn build_markdown_document_structure(content: &str) -> crate::types::document_structure::DocumentStructure {
+    use crate::types::builder::DocumentStructureBuilder;
+
+    let mut builder = DocumentStructureBuilder::new().source_format("markdown");
+
+    let lines: Vec<&str> = content.lines().collect();
+    let len = lines.len();
+    let mut i = 0;
+
+    while i < len {
+        let line = lines[i];
+
+        // Fenced code block
+        if line.starts_with("```") {
+            let lang = line.trim_start_matches('`').trim();
+            let lang_opt = if lang.is_empty() { None } else { Some(lang) };
+            let mut code_lines = Vec::new();
+            i += 1;
+            while i < len && !lines[i].starts_with("```") {
+                code_lines.push(lines[i]);
+                i += 1;
+            }
+            // Skip closing ```
+            if i < len {
+                i += 1;
+            }
+            let code_text = code_lines.join("\n");
+            builder.push_code(&code_text, lang_opt, None);
+            continue;
+        }
+
+        // Heading
+        if line.starts_with('#') {
+            let level = line.bytes().take_while(|&b| b == b'#').count() as u8;
+            if level <= 6 {
+                let text = line[level as usize..].trim_start_matches(' ');
+                if !text.is_empty() {
+                    builder.push_heading(level, text, None, None);
+                    i += 1;
+                    continue;
+                }
+            }
+        }
+
+        // Unordered list (- or *)
+        if line.starts_with("- ") || line.starts_with("* ") {
+            let list_idx = builder.push_list(false, None);
+            while i < len && (lines[i].starts_with("- ") || lines[i].starts_with("* ")) {
+                let item_text = lines[i][2..].trim();
+                builder.push_list_item(list_idx, item_text, None);
+                i += 1;
+            }
+            continue;
+        }
+
+        // Ordered list (digits followed by `. `)
+        if is_ordered_list_item(line) {
+            let list_idx = builder.push_list(true, None);
+            while i < len && is_ordered_list_item(lines[i]) {
+                let item_text = lines[i].split_once(". ").map(|x| x.1).unwrap_or("").trim();
+                builder.push_list_item(list_idx, item_text, None);
+                i += 1;
+            }
+            continue;
+        }
+
+        // Blank line — skip
+        if line.trim().is_empty() {
+            i += 1;
+            continue;
+        }
+
+        // Paragraph: collect consecutive non-blank, non-structural lines
+        let mut para_lines = Vec::new();
+        while i < len {
+            let l = lines[i];
+            if l.trim().is_empty()
+                || l.starts_with('#')
+                || l.starts_with("```")
+                || l.starts_with("- ")
+                || l.starts_with("* ")
+                || is_ordered_list_item(l)
+            {
+                break;
+            }
+            para_lines.push(l);
+            i += 1;
+        }
+        if !para_lines.is_empty() {
+            let para_text = para_lines.join("\n");
+            builder.push_paragraph(para_text.trim(), vec![], None, None);
+        }
+    }
+
+    builder.build()
+}
+
+/// Check if a line is an ordered list item (e.g. `1. `, `23. `).
+fn is_ordered_list_item(line: &str) -> bool {
+    let bytes = line.as_bytes();
+    let mut idx = 0;
+    // Must start with at least one digit
+    if idx >= bytes.len() || !bytes[idx].is_ascii_digit() {
+        return false;
+    }
+    while idx < bytes.len() && bytes[idx].is_ascii_digit() {
+        idx += 1;
+    }
+    // Must be followed by `. `
+    idx + 1 < bytes.len() && bytes[idx] == b'.' && bytes[idx + 1] == b' '
 }
 
 #[cfg(test)]

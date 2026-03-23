@@ -19,13 +19,17 @@ fn trim_trailing_newlines(s: &str) -> &str {
     s.trim_end_matches(['\n', '\r'])
 }
 
-/// Extract text content from an EPUB document by reading in spine order
+/// Extract text content from an EPUB document by reading in spine order.
+///
+/// Returns `(content, fully_converted, warnings, spine_hrefs)` where `spine_hrefs`
+/// are the already-parsed spine item paths, available for reuse by callers (e.g.
+/// `build_document_structure`) without re-reading/re-parsing the OPF file.
 pub(super) fn extract_content(
     archive: &mut ZipArchive<Cursor<Vec<u8>>>,
     opf_path: &str,
     manifest_dir: &str,
     config: &ExtractionConfig,
-) -> Result<(String, bool, Vec<ProcessingWarning>)> {
+) -> Result<(String, bool, Vec<ProcessingWarning>, Vec<String>)> {
     let opf_xml = read_file_from_zip(archive, opf_path)?;
     let (_, spine_hrefs) = parse_opf(&opf_xml)?;
 
@@ -92,7 +96,7 @@ pub(super) fn extract_content(
 
     let content = trim_trailing_newlines(&content).to_string();
     let fully_converted = wants_markup && !had_markup_fallback;
-    Ok((content, fully_converted, warnings))
+    Ok((content, fully_converted, warnings, spine_hrefs))
 }
 
 /// Block-level HTML/XHTML elements that should produce newlines before/after their content.
@@ -186,6 +190,11 @@ fn try_extract_via_roxmltree(xhtml: &str) -> Option<(String, bool)> {
         }
         Err(_) => None,
     }
+}
+
+/// Re-export of `strip_doctype` for use in `mod.rs` title extraction.
+pub(super) fn strip_doctype_for_title(xml: &str) -> String {
+    strip_doctype(xml)
 }
 
 /// Remove DOCTYPE declaration from XML/XHTML to allow safe parsing with roxmltree.

@@ -65,7 +65,7 @@ impl Plugin for BibtexExtractor {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl DocumentExtractor for BibtexExtractor {
     #[cfg_attr(feature = "otel", tracing::instrument(
-        skip(self, content, _config),
+        skip(self, content, config),
         fields(
             extractor.name = self.name(),
             content.size_bytes = content.len(),
@@ -75,21 +75,26 @@ impl DocumentExtractor for BibtexExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let bibtex_str = String::from_utf8_lossy(content);
+        let wants_structure = config.include_document_structure;
 
         let mut entries_vec = Vec::new();
         let mut authors_set = HashSet::new();
         let mut years_set = HashSet::new();
         let mut entry_types_map: AHashMap<String, i32> = AHashMap::new();
         let mut formatted_entries = String::new();
+        let mut citation_pairs: Vec<(String, String)> = Vec::new();
 
         match Bibliography::parse(&bibtex_str) {
             Ok(bib) => {
                 for entry in bib.iter() {
                     let key = entry.key.clone();
                     let entry_type = entry.entry_type.clone();
+
+                    // Track start position for document structure citation text
+                    let entry_start = formatted_entries.len();
 
                     // Format as @type{key, with key on the same line
                     formatted_entries.push_str(&format!("@{}{{{},\n", entry_type, key));
@@ -99,8 +104,7 @@ impl DocumentExtractor for BibtexExtractor {
                         formatted_entries.push_str(&format!("  {} = {{{}}},\n", field_name, field_text));
 
                         if field_name.to_lowercase() == "author" {
-                            let authors_text = field_chunks.format_verbatim();
-                            for author in authors_text.split(" and ") {
+                            for author in field_text.split(" and ") {
                                 let trimmed_author = author.trim().to_string();
                                 if !trimmed_author.is_empty() {
                                     authors_set.insert(trimmed_author);
@@ -108,15 +112,20 @@ impl DocumentExtractor for BibtexExtractor {
                             }
                         }
 
-                        if field_name.to_lowercase() == "year" {
-                            let year_str = field_chunks.format_verbatim();
-                            if let Ok(year) = year_str.parse::<u32>() {
-                                years_set.insert(year);
-                            }
+                        if field_name.to_lowercase() == "year"
+                            && let Ok(year) = field_text.parse::<u32>()
+                        {
+                            years_set.insert(year);
                         }
                     }
 
                     formatted_entries.push_str("}\n\n");
+
+                    // Reuse the already-formatted entry text for the citation node
+                    if wants_structure {
+                        let citation_text = formatted_entries[entry_start..].trim().to_string();
+                        citation_pairs.push((key.clone(), citation_text));
+                    }
 
                     *entry_types_map
                         .entry(entry_type.to_string().to_lowercase())
@@ -163,6 +172,17 @@ impl DocumentExtractor for BibtexExtractor {
 
         additional.insert(Cow::Borrowed("citation_keys"), serde_json::json!(entries_vec));
 
+        let document = if wants_structure && !citation_pairs.is_empty() {
+            use crate::types::builder::DocumentStructureBuilder;
+            let mut builder = DocumentStructureBuilder::new().source_format("bibtex");
+            for (key, citation_text) in &citation_pairs {
+                builder.push_citation(key, citation_text, None);
+            }
+            Some(builder.build())
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: formatted_entries,
             mime_type: mime_type.to_string().into(),
@@ -178,7 +198,7 @@ impl DocumentExtractor for BibtexExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,

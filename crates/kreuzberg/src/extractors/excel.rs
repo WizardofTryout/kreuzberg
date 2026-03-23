@@ -27,6 +27,28 @@ impl ExcelExtractor {
         Self
     }
 
+    /// Build a `DocumentStructure` from the workbook.
+    ///
+    /// Each sheet becomes a heading (level 1) followed by a table.
+    fn build_document_structure(
+        workbook: &crate::types::ExcelWorkbook,
+    ) -> crate::types::document_structure::DocumentStructure {
+        use crate::types::builder::DocumentStructureBuilder;
+        let mut builder = DocumentStructureBuilder::new().source_format("excel");
+
+        for sheet in &workbook.sheets {
+            builder.push_heading(1, &sheet.name, None, None);
+
+            if let Some(ref cells) = sheet.table_cells
+                && !cells.is_empty()
+            {
+                builder.push_table_simple(cells, None);
+            }
+        }
+
+        builder.build()
+    }
+
     /// Convert Excel workbook sheets to Table structs.
     ///
     /// Each sheet becomes a table with the first row as headers,
@@ -97,6 +119,11 @@ impl SyncExtractor for ExcelExtractor {
             _ => crate::extraction::excel::excel_to_text(&workbook),
         };
         let tables = Self::sheets_to_tables(&workbook);
+        let document = if config.include_document_structure {
+            Some(Self::build_document_structure(&workbook))
+        } else {
+            None
+        };
 
         let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
         let excel_metadata = ExcelMetadata {
@@ -127,7 +154,7 @@ impl SyncExtractor for ExcelExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,
@@ -197,6 +224,11 @@ impl DocumentExtractor for ExcelExtractor {
             _ => crate::extraction::excel::excel_to_text(&workbook),
         };
         let tables = Self::sheets_to_tables(&workbook);
+        let document = if config.include_document_structure {
+            Some(Self::build_document_structure(&workbook))
+        } else {
+            None
+        };
 
         let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
         let excel_metadata = ExcelMetadata {
@@ -227,7 +259,7 @@ impl DocumentExtractor for ExcelExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,
@@ -255,6 +287,11 @@ impl DocumentExtractor for ExcelExtractor {
             _ => crate::extraction::excel::excel_to_text(&workbook),
         };
         let tables = Self::sheets_to_tables(&workbook);
+        let document = if config.include_document_structure {
+            Some(Self::build_document_structure(&workbook))
+        } else {
+            None
+        };
 
         let sheet_names: Vec<String> = workbook.sheets.iter().map(|s| s.name.clone()).collect();
         let excel_metadata = ExcelMetadata {
@@ -285,7 +322,7 @@ impl DocumentExtractor for ExcelExtractor {
             djot_content: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,

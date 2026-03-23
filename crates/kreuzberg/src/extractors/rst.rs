@@ -19,6 +19,10 @@ use crate::core::config::ExtractionConfig;
 #[cfg(feature = "office")]
 use crate::plugins::{DocumentExtractor, Plugin};
 #[cfg(feature = "office")]
+use crate::types::builder::DocumentStructureBuilder;
+#[cfg(feature = "office")]
+use crate::types::document_structure::DocumentStructure;
+#[cfg(feature = "office")]
 use crate::types::{ExtractionResult, Metadata, Table};
 #[cfg(feature = "office")]
 use ahash::AHashMap;
@@ -367,6 +371,274 @@ impl RstExtractor {
         })
     }
 
+    /// Build a `DocumentStructure` from RST content.
+    fn build_document_structure(content: &str) -> DocumentStructure {
+        let mut builder = DocumentStructureBuilder::new().source_format("rst");
+        let lines: Vec<&str> = content.lines().collect();
+        // Determine heading level order from the underline characters used.
+        // RST heading levels are defined by the order of appearance of underline characters.
+        let mut heading_char_order: Vec<char> = Vec::new();
+        let mut i = 0;
+
+        while i < lines.len() {
+            let line = lines[i];
+            let trimmed = line.trim();
+
+            // Field list metadata
+            if trimmed.starts_with(':')
+                && trimmed.len() > 1
+                && let Some((key, value)) = Self::parse_field_list_line(trimmed)
+            {
+                // Collect continuation lines
+                let mut full_value = value;
+                while i + 1 < lines.len() {
+                    let next = lines[i + 1];
+                    if !next.is_empty() && (next.starts_with("   ") || next.starts_with("\t")) {
+                        full_value.push('\n');
+                        full_value.push_str(next.trim());
+                        i += 1;
+                    } else {
+                        break;
+                    }
+                }
+                builder.push_metadata_block(vec![(key, full_value)], None);
+                i += 1;
+                continue;
+            }
+
+            // Heading: text line followed by underline
+            if i + 1 < lines.len() && !trimmed.is_empty() && Self::is_section_underline(lines[i + 1]) {
+                let underline_char = lines[i + 1].trim().chars().next().unwrap_or('=');
+                if !heading_char_order.contains(&underline_char) {
+                    heading_char_order.push(underline_char);
+                }
+                let level = heading_char_order
+                    .iter()
+                    .position(|&c| c == underline_char)
+                    .map(|p| (p + 1) as u8)
+                    .unwrap_or(1);
+                builder.push_heading(level, trimmed, None, None);
+                i += 2;
+                continue;
+            }
+
+            // Code block directive
+            if trimmed.starts_with(".. code-block::") || trimmed.starts_with(".. code::") {
+                let language = if let Some(rest) = trimmed.strip_prefix(".. code-block::") {
+                    let lang = rest.trim();
+                    if lang.is_empty() { None } else { Some(lang.to_string()) }
+                } else if let Some(rest) = trimmed.strip_prefix(".. code::") {
+                    let lang = rest.trim();
+                    if lang.is_empty() { None } else { Some(lang.to_string()) }
+                } else {
+                    None
+                };
+                i += 1;
+                // Skip blank lines after directive
+                while i < lines.len() && lines[i].trim().is_empty() {
+                    i += 1;
+                }
+                // Collect indented content
+                let mut code_content = String::new();
+                while i < lines.len() && (lines[i].starts_with("   ") || lines[i].is_empty()) {
+                    if !code_content.is_empty() {
+                        code_content.push('\n');
+                    }
+                    // Strip 3-space indent
+                    if lines[i].starts_with("   ") {
+                        code_content.push_str(&lines[i][3..]);
+                    }
+                    i += 1;
+                }
+                builder.push_code(code_content.trim_end(), language.as_deref(), None);
+                continue;
+            }
+
+            // Admonition directives
+            if trimmed.starts_with(".. note::")
+                || trimmed.starts_with(".. warning::")
+                || trimmed.starts_with(".. important::")
+                || trimmed.starts_with(".. caution::")
+                || trimmed.starts_with(".. hint::")
+                || trimmed.starts_with(".. tip::")
+            {
+                let kind = trimmed.strip_prefix(".. ").unwrap_or("").trim_end_matches("::").trim();
+                builder.push_admonition(kind, None, None);
+                i += 1;
+                // Collect indented content as paragraphs
+                let mut admonition_text = String::new();
+                while i < lines.len() && (lines[i].starts_with("   ") || lines[i].is_empty()) {
+                    if !lines[i].is_empty() {
+                        if !admonition_text.is_empty() {
+                            admonition_text.push(' ');
+                        }
+                        admonition_text.push_str(lines[i].trim());
+                    }
+                    i += 1;
+                }
+                if !admonition_text.is_empty() {
+                    builder.push_paragraph(&admonition_text, vec![], None, None);
+                }
+                builder.exit_container();
+                continue;
+            }
+
+            // Image directive
+            if trimmed.starts_with(".. image::") {
+                let uri = trimmed.strip_prefix(".. image::").unwrap_or("").trim();
+                let desc = if uri.is_empty() { None } else { Some(uri) };
+                builder.push_image(desc, None, None, None);
+                i += 1;
+                // Skip image options
+                while i < lines.len() && (lines[i].starts_with("   ") || lines[i].is_empty()) {
+                    i += 1;
+                }
+                continue;
+            }
+
+            // Math directive
+            if trimmed.starts_with(".. math::") {
+                let inline_math = trimmed.strip_prefix(".. math::").unwrap_or("").trim();
+                i += 1;
+                let mut math_content = if inline_math.is_empty() {
+                    String::new()
+                } else {
+                    inline_math.to_string()
+                };
+                // Collect indented math content
+                while i < lines.len() && (lines[i].starts_with("   ") || lines[i].is_empty()) {
+                    if !lines[i].is_empty() {
+                        if !math_content.is_empty() {
+                            math_content.push('\n');
+                        }
+                        math_content.push_str(lines[i].trim());
+                    }
+                    i += 1;
+                }
+                if !math_content.is_empty() {
+                    builder.push_formula(&math_content, None);
+                }
+                continue;
+            }
+
+            // Other directives - skip
+            if trimmed.starts_with(".. ") || trimmed == ".." {
+                i += 1;
+                while i < lines.len() && (lines[i].starts_with("   ") || lines[i].is_empty()) {
+                    i += 1;
+                }
+                continue;
+            }
+
+            // Definition list: term followed by indented definition
+            if !trimmed.is_empty()
+                && !Self::is_list_item(line)
+                && i + 1 < lines.len()
+                && !lines[i + 1].trim().is_empty()
+                && (lines[i + 1].starts_with("   ") || lines[i + 1].starts_with("\t"))
+                && !Self::is_section_underline(lines[i + 1])
+            {
+                // Check if this really is a definition list (term + indented definition)
+                let term = trimmed.to_string();
+                i += 1;
+                let mut definition = String::new();
+                while i < lines.len() && (lines[i].starts_with("   ") || lines[i].starts_with("\t")) {
+                    if !definition.is_empty() {
+                        definition.push(' ');
+                    }
+                    definition.push_str(lines[i].trim());
+                    i += 1;
+                }
+                let dl = builder.push_definition_list(None);
+                builder.push_definition_item(dl, &term, &definition, None);
+                continue;
+            }
+
+            // List items
+            if Self::is_list_item(line) {
+                let is_ordered = {
+                    let t = trimmed.trim_start();
+                    if let Some(space_pos) = t.find(' ') {
+                        let prefix = &t[..space_pos];
+                        prefix.ends_with('.') || prefix.ends_with(')')
+                    } else {
+                        false
+                    }
+                };
+                let list_idx = builder.push_list(is_ordered, None);
+                // Collect consecutive list items
+                while i < lines.len() && Self::is_list_item(lines[i]) {
+                    let item_trimmed = lines[i].trim();
+                    // Strip bullet/number prefix
+                    let text = if let Some(rest) = item_trimmed
+                        .strip_prefix("* ")
+                        .or_else(|| item_trimmed.strip_prefix("+ "))
+                        .or_else(|| item_trimmed.strip_prefix("- "))
+                    {
+                        rest
+                    } else if let Some(space_pos) = item_trimmed.find(' ') {
+                        &item_trimmed[space_pos + 1..]
+                    } else {
+                        item_trimmed
+                    };
+                    builder.push_list_item(list_idx, text, None);
+                    i += 1;
+                }
+                continue;
+            }
+
+            // Grid table
+            if trimmed.contains('|') && (trimmed.contains('=') || trimmed.contains('-')) {
+                let mut table_lines = Vec::new();
+                while i < lines.len() && lines[i].contains('|') {
+                    table_lines.push(lines[i]);
+                    i += 1;
+                }
+                let cells = Self::parse_grid_table_cells(&table_lines);
+                if !cells.is_empty() {
+                    builder.push_table_simple(&cells, None);
+                }
+                continue;
+            }
+
+            // Regular paragraph
+            if !trimmed.is_empty() && !Self::is_markup_line(line) {
+                builder.push_paragraph(trimmed, vec![], None, None);
+            }
+
+            i += 1;
+        }
+
+        builder.build()
+    }
+
+    /// Parse cells from grid table lines (for DocumentStructure).
+    fn parse_grid_table_cells(lines: &[&str]) -> Vec<Vec<String>> {
+        let mut cells = Vec::new();
+        for line in lines {
+            let content = line.trim().trim_matches('|');
+            if content.is_empty() {
+                continue;
+            }
+            // Skip separator lines (all dashes/equals)
+            if content
+                .chars()
+                .all(|c| c == '-' || c == '=' || c == '+' || c == '|' || c == ' ')
+            {
+                continue;
+            }
+            let row: Vec<String> = content
+                .split('|')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if !row.is_empty() {
+                cells.push(row);
+            }
+        }
+        cells
+    }
+
     /// Convert table cells to markdown format.
     fn cells_to_markdown(cells: &[Vec<String>]) -> String {
         if cells.is_empty() {
@@ -375,30 +647,28 @@ impl RstExtractor {
 
         let mut md = String::new();
 
-        if !cells.is_empty() {
+        md.push('|');
+        for cell in &cells[0] {
+            md.push(' ');
+            md.push_str(cell);
+            md.push_str(" |");
+        }
+        md.push('\n');
+
+        md.push('|');
+        for _ in &cells[0] {
+            md.push_str(" --- |");
+        }
+        md.push('\n');
+
+        for row in &cells[1..] {
             md.push('|');
-            for cell in &cells[0] {
+            for cell in row {
                 md.push(' ');
                 md.push_str(cell);
                 md.push_str(" |");
             }
             md.push('\n');
-
-            md.push('|');
-            for _ in &cells[0] {
-                md.push_str(" --- |");
-            }
-            md.push('\n');
-
-            for row in &cells[1..] {
-                md.push('|');
-                for cell in row {
-                    md.push(' ');
-                    md.push_str(cell);
-                    md.push_str(" |");
-                }
-                md.push('\n');
-            }
         }
 
         md
@@ -446,7 +716,7 @@ impl DocumentExtractor for RstExtractor {
     #[cfg_attr(
         feature = "otel",
         tracing::instrument(
-            skip(self, content, _config),
+            skip(self, content, config),
             fields(
                 extractor.name = self.name(),
                 content.size_bytes = content.len(),
@@ -457,13 +727,19 @@ impl DocumentExtractor for RstExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let text = String::from_utf8_lossy(content).into_owned();
 
         let (extracted_text, metadata) = Self::extract_text_and_metadata(&text);
 
         let tables = Self::extract_tables(&text);
+
+        let document = if config.include_document_structure {
+            Some(Self::build_document_structure(&text))
+        } else {
+            None
+        };
 
         Ok(ExtractionResult {
             content: extracted_text,
@@ -477,7 +753,7 @@ impl DocumentExtractor for RstExtractor {
             pages: None,
             elements: None,
             ocr_elements: None,
-            document: None,
+            document,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             extracted_keywords: None,
             quality_score: None,
