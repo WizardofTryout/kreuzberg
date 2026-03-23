@@ -153,7 +153,7 @@ tasks:
     cmds:
       - cmd: bash scripts/e2e/csharp/test.sh
         platforms: [linux, darwin]
-      - cmd: cd e2e/csharp && dotnet test -c Release
+      - cmd: cd e2e/csharp && dotnet test Kreuzberg.E2E.csproj -c Release
         platforms: [windows]
 
   e2e:verify:
