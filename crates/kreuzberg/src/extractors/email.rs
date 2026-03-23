@@ -59,16 +59,6 @@ impl SyncExtractor for EmailExtractor {
             .filter_map(|att| att.filename.clone().or_else(|| att.name.clone()))
             .collect();
 
-        let email_metadata = EmailMetadata {
-            from_email: email_result.from_email.clone(),
-            from_name: None,
-            to_emails: email_result.to_emails.clone(),
-            cc_emails: email_result.cc_emails.clone(),
-            bcc_emails: email_result.bcc_emails.clone(),
-            message_id: email_result.message_id.clone(),
-            attachments: attachment_names,
-        };
-
         // Filter out keys already represented in EmailMetadata to avoid
         // flattened field conflicts (e.g. "attachments" as string vs Vec).
         const EMAIL_STRUCT_KEYS: &[&str] = &[
@@ -89,6 +79,8 @@ impl SyncExtractor for EmailExtractor {
             }
         }
 
+        // Build document structure while email_result is still fully owned,
+        // borrowing fields that will be moved into EmailMetadata/Metadata afterward.
         let document = if config.include_document_structure {
             use crate::types::builder::DocumentStructureBuilder;
             let mut builder = DocumentStructureBuilder::new().source_format("email");
@@ -126,13 +118,26 @@ impl SyncExtractor for EmailExtractor {
             None
         };
 
+        // Move fields out of email_result now that all borrows above are complete.
+        let subject = email_result.subject;
+        let created_at = email_result.date;
+        let email_metadata = EmailMetadata {
+            from_email: email_result.from_email,
+            from_name: None,
+            to_emails: email_result.to_emails,
+            cc_emails: email_result.cc_emails,
+            bcc_emails: email_result.bcc_emails,
+            message_id: email_result.message_id,
+            attachments: attachment_names,
+        };
+
         Ok(ExtractionResult {
             content: text,
             mime_type: mime_type.to_string().into(),
             metadata: Metadata {
                 format: Some(crate::types::FormatMetadata::Email(email_metadata)),
-                subject: email_result.subject.clone(),
-                created_at: email_result.date.clone(),
+                subject,
+                created_at,
                 additional,
                 ..Default::default()
             },

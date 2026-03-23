@@ -9,6 +9,7 @@ use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ExtractionResult, Metadata, Table};
 use ahash::AHashMap;
 use async_trait::async_trait;
+use memchr::memmem;
 use roxmltree::Document;
 use std::borrow::Cow;
 use std::io::Cursor;
@@ -64,39 +65,45 @@ impl Plugin for OdtExtractor {
 
 /// Replace a word in a string only if it appears as a whole word
 /// (not as a substring of a larger word).
+///
+/// Uses `memmem::Finder` for a single-pass search across all occurrences,
+/// avoiding repeated `find()` calls that restart from the current position.
 fn replace_whole_word(input: &str, word: &str, replacement: &str) -> String {
-    let mut result = String::new();
-    let mut remaining = input;
+    let finder = memmem::Finder::new(word.as_bytes());
+    let mut result = String::with_capacity(input.len());
+    // Byte offset of the last character emitted into `result`.
+    let mut last_end = 0;
 
-    while let Some(pos) = remaining.find(word) {
-        // Check character before the match
-        let before_ok = if pos == 0 {
+    for start in finder.find_iter(input.as_bytes()) {
+        let after_pos = start + word.len();
+
+        // Check the Unicode character immediately before the match (whole-word boundary).
+        let before_ok = if start == 0 {
             true
         } else {
-            let prev_char = remaining[..pos].chars().next_back().unwrap();
+            let prev_char = input[..start].chars().next_back().unwrap();
             !prev_char.is_alphanumeric()
         };
 
-        // Check character after the match
-        let after_pos = pos + word.len();
-        let after_ok = if after_pos >= remaining.len() {
+        // Check the Unicode character immediately after the match (whole-word boundary).
+        let after_ok = if after_pos >= input.len() {
             true
         } else {
-            let next_char = remaining[after_pos..].chars().next().unwrap();
+            let next_char = input[after_pos..].chars().next().unwrap();
             !next_char.is_alphanumeric()
         };
 
         if before_ok && after_ok {
-            result.push_str(&remaining[..pos]);
+            // Emit everything from the last replacement end up to this match, then the replacement.
+            result.push_str(&input[last_end..start]);
             result.push_str(replacement);
-            remaining = &remaining[after_pos..];
-        } else {
-            result.push_str(&remaining[..after_pos]);
-            remaining = &remaining[after_pos..];
+            last_end = after_pos;
         }
+        // Non-whole-word matches: leave `last_end` unchanged; the bytes will be
+        // included in the next emit or in the final trailing push below.
     }
 
-    result.push_str(remaining);
+    result.push_str(&input[last_end..]);
     result
 }
 
