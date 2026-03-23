@@ -785,17 +785,25 @@ fn extract_para_with_annotations(
                 if let Some(&(kind, open_depth, start, ref href)) = inline_stack.last() {
                     if open_depth == depth {
                         let end = text.len() as u32;
-                        if end > start {
+                        // Skip any leading whitespace separator that was prepended
+                        let actual_start = if (start as usize) < text.len() {
+                            let span = &text[start as usize..end as usize];
+                            let trimmed = span.trim_start();
+                            end - trimmed.len() as u32
+                        } else {
+                            start
+                        };
+                        if end > actual_start {
                             let href_clone = href.clone();
                             let annotation = match kind {
-                                "bold" => builder::bold(start, end),
-                                "italic" => builder::italic(start, end),
-                                "code" => builder::code(start, end),
-                                "subscript" => builder::subscript(start, end),
-                                "superscript" => builder::superscript(start, end),
+                                "bold" => builder::bold(actual_start, end),
+                                "italic" => builder::italic(actual_start, end),
+                                "code" => builder::code(actual_start, end),
+                                "subscript" => builder::subscript(actual_start, end),
+                                "superscript" => builder::superscript(actual_start, end),
                                 "link" => {
                                     let url = href_clone.as_deref().unwrap_or("");
-                                    builder::link(start, end, url, None)
+                                    builder::link(actual_start, end, url, None)
                                 }
                                 _ => unreachable!(),
                             };
