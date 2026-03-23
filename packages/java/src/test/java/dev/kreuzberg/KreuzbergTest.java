@@ -75,6 +75,7 @@ class KreuzbergTest {
 	void testPostProcessorLifecycle() throws KreuzbergException {
 		String name = "test-processor-" + System.currentTimeMillis();
 
+		// CPD-OFF: ExtractionResult constructor args mirror ResultParser.toJson — intentionally similar
 		PostProcessor processor = result -> {
 			return new ExtractionResult(result.getContent().toUpperCase(), result.getMimeType(), result.getMetadata(),
 					result.getTables(), result.getDetectedLanguages(), result.getChunks(), result.getImages(),
@@ -84,6 +85,7 @@ class KreuzbergTest {
 					result.getQualityScore().orElse(null), result.getProcessingWarnings().orElse(null),
 					result.getAnnotations().orElse(null));
 		};
+		// CPD-ON
 
 		Kreuzberg.registerPostProcessor(name, processor);
 		var processors = Kreuzberg.listPostProcessors();

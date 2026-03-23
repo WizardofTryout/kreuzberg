@@ -361,6 +361,7 @@ public final class TikaExtract {
         sb.append('"');
         return sb.toString();
     }
+    // CPD-ON
 
     private static void debugLog(String key, String value) {
         if (value == null) {
