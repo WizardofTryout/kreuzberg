@@ -118,6 +118,9 @@ def build_config(config: dict[str, Any] | None) -> ExtractionConfig:
         if key in config:
             kwargs[key] = config[key]
 
+    if (extraction_timeout_secs := config.get("extraction_timeout_secs")) is not None:
+        kwargs["extraction_timeout_secs"] = int(extraction_timeout_secs)
+
     _build_config_objects(config, kwargs)
 
     if (output_format := config.get("output_format")) is not None:
@@ -140,6 +143,9 @@ def build_file_config(config: dict[str, Any] | None) -> FileExtractionConfig:
     for key in ("enable_quality_processing", "force_ocr", "include_document_structure"):
         if key in config:
             kwargs[key] = config[key]
+
+    if (timeout_secs := config.get("timeout_secs")) is not None:
+        kwargs["timeout_secs"] = int(timeout_secs)
 
     _build_config_objects(config, kwargs)
 

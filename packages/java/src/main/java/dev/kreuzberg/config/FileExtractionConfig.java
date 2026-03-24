@@ -42,6 +42,7 @@ public final class FileExtractionConfig {
 	private final Boolean includeDocumentStructure;
 	private final String outputFormat;
 	private final String resultFormat;
+	private final Long timeoutSecs;
 
 	private FileExtractionConfig(Builder builder) {
 		this.enableQualityProcessing = builder.enableQualityProcessing;
@@ -60,6 +61,7 @@ public final class FileExtractionConfig {
 		this.includeDocumentStructure = builder.includeDocumentStructure;
 		this.outputFormat = builder.outputFormat;
 		this.resultFormat = builder.resultFormat;
+		this.timeoutSecs = builder.timeoutSecs;
 	}
 
 	public static Builder builder() {
@@ -131,6 +133,18 @@ public final class FileExtractionConfig {
 	}
 
 	/**
+	 * Get the per-file extraction timeout in seconds.
+	 *
+	 * <p>
+	 * When the timeout is exceeded, the extraction for this file is cancelled and an error is returned.
+	 *
+	 * @return the extraction timeout in seconds, or null if not set
+	 */
+	public Long getTimeoutSecs() {
+		return timeoutSecs;
+	}
+
+	/**
 	 * Serialize to a JSON-compatible map, omitting null values.
 	 *
 	 * @return map of non-null configuration fields
@@ -185,6 +199,9 @@ public final class FileExtractionConfig {
 		if (resultFormat != null) {
 			map.put("result_format", resultFormat);
 		}
+		if (timeoutSecs != null) {
+			map.put("timeout_secs", timeoutSecs);
+		}
 		return map;
 	}
 
@@ -218,6 +235,7 @@ public final class FileExtractionConfig {
 		private Boolean includeDocumentStructure;
 		private String outputFormat;
 		private String resultFormat;
+		private Long timeoutSecs;
 
 		public Builder enableQualityProcessing(Boolean enableQualityProcessing) {
 			this.enableQualityProcessing = enableQualityProcessing;
@@ -296,6 +314,21 @@ public final class FileExtractionConfig {
 
 		public Builder resultFormat(String resultFormat) {
 			this.resultFormat = resultFormat;
+			return this;
+		}
+
+		/**
+		 * Set the per-file extraction timeout in seconds.
+		 *
+		 * <p>
+		 * When the timeout is exceeded, the extraction for this file is cancelled and an error is returned.
+		 *
+		 * @param timeoutSecs
+		 *            timeout in seconds
+		 * @return this builder for chaining
+		 */
+		public Builder timeoutSecs(Long timeoutSecs) {
+			this.timeoutSecs = timeoutSecs;
 			return this;
 		}
 

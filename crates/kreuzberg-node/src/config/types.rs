@@ -1164,6 +1164,8 @@ pub struct JsExtractionConfig {
     pub cache_ttl_secs: Option<u32>,
     /// Maximum recursion depth for archive extraction (default: 3)
     pub max_archive_depth: Option<u32>,
+    /// Default per-file extraction timeout in seconds
+    pub extraction_timeout_secs: Option<u32>,
 }
 
 impl TryFrom<JsPageConfig> for kreuzberg::core::config::PageConfig {
@@ -1246,6 +1248,7 @@ impl TryFrom<JsExtractionConfig> for ExtractionConfig {
             acceleration: val.acceleration.map(Into::into),
             email: val.email.map(Into::into),
             concurrency: val.concurrency.map(Into::into),
+            extraction_timeout_secs: val.extraction_timeout_secs.map(|v| v as u64),
             cache_namespace: val.cache_namespace,
             cache_ttl_secs: val.cache_ttl_secs.map(|v| v as u64),
             max_archive_depth: val.max_archive_depth.map(|v| v as usize).unwrap_or(3),
@@ -1424,6 +1427,7 @@ impl TryFrom<ExtractionConfig> for JsExtractionConfig {
             cache_namespace: val.cache_namespace,
             cache_ttl_secs: val.cache_ttl_secs.map(|v| v as u32),
             max_archive_depth: Some(val.max_archive_depth as u32),
+            extraction_timeout_secs: val.extraction_timeout_secs.map(|v| v as u32),
         })
     }
 }
@@ -1553,6 +1557,8 @@ pub struct JsFileExtractionConfig {
     pub include_document_structure: Option<bool>,
     /// Layout detection configuration (None = layout detection disabled)
     pub layout: Option<JsLayoutDetectionConfig>,
+    /// Per-file extraction timeout in seconds
+    pub timeout_secs: Option<u32>,
 }
 
 impl TryFrom<JsFileExtractionConfig> for FileExtractionConfig {
@@ -1603,6 +1609,7 @@ impl TryFrom<JsFileExtractionConfig> for FileExtractionConfig {
                 .transpose()?,
             include_document_structure: val.include_document_structure,
             layout: val.layout.map(Into::into),
+            timeout_secs: val.timeout_secs.map(|v| v as u64),
         })
     }
 }
@@ -1746,6 +1753,7 @@ impl TryFrom<FileExtractionConfig> for JsFileExtractionConfig {
             }),
             include_document_structure: val.include_document_structure,
             layout: val.layout.map(JsLayoutDetectionConfig::from),
+            timeout_secs: val.timeout_secs.map(|v| v as u32),
         })
     }
 }

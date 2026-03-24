@@ -63,7 +63,8 @@ impl ExtractionConfig {
         email=None,
         concurrency=None,
         cache_namespace=None,
-        cache_ttl_secs=None
+        cache_ttl_secs=None,
+        extraction_timeout_secs=None
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -90,6 +91,7 @@ impl ExtractionConfig {
         concurrency: Option<ConcurrencyConfig>,
         cache_namespace: Option<String>,
         cache_ttl_secs: Option<u64>,
+        extraction_timeout_secs: Option<u64>,
     ) -> PyResult<Self> {
         let (html_options_inner, html_options_dict) = parse_html_options_dict(html_options)?;
         Ok(Self {
@@ -143,6 +145,7 @@ impl ExtractionConfig {
                 security_limits: None,
                 layout: layout.map(Into::into),
                 acceleration: acceleration.map(Into::into),
+                extraction_timeout_secs,
                 cache_namespace,
                 cache_ttl_secs,
                 email: email.map(Into::into),
@@ -2265,7 +2268,8 @@ impl FileExtractionConfig {
         result_format=None,
         output_format=None,
         include_document_structure=None,
-        layout=None
+        layout=None,
+        timeout_secs=None
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -2285,6 +2289,7 @@ impl FileExtractionConfig {
         output_format: Option<String>,
         include_document_structure: Option<bool>,
         layout: Option<LayoutDetectionConfig>,
+        timeout_secs: Option<u64>,
     ) -> PyResult<Self> {
         let (html_options_inner, html_options_dict) = parse_html_options_dict(html_options)?;
         Ok(Self {
@@ -2334,6 +2339,7 @@ impl FileExtractionConfig {
                 },
                 include_document_structure,
                 layout: layout.map(Into::into),
+                timeout_secs,
             },
             html_options_dict,
         })

@@ -234,6 +234,8 @@ export interface ExtractionConfig {
 	 * of nodes representing the document tree structure with semantic content types.
 	 */
 	includeDocumentStructure?: boolean;
+	/** Default per-file extraction timeout in seconds for batch operations. undefined = no timeout. */
+	extractionTimeoutSecs?: number;
 }
 
 /**

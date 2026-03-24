@@ -1013,6 +1013,13 @@ pub fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extra
                 }
             };
         }
+
+        if let Some(val) = get_kw(ruby, hash, "extraction_timeout_secs")
+            && val.equal(ruby.qnil()).ok() != Some(true)
+        {
+            let secs = u64::try_convert(val)?;
+            config.extraction_timeout_secs = Some(secs);
+        }
     }
 
     Ok(config)

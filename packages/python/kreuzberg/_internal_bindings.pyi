@@ -557,6 +557,7 @@ class ExtractionConfig:
     concurrency: ConcurrencyConfig | None
     cache_namespace: str | None
     cache_ttl_secs: int | None
+    extraction_timeout_secs: int | None
 
     def __init__(
         self,
@@ -585,6 +586,7 @@ class ExtractionConfig:
         concurrency: ConcurrencyConfig | None = None,
         cache_namespace: str | None = ...,
         cache_ttl_secs: int | None = ...,
+        extraction_timeout_secs: int | None = ...,
     ) -> None: ...
     @staticmethod
     def from_file(path: str | Path) -> ExtractionConfig: ...
@@ -615,6 +617,7 @@ class FileExtractionConfig:
     output_format: str | None
     include_document_structure: bool | None
     layout: LayoutDetectionConfig | None
+    timeout_secs: int | None
 
     def __init__(
         self,
@@ -635,6 +638,7 @@ class FileExtractionConfig:
         output_format: str | None = None,
         include_document_structure: bool | None = None,
         layout: LayoutDetectionConfig | None = None,
+        timeout_secs: int | None = None,
     ) -> None: ...
 
 class OcrConfig:

@@ -45,6 +45,7 @@ class ExtractionConfigBuilder
     private string $outputFormat = 'plain';
     private ?string $cacheNamespace = null;
     private ?int $cacheTtlSecs = null;
+    private ?int $extractionTimeoutSecs = null;
 
     /**
      * Set whether to enable caching of extraction results.
@@ -279,6 +280,21 @@ class ExtractionConfigBuilder
     }
 
     /**
+     * Set the default per-file extraction timeout in seconds for batch operations.
+     *
+     * When set, each file in a batch will be canceled after this duration
+     * unless overridden by a per-file timeout. Null means no timeout.
+     *
+     * @param int|null $secs Extraction timeout in seconds
+     * @return self For method chaining
+     */
+    public function withExtractionTimeoutSecs(?int $secs): self
+    {
+        $this->extractionTimeoutSecs = $secs;
+        return $this;
+    }
+
+    /**
      * Build and return the configured ExtractionConfig instance.
      *
      * @return ExtractionConfig The constructed configuration object
@@ -305,6 +321,7 @@ class ExtractionConfigBuilder
             concurrency: $this->concurrency,
             cacheNamespace: $this->cacheNamespace,
             cacheTtlSecs: $this->cacheTtlSecs,
+            extractionTimeoutSecs: $this->extractionTimeoutSecs,
         );
     }
 }

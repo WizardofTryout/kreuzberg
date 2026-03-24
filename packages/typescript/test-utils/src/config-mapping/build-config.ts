@@ -62,6 +62,7 @@ export interface ExtractionConfig {
 	enableQualityProcessing?: boolean;
 	forceOcr?: boolean;
 	maxConcurrentExtractions?: number;
+	extractionTimeoutSecs?: number;
 	ocr?: OcrConfig;
 	chunking?: ChunkingConfig;
 	images?: ImageExtractionConfig;
@@ -188,6 +189,7 @@ export function buildConfig(raw: unknown): ExtractionConfig {
 	assignBooleanField(target, source, "enable_quality_processing", "enableQualityProcessing");
 	assignBooleanField(target, source, "force_ocr", "forceOcr");
 	assignNumberField(target, source, "max_concurrent_extractions", "maxConcurrentExtractions");
+	assignNumberField(target, source, "extraction_timeout_secs", "extractionTimeoutSecs");
 
 	if (isPlainRecord(source["ocr"])) {
 		const mapped = mapOcrConfig(source["ocr"]);

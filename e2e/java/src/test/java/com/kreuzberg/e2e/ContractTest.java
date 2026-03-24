@@ -356,6 +356,43 @@ public class ContractTest {
   }
 
   @Test
+  public void apiBatchFileWithTimeoutSync() throws Exception {
+    JsonNode config = MAPPER.readTree("{\"extraction_timeout_secs\":300}");
+    Path documentPath = E2EHelpers.resolveDocument("pdf/fake_memo.pdf");
+
+    if (true && !Files.exists(documentPath)) {
+      String msg =
+          String.format(
+              "Skipping api_batch_file_with_timeout_sync: missing document at %s", documentPath);
+      System.err.println(msg);
+      org.junit.jupiter.api.Assumptions.assumeTrue(false, msg);
+      return;
+    }
+
+    ExtractionConfig extractionConfig = E2EHelpers.buildConfig(config);
+    List<String> paths = Arrays.asList(documentPath.toString());
+    List<ExtractionResult> results;
+    try {
+      results = Kreuzberg.batchExtractFiles(paths, extractionConfig);
+    } catch (Exception e) {
+      String skipReason =
+          E2EHelpers.skipReasonFor(
+              e, "api_batch_file_with_timeout_sync", Collections.emptyList(), null);
+      if (skipReason != null) {
+        org.junit.jupiter.api.Assumptions.assumeTrue(false, skipReason);
+        return;
+      }
+      throw e;
+    }
+
+    assertTrue(results.size() == 1, "Expected exactly 1 result from batch extraction");
+    ExtractionResult result = results.get(0);
+
+    E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/pdf"));
+    E2EHelpers.Assertions.assertMinContentLength(result, 10);
+  }
+
+  @Test
   public void apiExtractBytesAsync() throws Exception {
     JsonNode config = null;
     Path documentPath = E2EHelpers.resolveDocument("pdf/fake_memo.pdf");
@@ -785,6 +822,22 @@ public class ContractTest {
         result -> {
           E2EHelpers.Assertions.assertExpectedMime(
               result, Arrays.asList("application/vnd.ms-outlook"));
+          E2EHelpers.Assertions.assertMinContentLength(result, 10);
+        });
+  }
+
+  @Test
+  public void configExtractionTimeout() throws Exception {
+    JsonNode config = MAPPER.readTree("{\"extraction_timeout_secs\":300}");
+    E2EHelpers.runFixture(
+        "config_extraction_timeout",
+        "pdf/fake_memo.pdf",
+        config,
+        Collections.emptyList(),
+        null,
+        true,
+        result -> {
+          E2EHelpers.Assertions.assertExpectedMime(result, Arrays.asList("application/pdf"));
           E2EHelpers.Assertions.assertMinContentLength(result, 10);
         });
   }

@@ -282,6 +282,18 @@ readonly class ExtractionConfig
          * @default null
          */
         public ?int $cacheTtlSecs = null,
+
+        /**
+         * Default per-file extraction timeout in seconds for batch operations.
+         *
+         * When set, each file in a batch will be canceled after this duration
+         * unless overridden by a per-file FileExtractionConfig timeout_secs.
+         * When null, no timeout is applied (unbounded extraction time).
+         *
+         * @var int|null
+         * @default null
+         */
+        public ?int $extractionTimeoutSecs = null,
     ) {
     }
 
@@ -458,6 +470,13 @@ readonly class ExtractionConfig
             $cacheTtlSecs = (int) $cacheTtlSecs;
         }
 
+        /** @var int|null $extractionTimeoutSecs */
+        $extractionTimeoutSecs = $data['extraction_timeout_secs'] ?? null;
+        if ($extractionTimeoutSecs !== null && !is_int($extractionTimeoutSecs)) {
+            /** @var int $extractionTimeoutSecs */
+            $extractionTimeoutSecs = (int) $extractionTimeoutSecs;
+        }
+
         $securityLimits = null;
         if (isset($data['security_limits']) && is_array($data['security_limits'])) {
             /** @var array<string, mixed> $securityLimitsData */
@@ -489,6 +508,7 @@ readonly class ExtractionConfig
             concurrency: $concurrency,
             cacheNamespace: $cacheNamespace,
             cacheTtlSecs: $cacheTtlSecs,
+            extractionTimeoutSecs: $extractionTimeoutSecs,
         );
     }
 
@@ -697,6 +717,10 @@ readonly class ExtractionConfig
         // cacheTtlSecs defaults to null, so only add if set
         if ($this->cacheTtlSecs !== null) {
             $result['cache_ttl_secs'] = $this->cacheTtlSecs;
+        }
+        // extractionTimeoutSecs defaults to null, so only add if set
+        if ($this->extractionTimeoutSecs !== null) {
+            $result['extraction_timeout_secs'] = $this->extractionTimeoutSecs;
         }
 
         return array_filter($result, static fn ($value): bool => $value !== null);

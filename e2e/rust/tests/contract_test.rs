@@ -211,6 +211,34 @@ fn test_api_batch_file_with_configs_sync() {
     assertions::assert_min_content_length(&result, 10);
 }
 
+#[test]
+fn test_api_batch_file_with_timeout_sync() {
+    // Tests sync batch file extraction with per-file timeout config override
+
+    let document_path = resolve_document("pdf/fake_memo.pdf");
+    if !document_path.exists() {
+        println!(
+            "Skipping api_batch_file_with_timeout_sync: missing document at {}",
+            document_path.display()
+        );
+        return;
+    }
+    let config: ExtractionConfig = serde_json::from_str(
+        r#"{
+  "extraction_timeout_secs": 300
+}"#,
+    )
+    .expect("Fixture config should deserialize");
+
+    let result = match kreuzberg::batch_extract_file_sync(vec![(document_path.clone(), None)], &config) {
+        Err(err) => panic!("Extraction failed for api_batch_file_with_timeout_sync: {err:?}"),
+        Ok(results) => results.into_iter().next().expect("Expected at least one result"),
+    };
+
+    assertions::assert_expected_mime(&result, &["application/pdf"]);
+    assertions::assert_min_content_length(&result, 10);
+}
+
 #[tokio::test]
 async fn test_api_extract_bytes_async() {
     // Tests async bytes extraction API (extract_bytes)
@@ -965,6 +993,34 @@ fn test_config_email_msg_fallback_codepage() {
     };
 
     assertions::assert_expected_mime(&result, &["application/vnd.ms-outlook"]);
+    assertions::assert_min_content_length(&result, 10);
+}
+
+#[test]
+fn test_config_extraction_timeout() {
+    // Tests that extraction_timeout_secs config field is accepted and does not affect fast extractions
+
+    let document_path = resolve_document("pdf/fake_memo.pdf");
+    if !document_path.exists() {
+        println!(
+            "Skipping config_extraction_timeout: missing document at {}",
+            document_path.display()
+        );
+        return;
+    }
+    let config: ExtractionConfig = serde_json::from_str(
+        r#"{
+  "extraction_timeout_secs": 300
+}"#,
+    )
+    .expect("Fixture config should deserialize");
+
+    let result = match kreuzberg::extract_file_sync(&document_path, None, &config) {
+        Err(err) => panic!("Extraction failed for config_extraction_timeout: {err:?}"),
+        Ok(result) => result,
+    };
+
+    assertions::assert_expected_mime(&result, &["application/pdf"]);
     assertions::assert_min_content_length(&result, 10);
 }
 

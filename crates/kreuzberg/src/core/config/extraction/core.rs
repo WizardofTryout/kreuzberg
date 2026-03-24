@@ -89,6 +89,14 @@ pub struct ExtractionConfig {
     #[serde(default)]
     pub html_options: Option<html_to_markdown_rs::ConversionOptions>,
 
+    /// Default per-file timeout in seconds for batch extraction.
+    ///
+    /// When set, each file in a batch will be canceled after this duration
+    /// unless overridden by [`FileExtractionConfig::timeout_secs`].
+    /// `None` means no timeout (unbounded extraction time).
+    #[serde(default)]
+    pub extraction_timeout_secs: Option<u64>,
+
     /// Maximum concurrent extractions in batch operations (None = (num_cpus × 1.5).ceil()).
     ///
     /// Limits parallelism to prevent resource exhaustion when processing
@@ -213,6 +221,7 @@ impl Default for ExtractionConfig {
             postprocessor: None,
             #[cfg(feature = "html")]
             html_options: None,
+            extraction_timeout_secs: None,
             max_concurrent_extractions: None,
             #[cfg(feature = "archives")]
             security_limits: None,
@@ -276,6 +285,7 @@ impl ExtractionConfig {
             ref include_document_structure,
             #[cfg(feature = "layout-detection")]
             ref layout,
+            ref timeout_secs,
         } = *overrides;
 
         let mut config = self.clone();
@@ -331,6 +341,9 @@ impl ExtractionConfig {
         #[cfg(feature = "layout-detection")]
         if let Some(v) = layout {
             config.layout = Some(v.clone());
+        }
+        if let Some(v) = timeout_secs {
+            config.extraction_timeout_secs = Some(*v);
         }
 
         config

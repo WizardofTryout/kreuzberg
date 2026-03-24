@@ -190,6 +190,27 @@ Deno.test("api_batch_file_with_configs_sync", { permissions: { read: true, net: 
 	assertions.assertMinContentLength(result, 10);
 });
 
+Deno.test("api_batch_file_with_timeout_sync", { permissions: { read: true, net: true } }, async () => {
+	const config = buildConfig({ extraction_timeout_secs: 300 });
+	let result: ExtractionResult | null = null;
+	try {
+		const documentBytes = await resolveDocument("pdf/fake_memo.pdf");
+		// Batch sync extraction - WASM simulates with single extraction
+		const results = [await extractBytes(documentBytes, "application/octet-stream", config)];
+		result = results[0];
+	} catch (error) {
+		if (shouldSkipFixture(error, "api_batch_file_with_timeout_sync", [], undefined)) {
+			return;
+		}
+		throw error;
+	}
+	if (result === null) {
+		return;
+	}
+	assertions.assertExpectedMime(result, ["application/pdf"]);
+	assertions.assertMinContentLength(result, 10);
+});
+
 Deno.test("api_extract_bytes_async", { permissions: { read: true, net: true } }, async () => {
 	const config = buildConfig(undefined);
 	let result: ExtractionResult | null = null;
@@ -598,6 +619,26 @@ Deno.test("config_email_msg_fallback_codepage", { permissions: { read: true, net
 		return;
 	}
 	assertions.assertExpectedMime(result, ["application/vnd.ms-outlook"]);
+	assertions.assertMinContentLength(result, 10);
+});
+
+Deno.test("config_extraction_timeout", { permissions: { read: true, net: true } }, async () => {
+	const config = buildConfig({ extraction_timeout_secs: 300 });
+	let result: ExtractionResult | null = null;
+	try {
+		const documentBytes = await resolveDocument("pdf/fake_memo.pdf");
+		// Sync file extraction - WASM uses extractBytes with pre-read bytes
+		result = await extractBytes(documentBytes, "application/octet-stream", config);
+	} catch (error) {
+		if (shouldSkipFixture(error, "config_extraction_timeout", [], undefined)) {
+			return;
+		}
+		throw error;
+	}
+	if (result === null) {
+		return;
+	}
+	assertions.assertExpectedMime(result, ["application/pdf"]);
 	assertions.assertMinContentLength(result, 10);
 });
 

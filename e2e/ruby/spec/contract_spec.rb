@@ -164,6 +164,25 @@ RSpec.describe 'contract fixtures' do
     end
   end
 
+  it 'api_batch_file_with_timeout_sync' do
+    E2ERuby.run_fixture_with_method(
+      'api_batch_file_with_timeout_sync',
+      'pdf/fake_memo.pdf',
+      { extraction_timeout_secs: 300 },
+      :batch_sync,
+      :file,
+      requirements: [],
+      notes: nil,
+      skip_if_missing: true
+    ) do |result|
+      E2ERuby::Assertions.assert_expected_mime(
+        result,
+        ['application/pdf']
+      )
+      E2ERuby::Assertions.assert_min_content_length(result, 10)
+    end
+  end
+
   it 'api_extract_bytes_async' do
     E2ERuby.run_fixture_with_method(
       'api_extract_bytes_async',
@@ -532,6 +551,23 @@ RSpec.describe 'contract fixtures' do
       E2ERuby::Assertions.assert_expected_mime(
         result,
         ['application/vnd.ms-outlook']
+      )
+      E2ERuby::Assertions.assert_min_content_length(result, 10)
+    end
+  end
+
+  it 'config_extraction_timeout' do
+    E2ERuby.run_fixture(
+      'config_extraction_timeout',
+      'pdf/fake_memo.pdf',
+      { extraction_timeout_secs: 300 },
+      requirements: [],
+      notes: nil,
+      skip_if_missing: true
+    ) do |result|
+      E2ERuby::Assertions.assert_expected_mime(
+        result,
+        ['application/pdf']
       )
       E2ERuby::Assertions.assert_min_content_length(result, 10)
     end

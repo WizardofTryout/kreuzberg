@@ -89,6 +89,18 @@ func TestContractApiBatchFileWithConfigsSync(t *testing.T) {
 	assertMinContentLength(t, result, 10)
 }
 
+func TestContractApiBatchFileWithTimeoutSync(t *testing.T) {
+	results := runBatchExtraction(t, []string{"pdf/fake_memo.pdf"}, []byte(`{
+"extraction_timeout_secs": 300
+}`))
+	if len(results) == 0 {
+		t.Fatal("expected at least one result from batch extraction")
+	}
+	result := results[0]
+	assertExpectedMime(t, result, []string{"application/pdf"})
+	assertMinContentLength(t, result, 10)
+}
+
 func TestContractApiExtractBytesAsync(t *testing.T) {
 	result := runExtractionBytesAsync(t, "pdf/fake_memo.pdf", nil)
 	assertExpectedMime(t, result, []string{"application/pdf"})
@@ -302,6 +314,14 @@ func TestContractConfigEmailMsgFallbackCodepage(t *testing.T) {
 }
 }`))
 	assertExpectedMime(t, result, []string{"application/vnd.ms-outlook"})
+	assertMinContentLength(t, result, 10)
+}
+
+func TestContractConfigExtractionTimeout(t *testing.T) {
+	result := runExtraction(t, "pdf/fake_memo.pdf", []byte(`{
+"extraction_timeout_secs": 300
+}`))
+	assertExpectedMime(t, result, []string{"application/pdf"})
 	assertMinContentLength(t, result, 10)
 }
 

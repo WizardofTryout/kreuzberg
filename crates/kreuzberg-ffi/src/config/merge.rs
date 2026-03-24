@@ -60,6 +60,10 @@ pub fn merge_configs(base: &mut ExtractionConfig, override_config: &ExtractionCo
     if override_config.html_options.is_some() {
         base.html_options = override_config.html_options.clone();
     }
+
+    if override_config.extraction_timeout_secs.is_some() {
+        base.extraction_timeout_secs = override_config.extraction_timeout_secs;
+    }
 }
 
 #[cfg(test)]

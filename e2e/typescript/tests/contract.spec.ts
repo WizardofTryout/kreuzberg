@@ -259,6 +259,34 @@ describe("contract fixtures", () => {
 	);
 
 	it(
+		"api_batch_file_with_timeout_sync",
+		() => {
+			const documentPath = resolveDocument("pdf/fake_memo.pdf");
+			if (!existsSync(documentPath)) {
+				console.warn("Skipping api_batch_file_with_timeout_sync: missing document at", documentPath);
+				return;
+			}
+			const config = buildConfig({ extraction_timeout_secs: 300 });
+			let result: ExtractionResult | null = null;
+			try {
+				const results = batchExtractFilesSync([documentPath], config);
+				result = results[0];
+			} catch (error) {
+				if (shouldSkipFixture(error, "api_batch_file_with_timeout_sync", [], undefined)) {
+					return;
+				}
+				throw error;
+			}
+			if (result === null) {
+				return;
+			}
+			assertions.assertExpectedMime(result, ["application/pdf"]);
+			assertions.assertMinContentLength(result, 10);
+		},
+		TEST_TIMEOUT_MS,
+	);
+
+	it(
 		"api_extract_bytes_async",
 		async () => {
 			const documentPath = resolveDocument("pdf/fake_memo.pdf");
@@ -853,6 +881,33 @@ describe("contract fixtures", () => {
 				return;
 			}
 			assertions.assertExpectedMime(result, ["application/vnd.ms-outlook"]);
+			assertions.assertMinContentLength(result, 10);
+		},
+		TEST_TIMEOUT_MS,
+	);
+
+	it(
+		"config_extraction_timeout",
+		() => {
+			const documentPath = resolveDocument("pdf/fake_memo.pdf");
+			if (!existsSync(documentPath)) {
+				console.warn("Skipping config_extraction_timeout: missing document at", documentPath);
+				return;
+			}
+			const config = buildConfig({ extraction_timeout_secs: 300 });
+			let result: ExtractionResult | null = null;
+			try {
+				result = extractFileSync(documentPath, null, config);
+			} catch (error) {
+				if (shouldSkipFixture(error, "config_extraction_timeout", [], undefined)) {
+					return;
+				}
+				throw error;
+			}
+			if (result === null) {
+				return;
+			}
+			assertions.assertExpectedMime(result, ["application/pdf"]);
 			assertions.assertMinContentLength(result, 10);
 		},
 		TEST_TIMEOUT_MS,

@@ -205,6 +205,30 @@ defmodule E2E.ContractTest do
       end
     end
 
+    test "api_batch_file_with_timeout_sync" do
+      case E2E.Helpers.run_fixture_with_method(
+             "api_batch_file_with_timeout_sync",
+             "pdf/fake_memo.pdf",
+             %{extraction_timeout_secs: 300},
+             :batch_sync,
+             :file,
+             requirements: [],
+             notes: nil,
+             skip_if_missing: true
+           ) do
+        {:ok, result} ->
+          result
+          |> E2E.Helpers.assert_expected_mime(["application/pdf"])
+          |> E2E.Helpers.assert_min_content_length(10)
+
+        {:skipped, reason} ->
+          IO.puts("SKIPPED: #{reason}")
+
+        {:error, reason} ->
+          flunk("Extraction failed: #{inspect(reason)}")
+      end
+    end
+
     test "api_extract_bytes_async" do
       case E2E.Helpers.run_fixture_with_method(
              "api_extract_bytes_async",
@@ -689,6 +713,28 @@ defmodule E2E.ContractTest do
         {:ok, result} ->
           result
           |> E2E.Helpers.assert_expected_mime(["application/vnd.ms-outlook"])
+          |> E2E.Helpers.assert_min_content_length(10)
+
+        {:skipped, reason} ->
+          IO.puts("SKIPPED: #{reason}")
+
+        {:error, reason} ->
+          flunk("Extraction failed: #{inspect(reason)}")
+      end
+    end
+
+    test "config_extraction_timeout" do
+      case E2E.Helpers.run_fixture(
+             "config_extraction_timeout",
+             "pdf/fake_memo.pdf",
+             %{extraction_timeout_secs: 300},
+             requirements: [],
+             notes: nil,
+             skip_if_missing: true
+           ) do
+        {:ok, result} ->
+          result
+          |> E2E.Helpers.assert_expected_mime(["application/pdf"])
           |> E2E.Helpers.assert_min_content_length(10)
 
         {:skipped, reason} ->

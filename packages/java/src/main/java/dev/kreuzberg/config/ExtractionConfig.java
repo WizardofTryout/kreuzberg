@@ -52,6 +52,7 @@ public final class ExtractionConfig {
 	private final boolean includeDocumentStructureSet;
 	private final String cacheNamespace;
 	private final Long cacheTtlSecs;
+	private final Long extractionTimeoutSecs;
 
 	private ExtractionConfig(Builder builder) {
 		this.useCache = builder.useCache;
@@ -82,6 +83,7 @@ public final class ExtractionConfig {
 		this.includeDocumentStructureSet = builder.includeDocumentStructureSet;
 		this.cacheNamespace = builder.cacheNamespace;
 		this.cacheTtlSecs = builder.cacheTtlSecs;
+		this.extractionTimeoutSecs = builder.extractionTimeoutSecs;
 	}
 
 	public static Builder builder() {
@@ -242,6 +244,18 @@ public final class ExtractionConfig {
 	 */
 	public Long getCacheTtlSecs() {
 		return cacheTtlSecs;
+	}
+
+	/**
+	 * Get the per-request extraction timeout in seconds.
+	 *
+	 * <p>
+	 * When the timeout is exceeded, the extraction is cancelled and an error is returned.
+	 *
+	 * @return the extraction timeout in seconds, or null if not set
+	 */
+	public Long getExtractionTimeoutSecs() {
+		return extractionTimeoutSecs;
 	}
 
 	/**
@@ -554,6 +568,9 @@ public final class ExtractionConfig {
 		if (cacheTtlSecs != null) {
 			map.put("cache_ttl_secs", cacheTtlSecs);
 		}
+		if (extractionTimeoutSecs != null) {
+			map.put("extraction_timeout_secs", extractionTimeoutSecs);
+		}
 		return map;
 	}
 
@@ -654,6 +671,12 @@ public final class ExtractionConfig {
 				builder.cacheTtlSecs(((Number) val).longValue());
 			}
 		}
+		if (raw.containsKey("extraction_timeout_secs")) {
+			Object val = raw.get("extraction_timeout_secs");
+			if (val instanceof Number) {
+				builder.extractionTimeoutSecs(((Number) val).longValue());
+			}
+		}
 	}
 
 	private static boolean asBoolean(Object value, boolean defaultValue) {
@@ -730,6 +753,7 @@ public final class ExtractionConfig {
 		private SecurityLimitsConfig securityLimits;
 		private String cacheNamespace;
 		private Long cacheTtlSecs;
+		private Long extractionTimeoutSecs;
 
 		private Builder() {
 		}
@@ -950,6 +974,21 @@ public final class ExtractionConfig {
 		 */
 		public Builder cacheTtlSecs(Long cacheTtlSecs) {
 			this.cacheTtlSecs = cacheTtlSecs;
+			return this;
+		}
+
+		/**
+		 * Set the per-request extraction timeout in seconds.
+		 *
+		 * <p>
+		 * When the timeout is exceeded, the extraction is cancelled and an error is returned.
+		 *
+		 * @param extractionTimeoutSecs
+		 *            timeout in seconds
+		 * @return this builder for chaining
+		 */
+		public Builder extractionTimeoutSecs(Long extractionTimeoutSecs) {
+			this.extractionTimeoutSecs = extractionTimeoutSecs;
 			return this;
 		}
 

@@ -2206,6 +2206,10 @@ public sealed class ExtractionConfig
     [JsonPropertyName("cache_ttl_secs")]
     public ulong? CacheTtlSecs { get; init; }
 
+    /// <summary>Per-request extraction timeout in seconds. When exceeded, extraction is cancelled and an error is returned.</summary>
+    [JsonPropertyName("extraction_timeout_secs")]
+    public ulong? ExtractionTimeoutSecs { get; init; }
+
 }
 
 /// <summary>
@@ -3217,6 +3221,10 @@ public sealed class FileExtractionConfig
     /// <summary>Override result format for this file.</summary>
     [JsonPropertyName("result_format")]
     public string? ResultFormat { get; init; }
+
+    /// <summary>Per-file extraction timeout in seconds. When exceeded, extraction for this file is cancelled and an error is returned.</summary>
+    [JsonPropertyName("timeout_secs")]
+    public ulong? TimeoutSecs { get; init; }
 }
 
 /// <summary>

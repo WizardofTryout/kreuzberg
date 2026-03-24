@@ -933,7 +933,7 @@ module Kreuzberg
                   :token_reduction, :keywords, :html_options, :pages,
                   :max_concurrent_extractions, :output_format, :result_format,
                   :security_limits, :layout, :concurrency,
-                  :cache_namespace, :cache_ttl_secs
+                  :cache_namespace, :cache_ttl_secs, :extraction_timeout_secs
 
       # Alias for backward compatibility - image_extraction is the canonical name
       alias image_extraction images
@@ -958,7 +958,7 @@ module Kreuzberg
         language_detection pdf_options image_extraction
         postprocessor token_reduction keywords html_options pages
         max_concurrent_extractions output_format result_format
-        security_limits layout concurrency cache_namespace cache_ttl_secs
+        security_limits layout concurrency cache_namespace cache_ttl_secs extraction_timeout_secs
       ].freeze
 
       # Aliases for backward compatibility
@@ -1037,7 +1037,8 @@ module Kreuzberg
                      layout: nil,
                      concurrency: nil,
                      cache_namespace: nil,
-                     cache_ttl_secs: nil)
+                     cache_ttl_secs: nil,
+                     extraction_timeout_secs: nil)
         kwargs = {
           use_cache: use_cache, enable_quality_processing: enable_quality_processing,
           force_ocr: force_ocr, include_document_structure: include_document_structure,
@@ -1050,7 +1051,8 @@ module Kreuzberg
           security_limits: security_limits, layout: layout,
           concurrency: concurrency,
           cache_namespace: cache_namespace,
-          cache_ttl_secs: cache_ttl_secs
+          cache_ttl_secs: cache_ttl_secs,
+          extraction_timeout_secs: extraction_timeout_secs
         }
         extracted = extract_from_hash(hash, kwargs)
 
@@ -1086,6 +1088,7 @@ module Kreuzberg
         @result_format = validate_result_format(params[:result_format])
         @cache_namespace = params[:cache_namespace]
         @cache_ttl_secs = params[:cache_ttl_secs]&.to_i
+        @extraction_timeout_secs = params[:extraction_timeout_secs]&.to_i
         @security_limits = params[:security_limits]
       end
 
@@ -1123,7 +1126,8 @@ module Kreuzberg
           output_format: @output_format,
           result_format: @result_format,
           cache_namespace: @cache_namespace,
-          cache_ttl_secs: @cache_ttl_secs
+          cache_ttl_secs: @cache_ttl_secs,
+          extraction_timeout_secs: @extraction_timeout_secs
         }
       end
 
@@ -1286,6 +1290,8 @@ module Kreuzberg
           @cache_namespace = value
         when :cache_ttl_secs
           @cache_ttl_secs = value&.to_i
+        when :extraction_timeout_secs
+          @extraction_timeout_secs = value&.to_i
         else
           raise ArgumentError, "Unknown configuration key: #{key}"
         end
@@ -1369,6 +1375,7 @@ module Kreuzberg
         @result_format = merged.result_format
         @cache_namespace = merged.cache_namespace
         @cache_ttl_secs = merged.cache_ttl_secs
+        @extraction_timeout_secs = merged.extraction_timeout_secs
       end
     end
   end

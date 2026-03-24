@@ -128,6 +128,21 @@ test_that("api_batch_file_with_configs_sync", {
   assert_min_content_length(result, 10L)
 })
 
+test_that("api_batch_file_with_timeout_sync", {
+  result <- run_fixture_with_method(
+    "api_batch_file_with_timeout_sync",
+    "pdf/fake_memo.pdf",
+    list(extraction_timeout_secs = 300L),
+    "batch_sync",
+    "file",
+    requirements = character(0),
+    notes = NULL,
+    skip_if_missing = TRUE
+  )
+  assert_expected_mime(result, c("application/pdf"))
+  assert_min_content_length(result, 10L)
+})
+
 test_that("api_extract_bytes_async", {
   result <- run_fixture_with_method(
     "api_extract_bytes_async",
@@ -423,6 +438,19 @@ test_that("config_email_msg_fallback_codepage", {
     skip_if_missing = TRUE
   )
   assert_expected_mime(result, c("application/vnd.ms-outlook"))
+  assert_min_content_length(result, 10L)
+})
+
+test_that("config_extraction_timeout", {
+  result <- run_fixture(
+    "config_extraction_timeout",
+    "pdf/fake_memo.pdf",
+    list(extraction_timeout_secs = 300L),
+    requirements = character(0),
+    notes = NULL,
+    skip_if_missing = TRUE
+  )
+  assert_expected_mime(result, c("application/pdf"))
   assert_min_content_length(result, 10L)
 })
 

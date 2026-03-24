@@ -104,6 +104,7 @@ type ExtractionConfig struct {
 	ResultFormat             string                   `json:"result_format,omitempty"`
 	CacheNamespace           *string                  `json:"cache_namespace,omitempty"`
 	CacheTTLSecs             *uint64                  `json:"cache_ttl_secs,omitempty"`
+	ExtractionTimeoutSecs    *uint64                  `json:"extraction_timeout_secs,omitempty"`
 }
 
 // SecurityLimitsConfig controls security thresholds for archive extraction.
@@ -435,6 +436,7 @@ type FileExtractionConfig struct {
 	IncludeDocumentStructure *bool                    `json:"include_document_structure,omitempty"`
 	OutputFormat             string                   `json:"output_format,omitempty"`
 	ResultFormat             string                   `json:"result_format,omitempty"`
+	TimeoutSecs              *uint64                  `json:"timeout_secs,omitempty"`
 }
 
 // FileItem represents a file path paired with an optional per-file extraction config override.

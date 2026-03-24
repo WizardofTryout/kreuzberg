@@ -112,4 +112,12 @@ pub struct FileExtractionConfig {
     #[cfg(feature = "layout-detection")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub layout: Option<super::super::layout::LayoutDetectionConfig>,
+
+    /// Override per-file extraction timeout in seconds.
+    ///
+    /// When set, the extraction for this file will be canceled after the
+    /// specified duration. A timed-out file produces an error result without
+    /// affecting other files in the batch.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_secs: Option<u64>,
 }
