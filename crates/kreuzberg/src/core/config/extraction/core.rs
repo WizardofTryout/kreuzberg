@@ -47,11 +47,12 @@ pub struct ExtractionConfig {
     #[serde(default)]
     pub force_ocr: bool,
 
-    /// Force OCR on specific pages only (1-indexed page numbers).
+    /// Force OCR on specific pages only (1-indexed page numbers, must be >= 1).
     ///
     /// When set, only the listed pages are OCR'd regardless of text layer quality.
     /// Unlisted pages use native text extraction. Ignored when `force_ocr` is `true`.
-    /// Only applies to PDF documents.
+    /// Only applies to PDF documents. Duplicates are automatically deduplicated.
+    /// An `ocr` config is recommended for backend/language selection; defaults are used if absent.
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub force_ocr_pages: Option<Vec<usize>>,

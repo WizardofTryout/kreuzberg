@@ -313,13 +313,30 @@ pub(crate) fn render_selected_pages_for_ocr(
         source: None,
     })?;
 
+    let page_count = renderer
+        .page_count(content)
+        .map_err(|e| crate::KreuzbergError::Parsing {
+            message: format!("Failed to get PDF page count: {}", e),
+            source: None,
+        })?;
+
     let render_options = PageRenderOptions::default();
     let mut images = Vec::with_capacity(page_indices.len());
     for &idx in page_indices {
+        if idx >= page_count {
+            tracing::warn!(
+                page = idx + 1,
+                page_count,
+                "force_ocr_pages: page {} is out of range (document has {} pages), skipping",
+                idx + 1,
+                page_count
+            );
+            continue;
+        }
         let image = renderer
             .render_page_to_image(content, idx, &render_options)
             .map_err(|e| crate::KreuzbergError::Parsing {
-                message: format!("Failed to render PDF page {}: {}", idx, e),
+                message: format!("Failed to render PDF page {}: {}", idx + 1, e),
                 source: None,
             })?;
         images.push((idx, image));
@@ -332,6 +349,9 @@ pub(crate) fn render_selected_pages_for_ocr(
 ///
 /// For each page boundary, if the page is in `ocr_page_numbers` (1-indexed),
 /// use the OCR result; otherwise use the native text slice.
+///
+/// Page numbers must be >= 1 (invalid values are filtered out with a warning).
+/// An `ocr` config is recommended but not required; defaults are used if absent.
 #[cfg(feature = "ocr")]
 pub(crate) async fn extract_mixed_ocr_native(
     native_text: &str,
@@ -343,10 +363,26 @@ pub(crate) async fn extract_mixed_ocr_native(
 ) -> crate::Result<String> {
     use std::collections::HashSet;
 
-    let ocr_set: HashSet<usize> = ocr_page_numbers.iter().copied().collect();
+    // Deduplicate and validate page numbers (must be >= 1)
+    let ocr_set: HashSet<usize> = ocr_page_numbers
+        .iter()
+        .copied()
+        .filter(|&p| {
+            if p == 0 {
+                tracing::warn!("force_ocr_pages contains 0; page numbers are 1-indexed, ignoring");
+                false
+            } else {
+                true
+            }
+        })
+        .collect();
 
-    // Convert 1-indexed page numbers to 0-indexed for rendering
-    let page_indices: Vec<usize> = ocr_page_numbers.iter().map(|&p| p.saturating_sub(1)).collect();
+    if ocr_set.is_empty() {
+        return Ok(native_text.to_string());
+    }
+
+    // Convert 1-indexed page numbers to 0-indexed for rendering (deduplicated)
+    let page_indices: Vec<usize> = ocr_set.iter().map(|&p| p - 1).collect();
     let page_images = render_selected_pages_for_ocr(content, &page_indices)?;
 
     // OCR each selected page individually and collect results by page number (1-indexed)
@@ -367,25 +403,25 @@ pub(crate) async fn extract_mixed_ocr_native(
         ocr_results.insert(page_num, text);
     }
 
-    // Assemble final text: use OCR for selected pages, native for the rest
-    let mut parts: Vec<String> = Vec::with_capacity(boundaries.len());
-    for boundary in boundaries {
-        if boundary.byte_end > native_text.len() || boundary.byte_start > boundary.byte_end {
-            continue;
-        }
-        if ocr_set.contains(&boundary.page_number) {
-            if let Some(ocr_text) = ocr_results.get(&boundary.page_number) {
-                parts.push(ocr_text.clone());
-            } else {
-                // Fallback to native if OCR failed for this page
-                parts.push(native_text[boundary.byte_start..boundary.byte_end].to_string());
-            }
-        } else {
-            parts.push(native_text[boundary.byte_start..boundary.byte_end].to_string());
+    // Assemble final text by replacing OCR pages in-place within the native text.
+    // We preserve the original byte structure — native page slices keep their
+    // whitespace intact, and OCR results replace them without extra separators.
+    let mut result = native_text.to_string();
+
+    // Process boundaries in reverse order so byte offsets remain valid after replacement
+    let mut sorted_boundaries: Vec<&crate::types::PageBoundary> = boundaries
+        .iter()
+        .filter(|b| b.byte_end <= native_text.len() && b.byte_start <= b.byte_end)
+        .collect();
+    sorted_boundaries.sort_by(|a, b| b.byte_start.cmp(&a.byte_start));
+
+    for boundary in sorted_boundaries {
+        if let Some(ocr_text) = ocr_results.get(&boundary.page_number) {
+            result.replace_range(boundary.byte_start..boundary.byte_end, ocr_text);
         }
     }
 
-    Ok(parts.join("\n"))
+    Ok(result)
 }
 
 /// Extract text from PDF using OCR on pre-rendered page images.
