@@ -91,7 +91,6 @@ pub fn register_validator(args: &[Value]) -> Result<(), Error> {
     let registry = kreuzberg::get_validator_registry();
     registry
         .write()
-        .map_err(|e| runtime_error(format!("Failed to acquire registry lock: {}", e)))?
         .register(validator_impl)
         .map_err(kreuzberg_error)?;
 

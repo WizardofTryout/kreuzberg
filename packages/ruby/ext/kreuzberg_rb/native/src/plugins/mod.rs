@@ -30,7 +30,6 @@ pub fn unregister_post_processor(name: String) -> Result<(), Error> {
     let registry = get_post_processor_registry();
     registry
         .write()
-        .map_err(|e| crate::error_handling::runtime_error(format!("Failed to acquire registry lock: {}", e)))?
         .remove(&name)
         .map_err(crate::error_handling::kreuzberg_error)?;
 
@@ -48,7 +47,6 @@ pub fn clear_post_processors() -> Result<(), Error> {
     let registry = get_post_processor_registry();
     registry
         .write()
-        .map_err(|e| crate::error_handling::runtime_error(format!("Failed to acquire registry lock: {}", e)))?
         .shutdown_all()
         .map_err(crate::error_handling::kreuzberg_error)?;
 

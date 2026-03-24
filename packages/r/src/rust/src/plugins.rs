@@ -25,7 +25,6 @@ pub fn unregister_post_processor_impl(name: &str) -> extendr_api::Result<()> {
     let registry = kreuzberg::get_post_processor_registry();
     registry
         .write()
-        .map_err(|e| extendr_api::Error::Other(format!("Failed to acquire registry lock: {}", e)))?
         .remove(name)
         .map_err(kreuzberg_error)?;
     Ok(())
@@ -40,7 +39,6 @@ pub fn clear_post_processors_impl() -> extendr_api::Result<()> {
     let registry = kreuzberg::get_post_processor_registry();
     registry
         .write()
-        .map_err(|e| extendr_api::Error::Other(format!("Failed to acquire registry lock: {}", e)))?
         .shutdown_all()
         .map_err(kreuzberg_error)?;
     Ok(())

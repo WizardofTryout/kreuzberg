@@ -701,8 +701,8 @@ pub fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> R
     let warnings_array = ruby.ary_new();
     for warning in result.processing_warnings {
         let w_hash = ruby.hash_new();
-        w_hash.aset("source", warning.source.as_str())?;
-        w_hash.aset("message", warning.message.as_str())?;
+        w_hash.aset("source", warning.source.as_ref())?;
+        w_hash.aset("message", warning.message.as_ref())?;
         warnings_array.push(w_hash)?;
     }
     set_hash_entry(ruby, &hash, "processing_warnings", warnings_array.into_value_with(ruby))?;
@@ -738,6 +738,22 @@ pub fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> R
         set_hash_entry(ruby, &hash, "annotations", annotations_array.into_value_with(ruby))?;
     } else {
         set_hash_entry(ruby, &hash, "annotations", ruby.qnil().as_value())?;
+    }
+
+    // Convert children (archive entries)
+    if let Some(children) = result.children {
+        let children_array = ruby.ary_new();
+        for entry in children {
+            let entry_hash = ruby.hash_new();
+            entry_hash.aset("path", entry.path.as_str())?;
+            entry_hash.aset("mime_type", entry.mime_type.as_str())?;
+            let nested = extraction_result_to_ruby(ruby, *entry.result)?;
+            entry_hash.aset("result", nested.into_value_with(ruby))?;
+            children_array.push(entry_hash)?;
+        }
+        set_hash_entry(ruby, &hash, "children", children_array.into_value_with(ruby))?;
+    } else {
+        set_hash_entry(ruby, &hash, "children", ruby.qnil().as_value())?;
     }
 
     Ok(hash)

@@ -118,7 +118,6 @@ pub fn register_post_processor(args: &[Value]) -> Result<(), Error> {
     let registry = kreuzberg::get_post_processor_registry();
     registry
         .write()
-        .map_err(|e| runtime_error(format!("Failed to acquire registry lock: {}", e)))?
         .register(processor_impl, priority)
         .map_err(kreuzberg_error)?;
 
