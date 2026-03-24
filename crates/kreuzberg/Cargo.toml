@@ -237,6 +237,7 @@ blake3 = { workspace = true }
 bytes = { workspace = true }
 calamine = { version = "0.34.0", features = ["dates"], optional = true }
 cfb = { workspace = true, optional = true }
+chrono = { workspace = true }
 chardetng = { version = "0.1.17", optional = true }
 dashmap = "6.1"
 dbase = { workspace = true, optional = true }
