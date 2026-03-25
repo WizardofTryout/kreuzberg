@@ -710,16 +710,23 @@ pub(crate) async fn extract_with_ocr(
             // Collect recognized tables as Table structs for ExtractionResult.tables
             for rt in &recognized_tables {
                 if !rt.markdown.is_empty() {
-                    // Parse markdown table into cells (rows x columns)
+                    // Parse markdown pipe-table into cells (rows x columns).
+                    // Skip separator rows (e.g. "| --- | :---: | ---: |") by checking
+                    // whether the content between pipes is exclusively dashes/colons/spaces.
                     let cells: Vec<Vec<String>> = rt
                         .markdown
                         .lines()
                         .filter(|line| {
-                            !line.trim().is_empty()
-                                && !line
-                                    .trim()
-                                    .chars()
-                                    .all(|c| c == '-' || c == '|' || c == ' ' || c == ':')
+                            let trimmed = line.trim();
+                            if trimmed.is_empty() || !trimmed.contains('|') {
+                                return false;
+                            }
+                            // A separator row has only separator chars between pipes
+                            let inner = trimmed.trim_matches('|');
+                            !inner.split('|').all(|seg| {
+                                let s = seg.trim();
+                                !s.is_empty() && s.chars().all(|c| c == '-' || c == ':')
+                            })
                         })
                         .map(|line| {
                             line.trim()
@@ -734,7 +741,7 @@ pub(crate) async fn extract_with_ocr(
                         cells,
                         markdown: rt.markdown.clone(),
                         page_number: page_idx + 1, // 1-indexed
-                        bounding_box: None,        // TATR bbox is in image space, not PDF space
+                        bounding_box: None, // Image-space bbox; PDF-space conversion requires page dimensions not available here
                     });
                 }
             }
