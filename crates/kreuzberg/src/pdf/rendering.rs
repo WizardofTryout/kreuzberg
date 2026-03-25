@@ -15,6 +15,7 @@ pub struct PageRenderOptions {
     pub max_dpi: i32,
 }
 
+
 impl Default for PageRenderOptions {
     fn default() -> Self {
         Self {
