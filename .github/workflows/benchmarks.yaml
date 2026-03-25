@@ -1236,9 +1236,17 @@ jobs:
           path: benchmark-results/
           retention-days: 30
 
+  kreuzberg-gate:
+    name: Kreuzberg benchmarks complete
+    needs: [bench-native, bench-native-paddle, bench-python, bench-node, bench-wasm, bench-ruby, bench-r, bench-go, bench-java, bench-csharp, bench-elixir, bench-php, bench-c]
+    if: always()
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - run: echo "All kreuzberg binding benchmarks finished"
+
   bench-docling:
     name: docling (${{ matrix.mode }}, shard ${{ matrix.shard }}/3)
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1302,7 +1310,7 @@ jobs:
 
   bench-markitdown:
     name: markitdown (${{ matrix.mode }}, shard ${{ matrix.shard }}/3)
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1362,7 +1370,7 @@ jobs:
 
   bench-pandoc:
     name: pandoc (${{ matrix.mode }})
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1426,7 +1434,7 @@ jobs:
 
   bench-unstructured:
     name: unstructured (${{ matrix.mode }}, shard ${{ matrix.shard }}/4)
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1490,7 +1498,7 @@ jobs:
 
   bench-tika:
     name: tika (${{ matrix.mode }}, shard ${{ matrix.shard }}/3)
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1554,7 +1562,7 @@ jobs:
 
   bench-pymupdf4llm:
     name: pymupdf4llm (${{ matrix.mode }}, shard ${{ matrix.shard }}/3)
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1619,7 +1627,7 @@ jobs:
 
   bench-pdfplumber:
     name: pdfplumber (${{ matrix.mode }})
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1677,7 +1685,7 @@ jobs:
 
   bench-mineru:
     name: mineru (${{ matrix.mode }}, shard ${{ matrix.shard }}/3)
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1741,7 +1749,7 @@ jobs:
 
   bench-pypdf:
     name: pypdf (${{ matrix.mode }})
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1799,7 +1807,7 @@ jobs:
 
   bench-pdfminer:
     name: pdfminer (${{ matrix.mode }})
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1857,7 +1865,7 @@ jobs:
 
   bench-pdftotext:
     name: pdftotext (${{ matrix.mode }})
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1920,7 +1928,7 @@ jobs:
 
   bench-playa-pdf:
     name: playa-pdf (${{ matrix.mode }})
-    needs: setup
+    needs: kreuzberg-gate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     permissions:
@@ -1978,7 +1986,7 @@ jobs:
 
   aggregate-and-publish:
     name: Aggregate & Release Results
-    needs: [setup, bench-native, bench-native-paddle, bench-python, bench-node, bench-wasm, bench-ruby, bench-r, bench-c, bench-go, bench-java, bench-csharp, bench-elixir, bench-php, bench-docling, bench-markitdown, bench-pandoc, bench-unstructured, bench-tika, bench-pymupdf4llm, bench-pdfplumber, bench-mineru, bench-pypdf, bench-pdfminer, bench-pdftotext, bench-playa-pdf]
+    needs: [kreuzberg-gate, bench-docling, bench-markitdown, bench-pandoc, bench-unstructured, bench-tika, bench-pymupdf4llm, bench-pdfplumber, bench-mineru, bench-pypdf, bench-pdfminer, bench-pdftotext, bench-playa-pdf]
     runs-on: ubuntu-24.04-arm
     if: ${{ always() && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
     permissions:
