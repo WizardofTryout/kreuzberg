@@ -731,7 +731,10 @@ pub(crate) async fn extract_with_ocr(
             }
 
             // Accumulate OCR elements from this page.
-            if let Some(ref elems) = ocr_result.ocr_elements {
+            if let Some(ref mut elems) = ocr_result.ocr_elements {
+                for elem in elems.iter_mut() {
+                    elem.page_number = page_idx + 1;
+                }
                 all_ocr_elements.extend(elems.iter().cloned());
             }
 
@@ -741,8 +744,31 @@ pub(crate) async fn extract_with_ocr(
                 && !elements.is_empty()
             {
                 let detection = detections.get(page_idx);
-                let recognized_tables = match (detection, tatr_model.as_mut()) {
-                    (Some(det), Some(model)) => {
+
+                // Scale layout detection bounding boxes from layout-model resolution
+                // (e.g. 640×640) to OCR render resolution so that coordinates are
+                // consistent when passed to recognize_page_tables and detection_to_layout_hints.
+                // `width` and `height` come from the encoded PNG dimensions, i.e. they are
+                // the actual pixel dimensions of the OCR-rendered page image.
+                let ocr_render_width = encoded_batch[offset].2;
+                let ocr_render_height = encoded_batch[offset].3;
+                let scaled_detection: Option<crate::layout::DetectionResult> = detection.map(|det| {
+                    let sx = ocr_render_width as f32 / det.page_width as f32;
+                    let sy = ocr_render_height as f32 / det.page_height as f32;
+                    let mut scaled = det.clone();
+                    scaled.page_width = ocr_render_width;
+                    scaled.page_height = ocr_render_height;
+                    for region in &mut scaled.detections {
+                        region.bbox.x1 *= sx;
+                        region.bbox.y1 *= sy;
+                        region.bbox.x2 *= sx;
+                        region.bbox.y2 *= sy;
+                    }
+                    scaled
+                });
+
+                let recognized_tables = match (scaled_detection.as_ref(), tatr_model.as_mut()) {
+                    (Some(scaled_det), Some(model)) => {
                         // Decode the page image from its PNG for TATR table recognition.
                         // When pre-rendered images are available, use them directly.
                         // Otherwise, decode from the PNG we already encoded.
@@ -757,7 +783,7 @@ pub(crate) async fn extract_with_ocr(
                                 })?;
                             decoded.to_rgb8()
                         };
-                        crate::ocr::layout_assembly::recognize_page_tables(&rgb, det, elements, model)
+                        crate::ocr::layout_assembly::recognize_page_tables(&rgb, scaled_det, elements, model)
                     }
                     _ => Vec::new(),
                 };
@@ -801,8 +827,8 @@ pub(crate) async fn extract_with_ocr(
                 crate::pdf::markdown::reorder_elements_reading_order(&mut page_content.elements);
                 let mut paragraphs = crate::pdf::markdown::content_to_paragraphs(&page_content);
 
-                if let Some(det) = detection {
-                    let hints = detection_to_layout_hints(det, height as f32);
+                if let Some(ref scaled_det) = scaled_detection {
+                    let hints = detection_to_layout_hints(scaled_det, height as f32);
                     crate::pdf::markdown::layout_classify::apply_layout_overrides(
                         &mut paragraphs,
                         &hints,
