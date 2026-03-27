@@ -1013,7 +1013,7 @@ pub(crate) async fn run_ocr_pipeline(
     config: &ExtractionConfig,
     pipeline: &crate::core::config::OcrPipelineConfig,
     path: Option<&std::path::Path>,
-) -> crate::Result<(String, Vec<crate::types::OcrElement>)> {
+) -> crate::Result<(String, Vec<crate::types::Table>, Vec<crate::types::OcrElement>)> {
     use crate::plugins::registry::get_ocr_backend_registry;
 
     let default_ocr_config = crate::core::config::OcrConfig::default();
@@ -1044,7 +1044,7 @@ pub(crate) async fn run_ocr_pipeline(
         });
     }
 
-    let mut best_result: Option<(String, f64, Vec<crate::types::OcrElement>)> = None;
+    let mut best_result: Option<(String, f64, Vec<crate::types::Table>, Vec<crate::types::OcrElement>)> = None;
 
     for stage in &available_stages {
         // Build a modified config for this stage
@@ -1082,7 +1082,7 @@ pub(crate) async fn run_ocr_pipeline(
         .await;
 
         match result {
-            Ok((text, mean_conf, _stage_tables, stage_ocr_elements)) => {
+            Ok((text, mean_conf, stage_tables, stage_ocr_elements)) => {
                 let text_score = compute_quality_score(&text, &pipeline.quality_thresholds);
 
                 let score = match mean_conf {
@@ -1100,16 +1100,16 @@ pub(crate) async fn run_ocr_pipeline(
                 );
 
                 if score >= pipeline.quality_thresholds.pipeline_min_quality {
-                    return Ok((text, stage_ocr_elements));
+                    return Ok((text, stage_tables, stage_ocr_elements));
                 }
 
                 // Track best-so-far
                 match best_result {
-                    Some((_, best_score, _)) if score > best_score => {
-                        best_result = Some((text, score, stage_ocr_elements));
+                    Some((_, best_score, _, _)) if score > best_score => {
+                        best_result = Some((text, score, stage_tables, stage_ocr_elements));
                     }
                     None => {
-                        best_result = Some((text, score, stage_ocr_elements));
+                        best_result = Some((text, score, stage_tables, stage_ocr_elements));
                     }
                     _ => {}
                 }
@@ -1126,13 +1126,13 @@ pub(crate) async fn run_ocr_pipeline(
 
     // Return best result (with warning) or error if all backends failed entirely
     match best_result {
-        Some((text, score, elements)) => {
+        Some((text, score, tables, elements)) => {
             tracing::warn!(
                 score,
                 threshold = pipeline.quality_thresholds.pipeline_min_quality,
                 "All OCR pipeline backends produced suboptimal quality, using best result"
             );
-            Ok((text, elements))
+            Ok((text, tables, elements))
         }
         None => Err(crate::KreuzbergError::Parsing {
             message: "All OCR pipeline backends failed".to_string(),
