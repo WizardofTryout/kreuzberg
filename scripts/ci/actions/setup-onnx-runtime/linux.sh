@@ -70,12 +70,10 @@ else
 fi
 
 if [ "$strategy" = "bundled" ]; then
-  echo "Using bundled ORT strategy — skipping system env vars so ort-bundled cargo feature takes effect"
+  echo "Using bundled ORT strategy — letting ort-sys download-binaries handle static linking"
   {
-    echo "ORT_LIB_LOCATION=$ort_root/lib"
     echo "LD_LIBRARY_PATH=$ort_root/lib:$dest:${LD_LIBRARY_PATH:-}"
     echo "LIBRARY_PATH=$ort_root/lib:$dest:${LIBRARY_PATH:-}"
-    echo "RUSTFLAGS=$rustflags"
   } >>"$GITHUB_ENV"
 else
   {

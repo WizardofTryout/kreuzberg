@@ -74,10 +74,8 @@ foreach ($Dir in $DllDirs) {
 $RustFlags = if ($env:RUSTFLAGS) { "$env:RUSTFLAGS -L $OrtLib" } else { "-L $OrtLib" }
 
 if ($Strategy -eq "bundled") {
-  Write-Host "Using bundled ORT strategy - skipping system env vars so ort-bundled cargo feature takes effect"
+  Write-Host "Using bundled ORT strategy - letting ort-sys download-binaries handle static linking"
   @(
-    "ORT_LIB_LOCATION=$OrtLib"
-    "RUSTFLAGS=$RustFlags"
     "LIB=$OrtLib;$env:LIB"
     "LIBRARY_PATH=$OrtLib;$env:LIBRARY_PATH"
     "PATH=$Dest;$env:PATH"
